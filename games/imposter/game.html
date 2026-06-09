@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Imposter - Game</title>
+  <link rel="stylesheet" href="../../style.css">
+  <link rel="stylesheet" href="../../styles/components/timer.css">
+  <style>
+    .word-card {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 60px 40px;
+      border-radius: 20px;
+      text-align: center;
+      cursor: pointer;
+      user-select: none;
+      transition: transform 0.3s, box-shadow 0.3s;
+      margin: 30px auto;
+      max-width: 500px;
+      box-shadow: 0 10px 30px rgba(102, 126, 234, 0.3);
+    }
+
+    .word-card:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 15px 40px rgba(102, 126, 234, 0.4);
+    }
+
+    .word-card h2 {
+      margin: 0;
+      font-size: 2.5rem;
+      color: white;
+    }
+
+    .word-card p {
+      margin: 10px 0 0 0;
+      font-size: 1.2rem;
+      opacity: 0.9;
+      color: white;
+    }
+
+    .word-hidden {
+      font-size: 1.5rem;
+      opacity: 0.8;
+      color: white;
+    }
+
+    .hint-text {
+      font-size: 1rem;
+      margin-top: 15px;
+      padding-top: 15px;
+      border-top: 1px solid rgba(255, 255, 255, 0.3);
+    }
+
+    .turn-order {
+      background: #f9f9f9;
+      border-radius: 10px;
+      padding: 15px;
+      margin: 20px 0;
+    }
+
+    .turn-order h3 {
+      margin: 0 0 10px 0;
+      color: #000;
+      font-size: 1.2rem;
+    }
+
+    .turn-order-list {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+
+    .turn-order-list li {
+      padding: 8px 10px;
+      background: white;
+      border-radius: 5px;
+      font-size: 0.9rem;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🕵️ Imposter</h1>
+
+    <div class="timer" id="timer">Loading...</div>
+
+    <div class="turn-order" id="turnOrder">
+      <h3>Turn Order</h3>
+      <ul class="turn-order-list" id="turnOrderList"></ul>
+    </div>
+
+    <div class="word-card" id="wordCard">
+      <div class="word-hidden" id="wordHidden">Click to see word</div>
+      <div style="display: none;" id="wordRevealed">
+        <h2 id="wordText"></h2>
+        <p id="roleText"></p>
+        <div class="hint-text" id="hintText" style="display: none;"></div>
+      </div>
+    </div>
+
+    <div id="errorMessage" class="error" style="display: none;"></div>
+
+    <div id="voteRequestStatus" style="text-align: center; color: #666; font-size: 0.9rem; margin: 15px 0;"></div>
+
+    <button id="beginVotingBtn" class="button" style="display: none;">Begin Voting</button>
+    <button id="requestVoteBtn" class="button button--secondary" style="display: none;">Request to Begin Voting</button>
+  </div>
+
+  <script type="module">
+    import { getRoomRef, listenToRoom, update, get, ref as dbRef } from '../../firebase-config.js';
+    import { getUrlParams } from '../../utils.js';
+    import { db } from '../../firebase-config.js';
+    import { Timer } from '../../src/components/Timer.js';
+
+    const { roomCode, playerId } = getUrlParams();
+
+    if (!roomCode || !playerId) {
+      window.location.href = '../../index.html';
+    }
+
+    const turnOrderList = document.getElementById('turnOrderList');
+    const wordCard = document.getElementById('wordCard');
+    const wordHidden = document.getElementById('wordHidden');
+    const wordRevealed = document.getElementById('wordRevealed');
+    const wordText = document.getElementById('wordText');
+    const roleText = document.getElementById('roleText');
+    const hintText = document.getElementById('hintText');
+    const beginVotingBtn = document.getElementById('beginVotingBtn');
+    const requestVoteBtn = document.getElementById('requestVoteBtn');
+    const voteRequestStatus = document.getElementById('voteRequestStatus');
+    const errorMessage = document.getElementById('errorMessage');
+
+    let isHost = false;
+    let myRole = null;
+    let myHint = null;
+    let word = null;
+    let wordVisible = false;
+    let timer = null;
+
+    function showError(message) {
+      errorMessage.textContent = message;
+      errorMessage.style.display = 'block';
+    }
+
+    function displayTurnOrder(data) {
+      const turnOrder = data.gameData?.imposter?.turnOrder || [];
+      const players = data.players || {};
+
+      turnOrderList.innerHTML = '';
+      turnOrder.forEach((pid, index) => {
+        const player = players[pid];
+        if (!player) return;
+
+        const li = document.createElement('li');
+        let text = `${index + 1}. ${player.name}`;
+        if (pid === playerId) text += ' (You)';
+        li.textContent = text;
+        turnOrderList.appendChild(li);
+      });
+    }
+
+    // Toggle word visibility
+    wordCard.addEventListener('click', () => {
+      wordVisible = !wordVisible;
+
+      if (wordVisible) {
+        wordHidden.style.display = 'none';
+        wordRevealed.style.display = 'block';
+      } else {
+        wordHidden.style.display = 'block';
+        wordRevealed.style.display = 'none';
+      }
+    });
+
+    // Load game data
+    async function loadGame() {
+      try {
+        const roomRef = getRoomRef(roomCode);
+        const snapshot = await get(roomRef);
+        const data = snapshot.val();
+
+        if (!data || !data.players || !data.players[playerId]) {
+          window.location.href = '../../index.html';
+          return;
+        }
+
+        isHost = data.hostId === playerId;
+        const player = data.players[playerId];
+
+        // Check if player is a late joiner (not in game when it started)
+        if (!player.inGame) {
+          window.location.href = 'waiting.html?roomCode=' + roomCode + '&playerId=' + playerId;
+          return;
+        }
+
+        myRole = player.role;
+        myHint = player.hint;
+        word = data.gameData?.imposter?.word;
+        const startTime = data.gameData?.imposter?.startTime;
+        const gameDuration = data.settings?.imposter?.gameDuration || 5;
+
+        // Setup UI - card looks the same for everyone
+        if (myRole === 'imposter') {
+          wordText.textContent = 'Imposter';
+          roleText.textContent = 'You are an imposter!';
+          hintText.textContent = `Your hint: ${myHint}`;
+          hintText.style.display = 'block';
+        } else {
+          wordText.textContent = word;
+          roleText.textContent = 'You are innocent';
+        }
+
+        // Show appropriate button
+        if (isHost) {
+          beginVotingBtn.style.display = 'block';
+        } else {
+          requestVoteBtn.style.display = 'block';
+        }
+
+        // Display turn order
+        displayTurnOrder(data);
+
+        // Start timer - calculate time remaining from startTime
+        const now = Date.now();
+        const elapsed = Math.floor((now - startTime) / 1000);
+        const totalSeconds = gameDuration * 60;
+        const remaining = Math.max(0, totalSeconds - elapsed);
+
+        timer = new Timer({
+          element: document.getElementById('timer'),
+          duration: remaining,
+          warningAt: 60,
+          onComplete: () => {
+            if (isHost) transitionToVoting();
+          }
+        });
+        timer.start();
+      } catch (error) {
+        console.error('Error loading game:', error);
+        showError('Failed to load game');
+      }
+    }
+
+    async function transitionToVoting() {
+      try {
+        const updates = {};
+        updates[`rooms/${roomCode}/phase`] = 'voting';
+        await update(dbRef(db), updates);
+      } catch (error) {
+        console.error('Error transitioning to voting:', error);
+        showError('Failed to start voting');
+      }
+    }
+
+    // Listen for phase changes and vote requests
+    listenToRoom(roomCode, (snapshot) => {
+      const data = snapshot.val();
+      if (!data) {
+        window.location.href = '../../index.html';
+        return;
+      }
+
+      if (data.phase === 'voting') {
+        if (timer) timer.stop();
+        window.location.href = `voting.html?roomCode=${roomCode}&playerId=${playerId}`;
+        return;
+      }
+
+      // Update vote request status
+      updateVoteRequestStatus(data);
+    });
+
+    beginVotingBtn.addEventListener('click', async () => {
+      if (!isHost) return;
+
+      beginVotingBtn.disabled = true;
+      beginVotingBtn.textContent = 'Starting voting...';
+      await transitionToVoting();
+    });
+
+    // Request vote button
+    requestVoteBtn.addEventListener('click', async () => {
+      const hasRequested = requestVoteBtn.classList.contains('requested');
+
+      try {
+        const updates = {};
+        updates[`rooms/${roomCode}/gameData/imposter/voteRequests/${playerId}`] = !hasRequested;
+        await update(dbRef(db), updates);
+
+        if (!hasRequested) {
+          requestVoteBtn.classList.add('requested');
+          requestVoteBtn.textContent = 'Cancel Request';
+        } else {
+          requestVoteBtn.classList.remove('requested');
+          requestVoteBtn.textContent = 'Request to Begin Voting';
+        }
+      } catch (error) {
+        console.error('Error updating vote request:', error);
+      }
+    });
+
+    // Update vote request status display
+    function updateVoteRequestStatus(data) {
+      const voteRequests = data.gameData?.imposter?.voteRequests || {};
+      const players = data.players || {};
+      const inGamePlayers = Object.keys(players).filter(pid => players[pid].inGame);
+
+      const requestCount = Object.values(voteRequests).filter(v => v === true).length;
+      const totalCount = inGamePlayers.length;
+
+      if (requestCount > 0) {
+        voteRequestStatus.textContent = `${requestCount}/${totalCount} players requested to begin voting`;
+      } else {
+        voteRequestStatus.textContent = '';
+      }
+    }
+
+    loadGame();
+  </script>
+</body>
+</html>

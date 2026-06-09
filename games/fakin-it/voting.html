@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Fakin' It - Voting</title>
+  <link rel="stylesheet" href="../../style.css">
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="../shared-voting-styles.css">
+  <link rel="stylesheet" href="../../styles/components/timer.css">
+  <link rel="stylesheet" href="../../styles/components/question-display.css">
+</head>
+<body>
+  <div class="container">
+    <h1>🎮 Voting Round</h1>
+
+    <div id="timerDisplay" class="timer"></div>
+
+    <div class="question-display">
+      <h3>Question</h3>
+      <p id="questionText">Loading...</p>
+    </div>
+
+    <div class="status-message" id="overseerWaiting" style="display: none;">
+      Waiting for players to vote...
+    </div>
+
+    <div class="vote-instructions" id="voteInstructions">
+      Vote for <strong><span id="numFakersText">1</span> faker(s)</strong>
+    </div>
+
+    <div id="answersContainer"></div>
+
+    <div class="vote-status" id="votingStatus">0/0 players voted</div>
+
+    <button id="submitBtn" class="button" disabled>Submit Vote</button>
+    <button id="changeVoteBtn" class="button button--secondary" style="display: none;">Change Vote</button>
+    <button id="forceNextBtn" class="button button--secondary" style="display: none; margin-top: 10px;">Force Results (Host)</button>
+  </div>
+
+  <script type="module">
+    import { getRoomRef, listenToRoom, update, get, ref as dbRef } from '../../firebase-config.js';
+    import { getUrlParams } from '../../utils.js';
+    import { db } from '../../firebase-config.js';
+    import { Timer } from '../../src/components/Timer.js';
+
+    const { roomCode, playerId } = getUrlParams();
+
+    if (!roomCode || !playerId) {
+      window.location.href = '../../index.html';
+    }
+
+    const questionText = document.getElementById('questionText');
+    const overseerWaiting = document.getElementById('overseerWaiting');
+    const voteInstructions = document.getElementById('voteInstructions');
+    const numFakersText = document.getElementById('numFakersText');
+    const answersContainer = document.getElementById('answersContainer');
+    const submitBtn = document.getElementById('submitBtn');
+    const changeVoteBtn = document.getElementById('changeVoteBtn');
+    const forceNextBtn = document.getElementById('forceNextBtn');
+    const errorMessage = document.getElementById('errorMessage');
+    const votingStatus = document.getElementById('votingStatus');
+
+    let selectedVotes = [];
+    let maxVotes = 1;
+    let hasVoted = false;
+    let totalVoters = 0;
+    let votedCount = 0;
+    let overseer = null;
+    let isOverseer = false;
+    let timer = null;
+
+    function showError(message) {
+      errorMessage.textContent = message;
+      errorMessage.style.display = 'block';
+    }
+
+    async function loadAnswers() {
+      try {
+        const roomRef = getRoomRef(roomCode);
+        const snapshot = await get(roomRef);
+        const data = snapshot.val();
+
+        if (!data) {
+          window.location.href = '../../index.html';
+          return;
+        }
+
+        const questions = data.gameData?.fakinIt?.questions;
+        const players = data.players || {};
+        overseer = data.settings?.fakinIt?.overseer;
+        maxVotes = data.settings?.fakinIt?.numFakers || 1;
+
+        // Check if player is a late joiner (not in game when it started)
+        if (!players[playerId]?.inGame) {
+          window.location.href = 'waiting.html?roomCode=' + roomCode + '&playerId=' + playerId;
+          return;
+        }
+
+        // Check if this player is the overseer
+        if (playerId === overseer) {
+          isOverseer = true;
+          overseerWaiting.style.display = 'block';
+          voteInstructions.style.display = 'none';
+          submitBtn.style.display = 'none';
+          // Overseer can still see answers but can't vote
+        } else {
+          numFakersText.textContent = maxVotes;
+        }
+
+        questionText.textContent = questions.real;
+
+        // Check if current player already voted
+        if (players[playerId]?.votes) {
+          hasVoted = true;
+          selectedVotes = players[playerId].votes;
+        }
+
+        // Display all non-overseer players' answers (exclude late joiners)
+        answersContainer.innerHTML = '';
+        const playerIds = Object.keys(players);
+        const nonOverseerIds = playerIds.filter(pid => pid !== overseer && players[pid].inGame);
+
+        nonOverseerIds.forEach(pid => {
+          const player = players[pid];
+          const card = document.createElement('div');
+          card.className = 'player-card';
+          card.dataset.playerId = pid;
+
+          const nameEl = document.createElement('h3');
+          nameEl.className = 'player-card__name';
+          nameEl.textContent = player.name + (pid === playerId ? ' (You)' : '');
+
+          const answerEl = document.createElement('p');
+          answerEl.className = 'player-card__answer';
+          answerEl.textContent = player.answer || 'No answer';
+
+          card.appendChild(nameEl);
+          card.appendChild(answerEl);
+
+          // Don't allow voting for yourself or if overseer
+          if (!isOverseer && pid !== playerId && !hasVoted) {
+            card.addEventListener('click', () => toggleVote(pid, card));
+          } else {
+            if (pid === playerId) {
+              card.classList.add('player-card--disabled');
+            } else {
+              card.style.cursor = 'default';
+            }
+          }
+
+          // Highlight previously selected votes
+          if (hasVoted && selectedVotes.includes(pid)) {
+            card.classList.add('player-card--selected');
+          }
+
+          answersContainer.appendChild(card);
+        });
+
+        if (!isOverseer) {
+          if (hasVoted) {
+            submitBtn.style.display = 'none';
+            changeVoteBtn.style.display = 'block';
+          } else {
+            updateSubmitButton();
+          }
+        }
+
+        // Show force-next button for host
+        if (data.hostId === playerId) {
+          forceNextBtn.style.display = 'block';
+        }
+
+        // Start timer
+        const timerDuration = data.settings?.fakinIt?.votingTimer || 60;
+        timer = new Timer({
+          element: document.getElementById('timerDisplay'),
+          duration: timerDuration,
+          warningAt: 60,
+          onComplete: () => {
+            if (playerId === overseer || isOverseer) updatePhaseToResults();
+          }
+        });
+        timer.start();
+      } catch (error) {
+        console.error('Error loading answers:', error);
+        showError('Failed to load answers');
+      }
+    }
+
+    function toggleVote(pid, card) {
+      if (hasVoted) return;
+
+      const index = selectedVotes.indexOf(pid);
+      if (index > -1) {
+        // Remove vote
+        selectedVotes.splice(index, 1);
+        card.classList.remove('player-card--selected');
+      } else {
+        // Add vote if under limit
+        if (selectedVotes.length < maxVotes) {
+          selectedVotes.push(pid);
+          card.classList.add('player-card--selected');
+        } else {
+          showError(`You can only vote for ${maxVotes} faker(s)`);
+          setTimeout(() => {
+            errorMessage.style.display = 'none';
+          }, 2000);
+        }
+      }
+
+      updateSubmitButton();
+    }
+
+    function updateSubmitButton() {
+      submitBtn.disabled = selectedVotes.length === 0;
+    }
+
+    loadAnswers();
+
+    // Listen for voting updates
+    listenToRoom(roomCode, (snapshot) => {
+      const data = snapshot.val();
+      if (!data) return;
+
+      const players = data.players || {};
+      const playerIds = Object.keys(players);
+      const nonOverseerIds = playerIds.filter(pid => pid !== data.settings?.fakinIt?.overseer && players[pid].inGame);
+
+      totalVoters = nonOverseerIds.length;
+      votedCount = nonOverseerIds.filter(pid => players[pid].votes).length;
+
+      votingStatus.textContent = `${votedCount}/${totalVoters} players voted`;
+
+      // Check if all voted
+      if (votedCount === totalVoters && data.phase === 'voting') {
+        // Transition to results
+        if (data.hostId === playerId) {
+          updatePhaseToResults();
+        }
+      }
+
+      // Handle phase change
+      if (data.phase === 'results') {
+        window.location.href = `results.html?roomCode=${roomCode}&playerId=${playerId}`;
+      }
+    });
+
+    async function updatePhaseToResults() {
+      try {
+        const updates = {};
+        updates[`rooms/${roomCode}/phase`] = 'results';
+        await update(dbRef(db), updates);
+      } catch (error) {
+        console.error('Error updating phase:', error);
+      }
+    }
+
+    submitBtn.addEventListener('click', async () => {
+      if (selectedVotes.length === 0) return;
+      const updates = {};
+      updates[`rooms/${roomCode}/players/${playerId}/votes`] = selectedVotes;
+      await update(dbRef(db), updates);
+      hasVoted = true;
+      submitBtn.style.display = 'none';
+      changeVoteBtn.style.display = 'block';
+      const cards = document.querySelectorAll('.answer-card');
+      cards.forEach(card => card.onclick = null);
+    });
+
+    // Change vote button
+    changeVoteBtn.addEventListener('click', async () => {
+      await update(dbRef(db), { [`rooms/${roomCode}/players/${playerId}/votes`]: null });
+      hasVoted = false;
+      selectedVotes = [];
+      changeVoteBtn.style.display = 'none';
+      submitBtn.style.display = 'block';
+      submitBtn.disabled = true;
+      loadAnswers();
+    });
+
+    // Force-next button
+    forceNextBtn.addEventListener('click', () => {
+      if (confirm('Skip to results?')) updatePhaseToResults();
+    });
+  </script>
+</body>
+</html>

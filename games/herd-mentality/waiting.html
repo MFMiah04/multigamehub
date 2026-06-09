@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Herd Mentality - Waiting</title>
+  <link rel="stylesheet" href="../../style.css">
+</head>
+<body>
+  <div class="container">
+    <h1>🐄 Herd Mentality</h1>
+    <div class="waiting-message">
+      <h2>Game in Progress</h2>
+      <p>Wait for the current game to finish</p>
+      <div class="loading-spinner"></div>
+    </div>
+  </div>
+
+  <script type="module">
+    import { listenToRoom } from '../../firebase-config.js';
+    import { getUrlParams } from '../../utils.js';
+
+    const { roomCode, playerId } = getUrlParams();
+
+    if (!roomCode || !playerId) {
+      window.location.href = '../../index.html';
+    }
+
+    listenToRoom(roomCode, (snapshot) => {
+      const data = snapshot.val();
+      if (!data) {
+        window.location.href = '../../index.html';
+        return;
+      }
+
+      if (data.phase === 'lobby') {
+        window.location.href = `../../lobby.html?roomCode=${roomCode}&playerId=${playerId}`;
+      }
+    });
+  </script>
+</body>
+</html>

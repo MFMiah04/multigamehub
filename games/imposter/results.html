@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Imposter - Results</title>
+  <link rel="stylesheet" href="../../style.css">
+  <link rel="stylesheet" href="../shared-voting-styles.css">
+</head>
+<body>
+  <div class="container">
+    <h1>🕵️ Results</h1>
+
+    <button id="revealWordBtn" class="button" style="display: none;">Reveal Word</button>
+
+    <div class="reveal-display" id="wordDisplay">
+      <p>The word was:</p>
+      <h2 id="wordText">Loading...</h2>
+    </div>
+
+    <div class="results-list" id="resultsList"></div>
+
+    <div id="errorMessage" class="error" style="display: none;"></div>
+
+    <button id="returnToLobbyBtn" class="button">Return to Lobby</button>
+  </div>
+
+  <script type="module">
+    import { getRoomRef, listenToRoom, update, get, ref as dbRef } from '../../firebase-config.js';
+    import { getUrlParams } from '../../utils.js';
+    import { db } from '../../firebase-config.js';
+
+    const { roomCode, playerId } = getUrlParams();
+
+    if (!roomCode || !playerId) {
+      window.location.href = '../../index.html';
+    }
+
+    const wordDisplayDiv = document.getElementById('wordDisplay');
+    const wordText = document.getElementById('wordText');
+    const resultsList = document.getElementById('resultsList');
+    const revealWordBtn = document.getElementById('revealWordBtn');
+    const returnToLobbyBtn = document.getElementById('returnToLobbyBtn');
+    const errorMessage = document.getElementById('errorMessage');
+
+    let isHost = false;
+    let allPlayers = {};
+    let word = '';
+    let wordRevealed = false;
+
+    function showError(message) {
+      errorMessage.textContent = message;
+      errorMessage.style.display = 'block';
+    }
+
+    // Load results
+    async function loadResults() {
+      try {
+        const roomRef = getRoomRef(roomCode);
+        const snapshot = await get(roomRef);
+        const data = snapshot.val();
+
+        if (!data || !data.players) {
+          window.location.href = '../../index.html';
+          return;
+        }
+
+        isHost = data.hostId === playerId;
+        allPlayers = data.players || {};
+        word = data.gameData?.imposter?.word || 'Unknown';
+        wordRevealed = data.gameData?.imposter?.wordRevealed || false;
+
+        wordText.textContent = word;
+
+        // Show reveal button for host if word not revealed yet
+        if (isHost && !wordRevealed) {
+          revealWordBtn.style.display = 'block';
+        }
+
+        // Show word if already revealed
+        if (wordRevealed) {
+          wordDisplayDiv.style.display = 'block';
+        }
+
+        displayResults();
+      } catch (error) {
+        console.error('Error loading results:', error);
+        showError('Failed to load results');
+      }
+    }
+
+    function displayResults() {
+      resultsList.innerHTML = '';
+
+      // Calculate vote counts for each player
+      const playerIds = Object.keys(allPlayers).filter(pid => allPlayers[pid].role);
+      const voteCounts = {};
+
+      playerIds.forEach(pid => {
+        voteCounts[pid] = 0;
+      });
+
+      // Count votes
+      playerIds.forEach(voterId => {
+        const votes = allPlayers[voterId].votes || {};
+        Object.keys(votes).forEach(votedId => {
+          if (votes[votedId]) {
+            voteCounts[votedId] = (voteCounts[votedId] || 0) + 1;
+          }
+        });
+      });
+
+      // Sort players by vote count (descending)
+      const sortedPlayers = playerIds.sort((a, b) => {
+        return (voteCounts[b] || 0) - (voteCounts[a] || 0);
+      });
+
+      // Display results
+      sortedPlayers.forEach(pid => {
+        const player = allPlayers[pid];
+        const voteCount = voteCounts[pid] || 0;
+        const isImposter = player.role === 'imposter';
+
+        const resultItem = document.createElement('div');
+        resultItem.className = 'result-item';
+        if (isImposter) resultItem.classList.add('imposter');
+
+        // Player info section
+        const playerInfo = document.createElement('div');
+        playerInfo.className = 'player-info';
+
+        const nameEl = document.createElement('h3');
+        const roleLabel = isImposter ? ' (Imposter)' : '';
+        const youLabel = pid === playerId ? ' (You)' : '';
+        nameEl.textContent = player.name + roleLabel + youLabel;
+
+        playerInfo.appendChild(nameEl);
+
+        // Vote section
+        const voteSection = document.createElement('div');
+        voteSection.className = 'vote-section';
+
+        const voteCountEl = document.createElement('div');
+        voteCountEl.className = 'vote-count';
+        voteCountEl.textContent = `${voteCount} vote${voteCount !== 1 ? 's' : ''}`;
+
+        voteSection.appendChild(voteCountEl);
+
+        // Add expandable voters list
+        if (voteCount > 0) {
+          // Find who voted for this player
+          const voters = [];
+          playerIds.forEach(voterId => {
+            const votes = allPlayers[voterId].votes || {};
+            if (votes[pid]) {
+              voters.push(allPlayers[voterId].name);
+            }
+          });
+
+          const votersList = document.createElement('div');
+          votersList.className = 'voters-list';
+          votersList.textContent = voters.join(', ');
+
+          voteCountEl.addEventListener('click', () => {
+            votersList.classList.toggle('show');
+          });
+
+          voteSection.appendChild(votersList);
+        }
+
+        resultItem.appendChild(playerInfo);
+        resultItem.appendChild(voteSection);
+
+        resultsList.appendChild(resultItem);
+      });
+    }
+
+    // Reveal word
+    revealWordBtn.addEventListener('click', async () => {
+      if (!isHost) return;
+
+      try {
+        revealWordBtn.disabled = true;
+        revealWordBtn.textContent = 'Revealing...';
+
+        const updates = {};
+        updates[`rooms/${roomCode}/gameData/imposter/wordRevealed`] = true;
+        await update(dbRef(db), updates);
+
+        wordRevealed = true;
+        wordDisplayDiv.style.display = 'block';
+        revealWordBtn.style.display = 'none';
+      } catch (error) {
+        console.error('Error revealing word:', error);
+        showError('Failed to reveal word');
+        revealWordBtn.disabled = false;
+        revealWordBtn.textContent = 'Reveal Word';
+      }
+    });
+
+    // Return to lobby
+    returnToLobbyBtn.addEventListener('click', async () => {
+      if (!isHost) {
+        // Non-host just waits
+        returnToLobbyBtn.disabled = true;
+        returnToLobbyBtn.textContent = 'Waiting for host...';
+        return;
+      }
+
+      try {
+        returnToLobbyBtn.disabled = true;
+        returnToLobbyBtn.textContent = 'Returning to lobby...';
+
+        // Reset player roles, votes, and inGame flag
+        const playerIds = Object.keys(allPlayers);
+        const updates = {};
+
+        playerIds.forEach(pid => {
+          updates[`rooms/${roomCode}/players/${pid}/role`] = null;
+          updates[`rooms/${roomCode}/players/${pid}/hint`] = null;
+          updates[`rooms/${roomCode}/players/${pid}/votes`] = null;
+          updates[`rooms/${roomCode}/players/${pid}/inGame`] = null;
+        });
+
+        updates[`rooms/${roomCode}/phase`] = 'lobby';
+        updates[`rooms/${roomCode}/gameData/imposter`] = null;
+
+        await update(dbRef(db), updates);
+      } catch (error) {
+        console.error('Error returning to lobby:', error);
+        showError('Failed to return to lobby');
+        returnToLobbyBtn.disabled = false;
+        returnToLobbyBtn.textContent = 'Return to Lobby';
+      }
+    });
+
+    // Listen for phase changes and word reveal
+    listenToRoom(roomCode, (snapshot) => {
+      const data = snapshot.val();
+      if (!data) {
+        window.location.href = '../../index.html';
+        return;
+      }
+
+      // Check if word was revealed
+      const newWordRevealed = data.gameData?.imposter?.wordRevealed || false;
+      if (newWordRevealed && !wordRevealed) {
+        wordRevealed = true;
+        wordDisplayDiv.style.display = 'block';
+        revealWordBtn.style.display = 'none';
+      }
+
+      if (data.phase === 'lobby') {
+        window.location.href = `../../lobby.html?roomCode=${roomCode}&playerId=${playerId}`;
+      }
+    });
+
+    loadResults();
+  </script>
+</body>
+</html>

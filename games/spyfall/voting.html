@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Spyfall - Voting</title>
+  <link rel="stylesheet" href="../../style.css">
+  <link rel="stylesheet" href="../shared-voting-styles.css">
+  <link rel="stylesheet" href="../../styles/components/timer.css">
+</head>
+<body>
+  <div class="container">
+    <h1>🔍 Voting Round</h1>
+
+    <div id="timerDisplay" class="timer"></div>
+
+    <div class="vote-instructions" id="voteInstructions">
+      Vote for who you think is the <strong>spy</strong>
+    </div>
+
+    <div id="playersContainer"></div>
+
+    <div class="vote-status" id="voteStatus">0/0 players voted</div>
+
+    <button id="submitVoteBtn" class="button" disabled>Submit Vote</button>
+    <button id="changeVoteBtn" class="button button--secondary" style="display: none;">Change Vote</button>
+    <button id="forceNextBtn" class="button button--secondary" style="display: none; margin-top: 10px;">Force Results (Host)</button>
+  </div>
+
+  <script type="module">
+    import { getRoomRef, listenToRoom, update, get, ref as dbRef } from '../../firebase-config.js';
+    import { getUrlParams } from '../../utils.js';
+    import { db } from '../../firebase-config.js';
+    import { Timer } from '../../src/components/Timer.js';
+
+    const { roomCode, playerId } = getUrlParams();
+
+    if (!roomCode || !playerId) {
+      window.location.href = '../../index.html';
+    }
+
+    const playersContainer = document.getElementById('playersContainer');
+    const voteStatus = document.getElementById('voteStatus');
+    const submitVoteBtn = document.getElementById('submitVoteBtn');
+    const changeVoteBtn = document.getElementById('changeVoteBtn');
+    const forceNextBtn = document.getElementById('forceNextBtn');
+
+    let selectedVotes = new Set();
+    let hasVoted = false;
+    let isHost = false;
+    let timer = null;
+    let numSpies = 1;
+
+    async function loadPlayers() {
+      try {
+        const roomRef = getRoomRef(roomCode);
+        const snapshot = await get(roomRef);
+        const data = snapshot.val();
+
+        if (!data) {
+          window.location.href = '../../index.html';
+          return;
+        }
+
+        const playerData = data.players?.[playerId];
+
+        // Check if player is in game
+        if (!playerData?.inGame) {
+          window.location.href = `waiting.html?roomCode=${roomCode}&playerId=${playerId}`;
+          return;
+        }
+
+        const players = data.players || {};
+        const playerIds = Object.keys(players).filter(pid => players[pid].inGame);
+
+        isHost = data.hostId === playerId;
+        numSpies = data.settings?.spyfall?.numSpies || 1;
+
+        // Update vote instructions
+        const voteInstructions = document.getElementById('voteInstructions');
+        const spyText = numSpies === 1 ? 'spy' : 'spies';
+        voteInstructions.innerHTML = `Vote for up to <strong>${numSpies}</strong> <strong>${spyText}</strong>`;
+
+        // Check if already voted
+        hasVoted = playerData.spyVotes !== undefined && playerData.spyVotes !== null;
+
+        if (hasVoted) {
+          submitVoteBtn.style.display = 'none';
+          changeVoteBtn.style.display = 'block';
+          // Restore previous votes
+          selectedVotes = new Set(playerData.spyVotes || []);
+        }
+
+        if (isHost) forceNextBtn.style.display = 'block';
+
+        const timerDuration = data.settings?.spyfall?.votingTimer || 60;
+        timer = new Timer({
+          element: document.getElementById('timerDisplay'),
+          duration: timerDuration,
+          warningAt: 60,
+          onComplete: () => {
+            if (isHost) {
+              const updates = {};
+              updates[`rooms/${roomCode}/phase`] = 'results';
+              update(dbRef(db), updates);
+            }
+          }
+        });
+        timer.start();
+
+        playersContainer.innerHTML = '';
+
+        playerIds.forEach(pid => {
+          const player = players[pid];
+          const card = document.createElement('div');
+          card.className = 'player-card';
+
+          // Disable if already voted, or if voting for yourself
+          if (hasVoted || pid === playerId) {
+            card.classList.add('player-card--disabled');
+          }
+
+          // Show selected state if this player was voted for
+          if (selectedVotes.has(pid)) {
+            card.classList.add('player-card--selected');
+          }
+
+          const nameEl = document.createElement('h3');
+          nameEl.className = 'player-card__name';
+          nameEl.textContent = player.name + (pid === playerId ? ' (You)' : '');
+
+          card.appendChild(nameEl);
+
+          // Don't allow voting if already voted or voting for yourself
+          if (!hasVoted && pid !== playerId) {
+            card.addEventListener('click', () => {
+              // Toggle selection
+              if (selectedVotes.has(pid)) {
+                selectedVotes.delete(pid);
+                card.classList.remove('player-card--selected');
+              } else {
+                // Check if we've reached the max number of votes
+                if (selectedVotes.size < numSpies) {
+                  selectedVotes.add(pid);
+                  card.classList.add('player-card--selected');
+                }
+              }
+              submitVoteBtn.disabled = selectedVotes.size === 0;
+            });
+          }
+
+          playersContainer.appendChild(card);
+        });
+
+        // Count votes to show progress
+        const voteCount = playerIds.filter(pid => {
+          const p = players[pid];
+          return p.spyVote !== undefined && p.spyVote !== null;
+        }).length;
+
+        voteStatus.textContent = `${voteCount}/${playerIds.length} players voted`;
+
+        // Auto-advance when all voted
+        if (voteCount === playerIds.length) {
+          setTimeout(() => {
+            const hostId = data.hostId;
+            if (playerId === hostId) {
+              const updates = {};
+              updates[`rooms/${roomCode}/phase`] = 'results';
+              update(dbRef(db), updates);
+            }
+          }, 1000);
+        }
+      } catch (error) {
+        console.error('Error loading players:', error);
+      }
+    }
+
+    loadPlayers();
+
+    // Submit vote
+    submitVoteBtn.addEventListener('click', async () => {
+      if (selectedVotes.size === 0 || hasVoted) return;
+      const updates = {};
+      updates[`rooms/${roomCode}/players/${playerId}/spyVotes`] = Array.from(selectedVotes);
+      await update(dbRef(db), updates);
+      hasVoted = true;
+      submitVoteBtn.style.display = 'none';
+      changeVoteBtn.style.display = 'block';
+    });
+
+    // Change vote
+    changeVoteBtn.addEventListener('click', async () => {
+      await update(dbRef(db), { [`rooms/${roomCode}/players/${playerId}/spyVotes`]: null });
+      hasVoted = false;
+      selectedVotes.clear();
+      changeVoteBtn.style.display = 'none';
+      submitVoteBtn.style.display = 'block';
+      loadPlayers();
+    });
+
+    // Force-next
+    forceNextBtn.addEventListener('click', () => {
+      if (confirm('Skip to results?')) {
+        const updates = {};
+        updates[`rooms/${roomCode}/phase`] = 'results';
+        update(dbRef(db), updates);
+      }
+    });
+
+    // Listen for updates and phase changes
+    listenToRoom(roomCode, (snapshot) => {
+      const data = snapshot.val();
+      if (!data) return;
+
+      if (data.phase === 'results') {
+        window.location.href = `results.html?roomCode=${roomCode}&playerId=${playerId}`;
+      } else if (data.phase === 'lobby') {
+        window.location.href = `../../lobby.html?roomCode=${roomCode}&playerId=${playerId}`;
+      } else {
+        // Update vote count
+        const players = data.players || {};
+        const playerIds = Object.keys(players).filter(pid => players[pid].inGame);
+        const voteCount = playerIds.filter(pid => {
+          const p = players[pid];
+          return p.spyVote !== undefined && p.spyVote !== null;
+        }).length;
+
+        voteStatus.textContent = `${voteCount}/${playerIds.length} players voted`;
+
+        // Auto-advance when all voted
+        if (voteCount === playerIds.length) {
+          const hostId = data.hostId;
+          if (playerId === hostId) {
+            setTimeout(() => {
+              const updates = {};
+              updates[`rooms/${roomCode}/phase`] = 'results';
+              update(dbRef(db), updates);
+            }, 1000);
+          }
+        }
+      }
+    });
+  </script>
+</body>
+</html>

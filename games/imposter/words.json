@@ -1,0 +1,414 @@
+[
+  {
+    "word": "Astronaut",
+    "hints": ["Orbit", "Weightless", "Mission", "Capsule", "Training"]
+  },
+  {
+    "word": "Architect",
+    "hints": ["Blueprint", "Design", "Structure", "Planning", "Vision"]
+  },
+  {
+    "word": "Submarine",
+    "hints": ["Depth", "Pressure", "Sonar", "Torpedo", "Periscope"]
+  },
+  {
+    "word": "Glacier",
+    "hints": ["Movement", "Ancient", "Melting", "Crevasse", "Formation"]
+  },
+  {
+    "word": "Orchestra",
+    "hints": ["Conductor", "Harmony", "Performance", "Rehearsal", "Symphony"]
+  },
+  {
+    "word": "Volcano",
+    "hints": ["Dormant", "Magma", "Pressure", "Crater", "Tectonic"]
+  },
+  {
+    "word": "Parachute",
+    "hints": ["Descent", "Canopy", "Deployment", "Ripcord", "Harness"]
+  },
+  {
+    "word": "Lighthouse",
+    "hints": ["Navigation", "Beacon", "Rotating", "Keeper", "Shoreline"]
+  },
+  {
+    "word": "Laboratory",
+    "hints": ["Experiment", "Research", "Microscope", "Hypothesis", "Analysis"]
+  },
+  {
+    "word": "Pyramid",
+    "hints": ["Ancient", "Pharaoh", "Limestone", "Chamber", "Monument"]
+  },
+  {
+    "word": "Chameleon",
+    "hints": ["Adaptation", "Camouflage", "Tongue", "Reptile", "Vision"]
+  },
+  {
+    "word": "Windmill",
+    "hints": ["Blades", "Rural", "Rotation", "Energy", "Grain"]
+  },
+  {
+    "word": "Hourglass",
+    "hints": ["Duration", "Sand", "Flipped", "Measurement", "Narrow"]
+  },
+  {
+    "word": "Cactus",
+    "hints": ["Drought", "Spines", "Desert", "Storage", "Bloom"]
+  },
+  {
+    "word": "Compass",
+    "hints": ["Direction", "Magnetic", "Navigation", "Needle", "Cardinal"]
+  },
+  {
+    "word": "Avalanche",
+    "hints": ["Descent", "Snow", "Momentum", "Danger", "Slope"]
+  },
+  {
+    "word": "Aquarium",
+    "hints": ["Glass", "Habitat", "Filter", "Species", "Display"]
+  },
+  {
+    "word": "Telescope",
+    "hints": ["Observation", "Distant", "Lens", "Magnification", "Astronomy"]
+  },
+  {
+    "word": "Quicksand",
+    "hints": ["Sinking", "Saturation", "Unstable", "Struggle", "Density"]
+  },
+  {
+    "word": "Chandelier",
+    "hints": ["Ceiling", "Crystals", "Elegant", "Suspended", "Illuminate"]
+  },
+  {
+    "word": "Pendulum",
+    "hints": ["Swing", "Gravity", "Period", "Clock", "Arc"]
+  },
+  {
+    "word": "Fossil",
+    "hints": ["Ancient", "Preserved", "Sediment", "Extinction", "Discovery"]
+  },
+  {
+    "word": "Satellite",
+    "hints": ["Orbit", "Signal", "Launch", "Communication", "Transmission"]
+  },
+  {
+    "word": "Canyon",
+    "hints": ["Erosion", "Depth", "River", "Layers", "Formation"]
+  },
+  {
+    "word": "Metronome",
+    "hints": ["Tempo", "Rhythm", "Practice", "Tick", "Adjustable"]
+  },
+  {
+    "word": "Tornado",
+    "hints": ["Funnel", "Rotation", "Debris", "Warning", "Pressure"]
+  },
+  {
+    "word": "Amphitheater",
+    "hints": ["Acoustics", "Seating", "Semicircle", "Performance", "Ancient"]
+  },
+  {
+    "word": "Kaleidoscope",
+    "hints": ["Pattern", "Mirrors", "Rotation", "Symmetry", "Fragment"]
+  },
+  {
+    "word": "Harmonica",
+    "hints": ["Reed", "Breath", "Portable", "Folk", "Chromatic"]
+  },
+  {
+    "word": "Catapult",
+    "hints": ["Tension", "Launch", "Medieval", "Projectile", "Siege"]
+  },
+  {
+    "word": "Trampoline",
+    "hints": ["Springs", "Bounce", "Tension", "Gymnastics", "Fabric"]
+  },
+  {
+    "word": "Thermometer",
+    "hints": ["Mercury", "Measurement", "Calibration", "Celsius", "Expansion"]
+  },
+  {
+    "word": "Stalactite",
+    "hints": ["Formation", "Drip", "Mineral", "Ceiling", "Cave"]
+  },
+  {
+    "word": "Escalator",
+    "hints": ["Movement", "Steps", "Continuous", "Handrail", "Motor"]
+  },
+  {
+    "word": "Accordion",
+    "hints": ["Bellows", "Keys", "Squeeze", "Polka", "Reed"]
+  },
+  {
+    "word": "Scarecrow",
+    "hints": ["Fields", "Deterrent", "Stuffed", "Post", "Birds"]
+  },
+  {
+    "word": "Peacock",
+    "hints": ["Plumage", "Display", "Iridescent", "Courtship", "Tail"]
+  },
+  {
+    "word": "Origami",
+    "hints": ["Folding", "Precision", "Crane", "Japanese", "Square"]
+  },
+  {
+    "word": "Geyser",
+    "hints": ["Eruption", "Steam", "Thermal", "Periodic", "Pressure"]
+  },
+  {
+    "word": "Sextant",
+    "hints": ["Navigation", "Celestial", "Angle", "Maritime", "Horizon"]
+  },
+  {
+    "word": "Labyrinth",
+    "hints": ["Maze", "Pathways", "Ancient", "Minotaur", "Complex"]
+  },
+  {
+    "word": "Hammock",
+    "hints": ["Suspended", "Relaxation", "Rope", "Trees", "Swing"]
+  },
+  {
+    "word": "Silhouette",
+    "hints": ["Outline", "Shadow", "Profile", "Backlight", "Shape"]
+  },
+  {
+    "word": "Barometer",
+    "hints": ["Pressure", "Weather", "Measurement", "Prediction", "Mercury"]
+  },
+  {
+    "word": "Dinosaur",
+    "hints": ["Extinct", "Mesozoic", "Reptile", "Paleontology", "Evolution"]
+  },
+  {
+    "word": "Gargoyle",
+    "hints": ["Gothic", "Stone", "Drainage", "Medieval", "Grotesque"]
+  },
+  {
+    "word": "Mirage",
+    "hints": ["Illusion", "Desert", "Refraction", "Heat", "Optical"]
+  },
+  {
+    "word": "Sundial",
+    "hints": ["Shadow", "Gnomon", "Ancient", "Solar", "Time"]
+  },
+  {
+    "word": "Silkworm",
+    "hints": ["Cocoon", "Metamorphosis", "Textile", "Larvae", "Mulberry"]
+  },
+  {
+    "word": "Prism",
+    "hints": ["Refraction", "Spectrum", "Triangle", "Light", "Dispersion"]
+  },
+  {
+    "word": "Masquerade",
+    "hints": ["Disguise", "Ball", "Identity", "Costume", "Mystery"]
+  },
+  {
+    "word": "Hieroglyphics",
+    "hints": ["Ancient", "Symbols", "Egyptian", "Carving", "Decode"]
+  },
+  {
+    "word": "Constellation",
+    "hints": ["Pattern", "Celestial", "Navigate", "Mythology", "Connect"]
+  },
+  {
+    "word": "Tapestry",
+    "hints": ["Woven", "Wall", "Thread", "Narrative", "Medieval"]
+  },
+  {
+    "word": "Cobweb",
+    "hints": ["Silk", "Spiral", "Abandoned", "Dusty", "Strands"]
+  },
+  {
+    "word": "Quartz",
+    "hints": ["Crystal", "Formation", "Silicon", "Transparent", "Mineral"]
+  },
+  {
+    "word": "Whirlpool",
+    "hints": ["Vortex", "Rotation", "Current", "Spiral", "Suction"]
+  },
+  {
+    "word": "Cocoon",
+    "hints": ["Transformation", "Silk", "Protection", "Metamorphosis", "Enclosed"]
+  },
+  {
+    "word": "Abacus",
+    "hints": ["Beads", "Calculation", "Ancient", "Rows", "Manual"]
+  },
+  {
+    "word": "Eclipse",
+    "hints": ["Shadow", "Alignment", "Celestial", "Temporary", "Corona"]
+  },
+  {
+    "word": "Porpoise",
+    "hints": ["Marine", "Intelligent", "Echolocation", "Pod", "Coastal"]
+  },
+  {
+    "word": "Amphora",
+    "hints": ["Clay", "Ancient", "Storage", "Handles", "Wine"]
+  },
+  {
+    "word": "Bellows",
+    "hints": ["Air", "Forge", "Accordion", "Compression", "Fire"]
+  },
+  {
+    "word": "Constellation",
+    "hints": ["Stars", "Pattern", "Navigate", "Mythology", "Zodiac"]
+  },
+  {
+    "word": "Periscope",
+    "hints": ["Mirrors", "Submarine", "View", "Rotate", "Vertical"]
+  },
+  {
+    "word": "Graffiti",
+    "hints": ["Urban", "Spray", "Expression", "Wall", "Illegal"]
+  },
+  {
+    "word": "Hieroglyph",
+    "hints": ["Symbol", "Ancient", "Writing", "Egypt", "Pictorial"]
+  },
+  {
+    "word": "Meridian",
+    "hints": ["Longitude", "Prime", "Imaginary", "Greenwich", "Navigation"]
+  },
+  {
+    "word": "Igloo",
+    "hints": ["Blocks", "Arctic", "Dome", "Shelter", "Inuit"]
+  },
+  {
+    "word": "Fjord",
+    "hints": ["Glacial", "Inlet", "Norway", "Steep", "Narrow"]
+  },
+  {
+    "word": "Tundra",
+    "hints": ["Permafrost", "Arctic", "Treeless", "Moss", "Climate"]
+  },
+  {
+    "word": "Boomerang",
+    "hints": ["Return", "Curved", "Aboriginal", "Aerodynamic", "Throw"]
+  },
+  {
+    "word": "Stalactite",
+    "hints": ["Cave", "Ceiling", "Drip", "Mineral", "Downward"]
+  },
+  {
+    "word": "Obelisk",
+    "hints": ["Pillar", "Tapered", "Monument", "Ancient", "Egyptian"]
+  },
+  {
+    "word": "Catacomb",
+    "hints": ["Underground", "Burial", "Tunnel", "Ancient", "Chambers"]
+  },
+  {
+    "word": "Aqueduct",
+    "hints": ["Channel", "Roman", "Transport", "Arches", "Engineering"]
+  },
+  {
+    "word": "Archipelago",
+    "hints": ["Islands", "Cluster", "Ocean", "Chain", "Geography"]
+  },
+  {
+    "word": "Stalactite",
+    "hints": ["Formation", "Cave", "Mineral", "Hanging", "Deposit"]
+  },
+  {
+    "word": "Catapult",
+    "hints": ["Launch", "Medieval", "Tension", "Siege", "Arm"]
+  },
+  {
+    "word": "Hourglass",
+    "hints": ["Timer", "Sand", "Glass", "Narrow", "Gravity"]
+  },
+  {
+    "word": "Reservoir",
+    "hints": ["Storage", "Dam", "Supply", "Artificial", "Capacity"]
+  },
+  {
+    "word": "Gargoyle",
+    "hints": ["Stone", "Spout", "Gothic", "Cathedral", "Decorative"]
+  },
+  {
+    "word": "Monolith",
+    "hints": ["Single", "Stone", "Massive", "Ancient", "Monument"]
+  },
+  {
+    "word": "Pinnacle",
+    "hints": ["Peak", "Summit", "Achievement", "Highest", "Point"]
+  },
+  {
+    "word": "Mosaic",
+    "hints": ["Tiles", "Pattern", "Ancient", "Artistic", "Assembly"]
+  },
+  {
+    "word": "Stalactite",
+    "hints": ["Dripping", "Limestone", "Cave", "Formation", "Ceiling"]
+  },
+  {
+    "word": "Amphitheater",
+    "hints": ["Arena", "Semicircle", "Tiered", "Performance", "Roman"]
+  },
+  {
+    "word": "Labyrinth",
+    "hints": ["Complex", "Passages", "Puzzle", "Winding", "Greek"]
+  },
+  {
+    "word": "Sarcophagus",
+    "hints": ["Stone", "Burial", "Coffin", "Ancient", "Pharaoh"]
+  },
+  {
+    "word": "Viaduct",
+    "hints": ["Bridge", "Valley", "Arches", "Railway", "Transport"]
+  },
+  {
+    "word": "Catacomb",
+    "hints": ["Tomb", "Underground", "Network", "Roman", "Passages"]
+  },
+  {
+    "word": "Stalactite",
+    "hints": ["Cavern", "Deposit", "Mineral", "Drip", "Slow"]
+  },
+  {
+    "word": "Planetarium",
+    "hints": ["Dome", "Projection", "Stars", "Education", "Display"]
+  },
+  {
+    "word": "Ziggurat",
+    "hints": ["Stepped", "Temple", "Mesopotamia", "Ancient", "Platform"]
+  },
+  {
+    "word": "Drawbridge",
+    "hints": ["Castle", "Moat", "Raised", "Defense", "Chains"]
+  },
+  {
+    "word": "Portcullis",
+    "hints": ["Gate", "Castle", "Grating", "Defense", "Vertical"]
+  },
+  {
+    "word": "Mausoleum",
+    "hints": ["Tomb", "Monument", "Building", "Memorial", "Grand"]
+  },
+  {
+    "word": "Terrarium",
+    "hints": ["Glass", "Plants", "Enclosed", "Miniature", "Ecosystem"]
+  },
+  {
+    "word": "Gazebo",
+    "hints": ["Structure", "Garden", "Roof", "Open", "Octagonal"]
+  },
+  {
+    "word": "Esplanade",
+    "hints": ["Walkway", "Waterfront", "Paved", "Promenade", "Public"]
+  },
+  {
+    "word": "Coliseum",
+    "hints": ["Arena", "Gladiator", "Roman", "Amphitheater", "Ruins"]
+  },
+  {
+    "word": "Balustrade",
+    "hints": ["Railing", "Balcony", "Posts", "Decorative", "Support"]
+  },
+  {
+    "word": "Campanile",
+    "hints": ["Tower", "Bells", "Freestanding", "Italian", "Church"]
+  }
+]

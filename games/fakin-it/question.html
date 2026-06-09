@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Fakin' It - Question Input</title>
+  <link rel="stylesheet" href="../../style.css">
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="../../styles/components/input-field.css">
+</head>
+<body>
+  <div class="container">
+    <h1>🎮 Question Setup</h1>
+    <h2>Overseer: Set Questions</h2>
+
+    <div class="input-group">
+      <label for="realQuestion">Real Question (for innocent players)</label>
+      <textarea id="realQuestion" placeholder="e.g., What's your favorite movie?"></textarea>
+    </div>
+
+    <div class="input-group">
+      <label for="fakerQuestion">Faker Question (for the faker)</label>
+      <textarea id="fakerQuestion" placeholder="e.g., What's your favorite TV show?"></textarea>
+    </div>
+
+    <div id="errorMessage" class="error" style="display: none;"></div>
+
+    <button id="submitBtn" class="button">Submit Questions</button>
+  </div>
+
+  <script type="module">
+    import { getRoomRef, updatePhase, update, get, ref as dbRef } from '../../firebase-config.js';
+    import { getUrlParams, selectFakers } from '../../utils.js';
+    import { db } from '../../firebase-config.js';
+
+    const { roomCode, playerId } = getUrlParams();
+
+    if (!roomCode || !playerId) {
+      window.location.href = '../../index.html';
+    }
+
+    const realQuestionInput = document.getElementById('realQuestion');
+    const fakerQuestionInput = document.getElementById('fakerQuestion');
+    const submitBtn = document.getElementById('submitBtn');
+    const errorMessage = document.getElementById('errorMessage');
+
+    // Verify user is overseer
+    async function verifyOverseer() {
+      const roomRef = getRoomRef(roomCode);
+      const snapshot = await get(roomRef);
+      const data = snapshot.val();
+
+      if (!data || data.settings?.fakinIt?.overseer !== playerId) {
+        window.location.href = `../../lobby.html?roomCode=${roomCode}&playerId=${playerId}`;
+        return false;
+      }
+
+      return true;
+    }
+
+    verifyOverseer();
+
+    function showError(message) {
+      errorMessage.textContent = message;
+      errorMessage.style.display = 'block';
+    }
+
+    submitBtn.addEventListener('click', async () => {
+      const realQuestion = realQuestionInput.value.trim();
+      const fakerQuestion = fakerQuestionInput.value.trim();
+
+      if (!realQuestion || !fakerQuestion) {
+        showError('Please fill in both questions');
+        return;
+      }
+
+      try {
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Setting up...';
+
+        // Get room data
+        const roomRef = getRoomRef(roomCode);
+        const snapshot = await get(roomRef);
+        const roomData = snapshot.val();
+
+        if (!roomData) {
+          showError('Room not found');
+          return;
+        }
+
+        const players = roomData.players || {};
+        const overseer = roomData.settings?.fakinIt?.overseer;
+        const numFakers = roomData.settings?.fakinIt?.numFakers || 1;
+
+        // Get non-overseer player IDs
+        const playerIds = Object.keys(players);
+        const nonOverseerIds = playerIds.filter(pid => pid !== overseer);
+
+        // Select random fakers
+        const fakerIds = selectFakers(nonOverseerIds, numFakers);
+
+        // Prepare updates
+        const updates = {};
+
+        // Set questions in game-specific data
+        updates[`rooms/${roomCode}/gameData/fakinIt/questions`] = {
+          real: realQuestion,
+          faker: fakerQuestion
+        };
+
+        // Assign roles and reset answers/votes
+        nonOverseerIds.forEach(pid => {
+          const role = fakerIds.includes(pid) ? 'faker' : 'innocent';
+          updates[`rooms/${roomCode}/players/${pid}/role`] = role;
+          updates[`rooms/${roomCode}/players/${pid}/answer`] = null;
+          updates[`rooms/${roomCode}/players/${pid}/votes`] = null;
+        });
+
+        // Reset overseer's data too
+        if (overseer) {
+          updates[`rooms/${roomCode}/players/${overseer}/role`] = null;
+          updates[`rooms/${roomCode}/players/${overseer}/answer`] = null;
+          updates[`rooms/${roomCode}/players/${overseer}/votes`] = null;
+        }
+
+        // Update phase
+        updates[`rooms/${roomCode}/phase`] = 'answer';
+
+        // Apply all updates
+        await update(dbRef(db), updates);
+
+        // No need to navigate - phase listener will handle it
+      } catch (error) {
+        console.error('Error submitting questions:', error);
+        showError('Failed to submit questions');
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Submit Questions';
+      }
+    });
+
+    // Listen for phase changes (in case we need to navigate)
+    import { listenToRoom } from '../../firebase-config.js';
+    listenToRoom(roomCode, (snapshot) => {
+      const data = snapshot.val();
+      if (data && data.phase === 'answer') {
+        window.location.href = `answer.html?roomCode=${roomCode}&playerId=${playerId}`;
+      }
+    });
+  </script>
+</body>
+</html>

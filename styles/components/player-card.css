@@ -1,0 +1,169 @@
+@import url('../variables.css');
+
+/* Base player card - replaces both .player-card and .answer-card */
+.player-card {
+  background: var(--color-white);
+  padding: var(--space-lg);
+  border-radius: var(--radius-md);
+  margin: var(--space-sm) 0;
+  cursor: pointer;
+  transition: all var(--transition-base);
+  border: 2px solid var(--color-gray-300);
+  box-shadow: var(--shadow-sm);
+}
+
+.player-card:hover {
+  border-color: var(--color-primary);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+}
+
+.player-card:active {
+  transform: scale(0.98);
+  box-shadow: var(--shadow-xs);
+}
+
+/* Selected state */
+.player-card--selected {
+  background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-secondary) 100%);
+  color: var(--color-white);
+  border-color: var(--color-primary);
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+  transform: scale(1.02);
+}
+
+/* Disabled state (current player - "You") */
+.player-card--disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.player-card--disabled:hover {
+  transform: none;
+  border-color: var(--color-gray-300);
+  box-shadow: var(--shadow-sm);
+}
+
+/* Draggable variant (Herd Mentality) */
+.player-card--draggable {
+  cursor: grab;
+}
+
+.player-card--draggable:active {
+  cursor: grabbing;
+}
+
+.player-card--dragging {
+  opacity: 0.5;
+  transform: rotate(2deg);
+}
+
+/* Role variants for results display */
+.player-card--faker,
+.player-card--imposter,
+.player-card--spy {
+  background: var(--color-danger-light);
+  border-left: 3px solid var(--color-danger);
+}
+
+/* Player card elements */
+.player-card__name {
+  margin: 0 0 var(--space-xs) 0;
+  font-size: var(--font-size-sm-plus);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-gray-700);
+}
+
+.player-card--selected .player-card__name {
+  color: var(--color-white);
+}
+
+.player-card--disabled .player-card__name {
+  color: var(--color-gray-400);
+}
+
+.player-card--faker .player-card__name,
+.player-card--imposter .player-card__name,
+.player-card--spy .player-card__name {
+  color: var(--color-gray-800);
+}
+
+/* Answer text (Fakin' It) */
+.player-card__answer {
+  margin: 0;
+  font-size: var(--font-size-sm);
+  font-style: italic;
+  color: var(--color-gray-500);
+}
+
+.player-card--selected .player-card__answer {
+  color: rgba(255, 255, 255, 0.9);
+}
+
+/* Vote count display */
+.player-card__votes {
+  margin-top: var(--space-xs);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-primary);
+}
+
+.player-card--selected .player-card__votes {
+  color: var(--color-white);
+}
+
+/* Points indicator */
+.player-card__points {
+  margin-top: var(--space-xs);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+}
+
+.player-card__points--positive {
+  color: var(--color-success);
+}
+
+.player-card__points--zero {
+  color: var(--color-gray-400);
+}
+
+/* Badge (host, overseer, etc.) */
+.player-card__badge {
+  display: inline-block;
+  padding: var(--space-xs) var(--space-sm);
+  background: var(--color-warning);
+  color: var(--color-white);
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  margin-left: var(--space-sm);
+}
+
+.player-card__badge--host {
+  background: var(--color-warning);
+}
+
+.player-card__badge--overseer {
+  background: var(--color-info);
+}
+
+.player-card__badge--you {
+  background: var(--color-gray-500);
+}
+
+/* Mobile responsiveness */
+@media (max-width: 768px) {
+  .player-card {
+    padding: var(--space-lg-plus);
+    margin: var(--space-md) 0;
+  }
+
+  .player-card__name {
+    font-size: var(--font-size-base);
+  }
+
+  .player-card__votes {
+    padding: var(--space-xs) var(--space-lg);
+    font-size: var(--font-size-sm-plus);
+  }
+}

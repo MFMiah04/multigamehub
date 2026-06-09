@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Spyfall - Game</title>
+  <link rel="stylesheet" href="../../style.css">
+  <link rel="stylesheet" href="../../styles/components/timer.css">
+  <style>
+    .role-card {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 30px;
+      border-radius: 15px;
+      text-align: center;
+      margin: 20px 0;
+      cursor: pointer;
+      transition: transform 0.2s;
+      min-height: 150px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .role-card:hover {
+      transform: scale(1.02);
+    }
+
+    .role-card h2 {
+      margin: 10px 0;
+      font-size: 24px;
+      color: white;
+    }
+
+    .role-card p {
+      margin: 5px 0;
+      font-size: 18px;
+      color: white;
+    }
+
+    .role-card.hidden .role-info {
+      display: none;
+    }
+
+    .role-card.hidden::after {
+      content: "Reveal Role";
+      font-size: 1.5rem;
+      font-weight: bold;
+      color: white;
+    }
+
+    .section {
+      background: white;
+      padding: 20px;
+      border-radius: 10px;
+      margin: 20px 0;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    .section h3 {
+      margin-top: 0;
+      color: #333;
+      border-bottom: 2px solid #667eea;
+      padding-bottom: 10px;
+    }
+
+    .section h3 {
+      cursor: pointer;
+      user-select: none;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .list-item {
+      padding: 6px 8px;
+      margin: 3px 0;
+      background: #f8f9fa;
+      border-radius: 5px;
+      cursor: pointer;
+      transition: background 0.2s;
+      font-size: 0.9rem;
+    }
+
+    .list-item:hover {
+      background: #e9ecef;
+    }
+
+    .list-item.crossed {
+      text-decoration: line-through;
+      opacity: 0.5;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+      gap: 5px;
+    }
+
+    .collapsible-content {
+      display: none;
+      margin-top: 8px;
+    }
+
+    .collapsible-content.show {
+      display: block;
+    }
+
+    button {
+      width: 100%;
+      margin-top: 10px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🔍 Spyfall</h1>
+
+    <div class="timer" id="timer">--:--</div>
+
+    <div class="role-card hidden" id="roleCard">
+      <div class="role-info">
+        <h2 id="roleTitle">Your Role</h2>
+        <p id="locationText"></p>
+        <p id="roleText"></p>
+      </div>
+    </div>
+
+    <div class="section">
+      <h3 id="playersToggle">Players <span>▶</span></h3>
+      <div class="collapsible-content" id="playersContent">
+        <div id="playersList"></div>
+      </div>
+    </div>
+
+    <div class="section" id="locationsSection">
+      <h3 id="locationsToggle">Possible Locations <span>▶</span></h3>
+      <div class="collapsible-content" id="locationsContent">
+        <div class="grid" id="locationsList"></div>
+      </div>
+    </div>
+
+    <div id="voteRequestStatus" style="text-align: center; color: #666; font-size: 0.9rem; margin: 15px 0;"></div>
+
+    <button id="beginVotingBtn" class="button" style="display: none;">Begin Voting</button>
+    <button id="requestVoteBtn" class="button button--secondary" style="display: none;">Request to Begin Voting</button>
+  </div>
+
+  <script type="module">
+    import { getRoomRef, listenToRoom, update, get, ref as dbRef } from '../../firebase-config.js';
+    import { getUrlParams } from '../../utils.js';
+    import { db } from '../../firebase-config.js';
+    import { Timer } from '../../src/components/Timer.js';
+
+    const { roomCode, playerId } = getUrlParams();
+
+    if (!roomCode || !playerId) {
+      window.location.href = '../../index.html';
+    }
+
+    const timerDiv = document.getElementById('timer');
+    const roleCard = document.getElementById('roleCard');
+    const roleTitle = document.getElementById('roleTitle');
+    const locationText = document.getElementById('locationText');
+    const roleText = document.getElementById('roleText');
+    const playersList = document.getElementById('playersList');
+    const locationsSection = document.getElementById('locationsSection');
+    const locationsList = document.getElementById('locationsList');
+    const beginVotingBtn = document.getElementById('beginVotingBtn');
+    const requestVoteBtn = document.getElementById('requestVoteBtn');
+    const voteRequestStatus = document.getElementById('voteRequestStatus');
+
+    let isHost = false;
+    let isSpy = false;
+    let roleRevealed = false;
+    let crossedPlayers = new Set();
+    let crossedLocations = new Set();
+    let timer = null;
+
+    async function loadGameData() {
+      try {
+        const roomRef = getRoomRef(roomCode);
+        const snapshot = await get(roomRef);
+        const data = snapshot.val();
+
+        if (!data) {
+          window.location.href = '../../index.html';
+          return;
+        }
+
+        const playerData = data.players?.[playerId];
+
+        // Check if player is in game
+        if (!playerData?.inGame) {
+          window.location.href = `waiting.html?roomCode=${roomCode}&playerId=${playerId}`;
+          return;
+        }
+
+        isHost = data.hostId === playerId;
+        const players = data.players || {};
+        const gameData = data.gameData?.spyfall || {};
+        const settings = data.settings?.spyfall || {};
+
+        // Show appropriate button
+        if (isHost) {
+          beginVotingBtn.style.display = 'block';
+        } else {
+          requestVoteBtn.style.display = 'block';
+        }
+
+        // Set up role card
+        isSpy = playerData.role === 'spy';
+        if (isSpy) {
+          roleTitle.textContent = 'You are the Spy!';
+          locationText.textContent = 'Find out the location without revealing yourself.';
+          roleText.textContent = '';
+        } else {
+          roleTitle.textContent = 'You are Innocent';
+          locationText.textContent = `Location: ${playerData.location}`;
+          roleText.textContent = `Role: ${playerData.assignedRole}`;
+        }
+
+        // Set up timer - calculate remaining time from startTime
+        const gameStartTime = gameData.startTime;
+        const timerDurationMinutes = settings.timer || 8;
+        const now = Date.now();
+        const elapsed = now - gameStartTime;
+        const totalSeconds = timerDurationMinutes * 60;
+        const elapsedSeconds = Math.floor(elapsed / 1000);
+        const remaining = Math.max(0, totalSeconds - elapsedSeconds);
+
+        timer = new Timer({
+          element: document.getElementById('timer'),
+          duration: remaining,
+          warningAt: 60
+        });
+        timer.start();
+
+        // Load players
+        const playerIds = Object.keys(players).filter(pid => players[pid].inGame);
+        playersList.innerHTML = '';
+        playerIds.forEach(pid => {
+          const player = players[pid];
+          const playerItem = document.createElement('div');
+          playerItem.className = 'list-item';
+          playerItem.textContent = player.name + (pid === playerId ? ' (You)' : '');
+          playerItem.addEventListener('click', () => {
+            if (crossedPlayers.has(pid)) {
+              crossedPlayers.delete(pid);
+              playerItem.classList.remove('crossed');
+            } else {
+              crossedPlayers.add(pid);
+              playerItem.classList.add('crossed');
+            }
+          });
+          playersList.appendChild(playerItem);
+        });
+
+        // Load locations for all players (including spies)
+        const locationsResponse = await fetch('locations.json');
+        const allLocations = await locationsResponse.json();
+        const enabledLocations = settings.enabledLocations || allLocations.map(l => l.location);
+
+        locationsList.innerHTML = '';
+        enabledLocations.forEach(loc => {
+          const locItem = document.createElement('div');
+          locItem.className = 'list-item';
+          locItem.textContent = loc;
+          locItem.addEventListener('click', () => {
+            if (crossedLocations.has(loc)) {
+              crossedLocations.delete(loc);
+              locItem.classList.remove('crossed');
+            } else {
+              crossedLocations.add(loc);
+              locItem.classList.add('crossed');
+            }
+          });
+          locationsList.appendChild(locItem);
+        });
+      } catch (error) {
+        console.error('Error loading game data:', error);
+      }
+    }
+
+    // Role card toggle
+    roleCard.addEventListener('click', () => {
+      if (roleRevealed) {
+        roleCard.classList.add('hidden');
+        roleRevealed = false;
+      } else {
+        roleCard.classList.remove('hidden');
+        roleRevealed = true;
+      }
+    });
+
+    // Collapsible sections
+    const playersToggle = document.getElementById('playersToggle');
+    const playersContent = document.getElementById('playersContent');
+    const locationsToggle = document.getElementById('locationsToggle');
+    const locationsContent = document.getElementById('locationsContent');
+
+    playersToggle.addEventListener('click', () => {
+      playersContent.classList.toggle('show');
+      const arrow = playersToggle.querySelector('span');
+      arrow.textContent = playersContent.classList.contains('show') ? '▼' : '▶';
+    });
+
+    locationsToggle.addEventListener('click', () => {
+      locationsContent.classList.toggle('show');
+      const arrow = locationsToggle.querySelector('span');
+      arrow.textContent = locationsContent.classList.contains('show') ? '▼' : '▶';
+    });
+
+    loadGameData();
+
+    // Listen for phase changes and vote requests
+    listenToRoom(roomCode, (snapshot) => {
+      const data = snapshot.val();
+      if (!data) return;
+
+      if (data.phase === 'voting') {
+        window.location.href = `voting.html?roomCode=${roomCode}&playerId=${playerId}`;
+        return;
+      } else if (data.phase === 'lobby') {
+        window.location.href = `../../lobby.html?roomCode=${roomCode}&playerId=${playerId}`;
+        return;
+      }
+
+      // Update vote request status
+      updateVoteRequestStatus(data);
+    });
+
+    // Begin voting
+    beginVotingBtn.addEventListener('click', async () => {
+      if (!isHost) return;
+
+      try {
+        beginVotingBtn.disabled = true;
+        beginVotingBtn.textContent = 'Starting voting...';
+
+        const updates = {};
+        updates[`rooms/${roomCode}/phase`] = 'voting';
+        await update(dbRef(db), updates);
+      } catch (error) {
+        console.error('Error starting voting:', error);
+        beginVotingBtn.disabled = false;
+        beginVotingBtn.textContent = 'Begin Voting';
+      }
+    });
+
+    // Request vote button
+    requestVoteBtn.addEventListener('click', async () => {
+      const hasRequested = requestVoteBtn.classList.contains('requested');
+
+      try {
+        const updates = {};
+        updates[`rooms/${roomCode}/gameData/spyfall/voteRequests/${playerId}`] = !hasRequested;
+        await update(dbRef(db), updates);
+
+        if (!hasRequested) {
+          requestVoteBtn.classList.add('requested');
+          requestVoteBtn.textContent = 'Cancel Request';
+        } else {
+          requestVoteBtn.classList.remove('requested');
+          requestVoteBtn.textContent = 'Request to Begin Voting';
+        }
+      } catch (error) {
+        console.error('Error updating vote request:', error);
+      }
+    });
+
+    // Update vote request status display
+    function updateVoteRequestStatus(data) {
+      const voteRequests = data.gameData?.spyfall?.voteRequests || {};
+      const players = data.players || {};
+      const inGamePlayers = Object.keys(players).filter(pid => players[pid].inGame);
+
+      const requestCount = Object.values(voteRequests).filter(v => v === true).length;
+      const totalCount = inGamePlayers.length;
+
+      if (requestCount > 0) {
+        voteRequestStatus.textContent = `${requestCount}/${totalCount} players requested to begin voting`;
+      } else {
+        voteRequestStatus.textContent = '';
+      }
+    }
+  </script>
+</body>
+</html>

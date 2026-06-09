@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Herd Mentality</title>
+  <link rel="stylesheet" href="../../style.css">
+  <link rel="stylesheet" href="../../styles/components/timer.css">
+  <link rel="stylesheet" href="../../styles/components/question-display.css">
+  <link rel="stylesheet" href="../../styles/components/input-field.css">
+</head>
+<body>
+  <div class="container">
+    <h1>🐄 Herd Mentality</h1>
+
+    <!-- Timer -->
+    <div id="timer" class="timer"></div>
+
+    <div class="question-display">
+      <h3>Question</h3>
+      <p id="questionText">Loading...</p>
+    </div>
+
+    <!-- Answer Input (styled like Fakin' It) -->
+    <div class="input-group">
+      <label for="answerInput">Your Answer</label>
+      <textarea id="answerInput" placeholder="Type your answer here..."></textarea>
+    </div>
+
+    <!-- Submission Status -->
+    <div class="submission-status" id="submissionStatus"></div>
+
+    <div id="errorMessage" class="error" style="display: none;"></div>
+
+    <!-- Submit Button -->
+    <button id="submitBtn" class="button">Submit Answer</button>
+  </div>
+
+  <script type="module">
+    import { getRoomRef, listenToRoom, update, get, ref as dbRef } from '../../firebase-config.js';
+    import { getUrlParams } from '../../utils.js';
+    import { db } from '../../firebase-config.js';
+    import { getRandomQuestion } from './questions.js';
+    import { Timer } from '../../src/components/Timer.js';
+
+    const { roomCode, playerId } = getUrlParams();
+
+    if (!roomCode || !playerId) {
+      window.location.href = '../../index.html';
+    }
+
+    const questionText = document.getElementById('questionText');
+    const answerInput = document.getElementById('answerInput');
+    const submitBtn = document.getElementById('submitBtn');
+    const errorMessage = document.getElementById('errorMessage');
+    const submissionStatus = document.getElementById('submissionStatus');
+
+    let timer = null;
+    let hasSubmitted = false;
+    let isHost = false;
+    let currentQuestion = '';
+    let totalPlayers = 0;
+
+    function showError(message) {
+      errorMessage.textContent = message;
+      errorMessage.style.display = 'block';
+    }
+
+    // Initialize game
+    async function initGame() {
+      try {
+        const roomRef = getRoomRef(roomCode);
+        const snapshot = await get(roomRef);
+        const data = snapshot.val();
+
+        if (!data || !data.players || !data.players[playerId]) {
+          window.location.href = '../../index.html';
+          return;
+        }
+
+        const player = data.players[playerId];
+        isHost = data.hostId === playerId;
+
+        // Check if late joiner
+        if (!player.inGame) {
+          window.location.href = 'waiting.html?roomCode=' + roomCode + '&playerId=' + playerId;
+          return;
+        }
+
+        // Check if already submitted
+        if (player.answer) {
+          hasSubmitted = true;
+          answerInput.value = player.answer;
+          answerInput.disabled = true;
+          submitBtn.disabled = true;
+          submitBtn.textContent = 'Submitted';
+        }
+
+        // Get or set question
+        if (data.gameData?.herdMentality?.currentQuestion) {
+          currentQuestion = data.gameData.herdMentality.currentQuestion;
+          questionText.textContent = currentQuestion;
+        } else if (isHost) {
+          // Host picks random question
+          const usedQuestions = data.gameData?.herdMentality?.usedQuestions || [];
+          currentQuestion = getRandomQuestion(usedQuestions);
+
+          const updates = {};
+          updates[`rooms/${roomCode}/gameData/herdMentality/currentQuestion`] = currentQuestion;
+          updates[`rooms/${roomCode}/gameData/herdMentality/usedQuestions`] = [...usedQuestions, currentQuestion];
+          await update(dbRef(db), updates);
+
+          questionText.textContent = currentQuestion;
+        }
+
+        // Start timer
+        const timerDuration = data.settings?.herdMentality?.timer || 20;
+        timer = new Timer({
+          element: document.getElementById('timer'),
+          duration: timerDuration,
+          warningAt: 5,
+          onComplete: async () => {
+            if (hasSubmitted) return;
+
+            const answer = answerInput.value.trim() || '[No Answer]';
+
+            try {
+              const updates = {};
+              updates[`rooms/${roomCode}/players/${playerId}/answer`] = answer;
+              await update(dbRef(db), updates);
+
+              hasSubmitted = true;
+              answerInput.disabled = true;
+              submitBtn.disabled = true;
+              submitBtn.textContent = 'Time\'s Up!';
+            } catch (error) {
+              console.error('Error auto-submitting:', error);
+            }
+          }
+        });
+        timer.start();
+
+        // Count total in-game players
+        totalPlayers = Object.values(data.players).filter(p => p.inGame).length;
+        updateSubmissionStatus(data);
+      } catch (error) {
+        console.error('Error initializing game:', error);
+        showError('Failed to load game');
+      }
+    }
+
+    // Submit answer
+    submitBtn.addEventListener('click', async () => {
+      if (hasSubmitted) return;
+
+      const answer = answerInput.value.trim();
+      if (!answer) {
+        showError('Please enter an answer');
+        return;
+      }
+
+      try {
+        const updates = {};
+        updates[`rooms/${roomCode}/players/${playerId}/answer`] = answer;
+        await update(dbRef(db), updates);
+
+        hasSubmitted = true;
+        answerInput.disabled = true;
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Submitted';
+        errorMessage.style.display = 'none';
+      } catch (error) {
+        console.error('Error submitting answer:', error);
+        showError('Failed to submit answer');
+      }
+    });
+
+    // Update submission status
+    function updateSubmissionStatus(data) {
+      const players = data.players || {};
+      const inGamePlayers = Object.values(players).filter(p => p.inGame);
+      const submittedPlayers = inGamePlayers.filter(p => p.answer);
+
+      submissionStatus.textContent = `${submittedPlayers.length}/${inGamePlayers.length} players submitted`;
+
+      // All submitted - move to reveal
+      if (submittedPlayers.length === inGamePlayers.length && inGamePlayers.length > 0) {
+        if (timer) timer.stop();
+
+        if (isHost) {
+          setTimeout(async () => {
+            const updates = {};
+            updates[`rooms/${roomCode}/phase`] = 'reveal';
+            await update(dbRef(db), updates);
+          }, 1000);
+        }
+      }
+    }
+
+    // Listen for phase changes
+    listenToRoom(roomCode, (snapshot) => {
+      const data = snapshot.val();
+      if (!data) return;
+
+      if (data.phase === 'reveal') {
+        window.location.href = `reveal.html?roomCode=${roomCode}&playerId=${playerId}`;
+      } else if (data.phase === 'lobby') {
+        window.location.href = `../../lobby.html?roomCode=${roomCode}&playerId=${playerId}`;
+      }
+
+      updateSubmissionStatus(data);
+    });
+
+    initGame();
+  </script>
+</body>
+</html>

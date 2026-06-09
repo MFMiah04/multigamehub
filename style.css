@@ -1,0 +1,186 @@
+@import url('styles/variables.css');
+@import url('styles/components/button.css');
+@import url('styles/components/player-card.css');
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: var(--font-family);
+  background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-secondary) 100%);
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: var(--space-xl);
+  color: var(--color-gray-700);
+}
+
+.container {
+  background: var(--color-white);
+  border-radius: var(--radius-xl);
+  padding: var(--space-2xl-plus);
+  max-width: 600px;
+  width: 100%;
+  box-shadow: var(--shadow-2xl);
+  position: relative;
+}
+
+h1 {
+  text-align: center;
+  margin-bottom: var(--space-2xl);
+  color: var(--color-gray-700);
+  font-size: var(--font-size-xl-plus);
+}
+
+h2 {
+  text-align: center;
+  margin-bottom: var(--space-xl);
+  color: var(--color-gray-700);
+  font-size: var(--font-size-xl-plus);
+}
+
+.player-list {
+  margin: var(--space-lg) 0;
+}
+
+#playersList {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: var(--space-sm-plus);
+}
+
+.player-item {
+  padding: var(--space-md-plus);
+  background: var(--color-gray-100);
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-sm-plus);
+  text-align: center;
+  box-shadow: var(--shadow-sm-plus);
+  transition: all var(--transition-base);
+}
+
+.player-item:hover {
+  box-shadow: var(--shadow-md-plus);
+  transform: translateY(-1px);
+}
+
+.player-item.host {
+  background: var(--color-warning-light);
+  border-left: 4px solid var(--color-warning);
+}
+
+.player-item.overseer {
+  background: var(--color-info-light);
+  border-left: 4px solid var(--color-info);
+}
+
+.player-item.faker {
+  background: var(--color-danger-light);
+  border-left: 4px solid #ef5350;
+  color: var(--color-gray-800);
+}
+
+.settings-panel {
+  background: var(--color-gray-100);
+  padding: var(--space-lg);
+  border-radius: var(--radius-md);
+  margin: var(--space-lg) 0;
+  box-shadow: var(--shadow-sm-plus);
+}
+
+.settings-panel h2 {
+  margin-bottom: var(--space-md-plus);
+  font-size: var(--font-size-lg-plus);
+}
+
+.vote-count {
+  display: inline-block;
+  background: var(--color-primary);
+  color: var(--color-white);
+  padding: var(--space-xs) var(--space-lg);
+  border-radius: var(--radius-round);
+  font-size: 14px;
+  margin-left: var(--space-md-plus);
+}
+
+.voters-list {
+  margin-top: var(--space-md-plus);
+  padding: var(--space-md-plus);
+  background: var(--color-white);
+  border-radius: var(--radius-sm);
+  font-size: 14px;
+}
+
+.voters-toggle {
+  color: var(--color-primary);
+  cursor: pointer;
+  text-decoration: underline;
+  font-size: 14px;
+  margin-top: var(--space-md);
+  display: inline-block;
+}
+
+.status-message {
+  text-align: center;
+  padding: var(--space-lg);
+  background: var(--color-primary-light);
+  border-radius: var(--radius-md);
+  margin: var(--space-lg) 0;
+  color: var(--color-primary);
+  font-weight: var(--font-weight-semibold);
+  font-size: var(--font-size-sm-plus-plus);
+}
+
+.error {
+  color: var(--color-gray-800);
+  text-align: center;
+  padding: var(--space-md-plus);
+  background: var(--color-danger-light);
+  border-radius: var(--radius-md);
+  margin: var(--space-md) 0;
+  font-size: var(--font-size-sm-plus);
+}
+
+.submission-status {
+  text-align: center;
+  margin: var(--space-lg) 0;
+  font-size: 16px;
+  color: var(--color-primary);
+  font-weight: var(--font-weight-semibold);
+}
+
+/* Mobile-specific styles */
+@media (max-width: 768px) {
+  body {
+    padding: var(--space-md-plus);
+    padding-bottom: env(safe-area-inset-bottom, 10px);
+  }
+
+  .container {
+    padding: var(--space-2xl);
+  }
+
+  h1 {
+    font-size: var(--font-size-xl);
+  }
+
+  h2 {
+    font-size: var(--font-size-lg);
+  }
+
+  /* Single column player list on mobile */
+  #playersList {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (min-width: 400px) and (max-width: 768px) {
+  /* 2 column layout for medium mobile */
+  #playersList {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}

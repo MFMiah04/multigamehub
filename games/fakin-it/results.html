@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Fakin' It - Results</title>
+  <link rel="stylesheet" href="../../style.css">
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="../shared-voting-styles.css">
+  <style>
+    /* Specific styling for Fakin' It results questions display */
+    .reveal-display.questions {
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🎮 Results</h1>
+
+    <button id="revealQuestionsBtn" class="button" style="display: none;">Reveal Questions</button>
+
+    <div class="reveal-display questions" id="questionDisplay">
+      <h3>Questions:</h3>
+      <p><strong>Real:</strong> <span id="realQuestion">Loading...</span></p>
+      <p><strong>Faker:</strong> <span id="fakerQuestion">Loading...</span></p>
+    </div>
+
+    <div id="resultsContainer"></div>
+
+    <button id="returnBtn" class="button">Return to Lobby</button>
+  </div>
+
+  <script type="module">
+    import { getRoomRef, listenToRoom, update, get, ref as dbRef } from '../../firebase-config.js';
+    import { getUrlParams } from '../../utils.js';
+    import { db } from '../../firebase-config.js';
+
+    const { roomCode, playerId } = getUrlParams();
+
+    if (!roomCode || !playerId) {
+      window.location.href = '../../index.html';
+    }
+
+    const questionDisplayDiv = document.getElementById('questionDisplay');
+    const realQuestion = document.getElementById('realQuestion');
+    const fakerQuestion = document.getElementById('fakerQuestion');
+    const resultsContainer = document.getElementById('resultsContainer');
+    const revealQuestionsBtn = document.getElementById('revealQuestionsBtn');
+    const returnBtn = document.getElementById('returnBtn');
+
+    let isHost = false;
+    let questionsRevealed = false;
+
+    async function loadResults() {
+      try {
+        const roomRef = getRoomRef(roomCode);
+        const snapshot = await get(roomRef);
+        const data = snapshot.val();
+
+        if (!data) {
+          window.location.href = '../../index.html';
+          return;
+        }
+
+        isHost = data.hostId === playerId;
+        const questions = data.gameData?.fakinIt?.questions;
+        const players = data.players || {};
+        const overseer = data.settings?.fakinIt?.overseer;
+        questionsRevealed = data.gameData?.fakinIt?.questionsRevealed || false;
+
+        realQuestion.textContent = questions.real;
+        fakerQuestion.textContent = questions.faker;
+
+        // Show reveal button for host if questions not revealed yet
+        if (isHost && !questionsRevealed) {
+          revealQuestionsBtn.style.display = 'block';
+        }
+
+        // Show questions if already revealed
+        if (questionsRevealed) {
+          questionDisplayDiv.style.display = 'block';
+        }
+
+        // Calculate vote counts for each player
+        const playerIds = Object.keys(players);
+        const nonOverseerIds = playerIds.filter(pid => pid !== overseer);
+
+        const voteCounts = {};
+        const votersFor = {};
+
+        // Initialize
+        nonOverseerIds.forEach(pid => {
+          voteCounts[pid] = 0;
+          votersFor[pid] = [];
+        });
+
+        // Count votes
+        nonOverseerIds.forEach(pid => {
+          const votes = players[pid].votes || [];
+          votes.forEach(votedForId => {
+            if (voteCounts[votedForId] !== undefined) {
+              voteCounts[votedForId]++;
+              votersFor[votedForId].push(players[pid].name);
+            }
+          });
+        });
+
+        // Sort players by vote count (descending)
+        const sortedPlayers = nonOverseerIds.sort((a, b) => voteCounts[b] - voteCounts[a]);
+
+        // Display results
+        resultsContainer.innerHTML = '';
+
+        sortedPlayers.forEach(pid => {
+          const player = players[pid];
+          const card = document.createElement('div');
+          card.className = 'result-card';
+
+          if (player.role === 'faker') {
+            card.classList.add('faker');
+          }
+
+          // Player info section
+          const playerInfo = document.createElement('div');
+          playerInfo.className = 'player-info';
+
+          const nameEl = document.createElement('h3');
+          const fakerLabel = player.role === 'faker' ? ' (Faker)' : '';
+          const youLabel = pid === playerId ? ' (You)' : '';
+          nameEl.textContent = player.name + fakerLabel + youLabel;
+
+          const answerEl = document.createElement('p');
+          answerEl.textContent = player.answer || 'No answer';
+
+          playerInfo.appendChild(nameEl);
+          playerInfo.appendChild(answerEl);
+
+          // Vote section
+          const voteSection = document.createElement('div');
+          voteSection.className = 'vote-section';
+
+          const voteCount = document.createElement('div');
+          voteCount.className = 'vote-count';
+          voteCount.textContent = `${voteCounts[pid]} vote${voteCounts[pid] !== 1 ? 's' : ''}`;
+
+          voteSection.appendChild(voteCount);
+
+          // Add expandable voters list
+          if (voteCounts[pid] > 0) {
+            const votersList = document.createElement('div');
+            votersList.className = 'voters-list';
+            votersList.textContent = votersFor[pid].join(', ');
+
+            voteCount.addEventListener('click', () => {
+              votersList.classList.toggle('show');
+            });
+
+            voteSection.appendChild(votersList);
+          }
+
+          card.appendChild(playerInfo);
+          card.appendChild(voteSection);
+
+          resultsContainer.appendChild(card);
+        });
+      } catch (error) {
+        console.error('Error loading results:', error);
+      }
+    }
+
+    loadResults();
+
+    // Reveal questions
+    revealQuestionsBtn.addEventListener('click', async () => {
+      if (!isHost) return;
+
+      try {
+        revealQuestionsBtn.disabled = true;
+        revealQuestionsBtn.textContent = 'Revealing...';
+
+        const updates = {};
+        updates[`rooms/${roomCode}/gameData/fakinIt/questionsRevealed`] = true;
+        await update(dbRef(db), updates);
+
+        questionsRevealed = true;
+        questionDisplayDiv.style.display = 'block';
+        revealQuestionsBtn.style.display = 'none';
+      } catch (error) {
+        console.error('Error revealing questions:', error);
+        revealQuestionsBtn.disabled = false;
+        revealQuestionsBtn.textContent = 'Reveal Questions';
+      }
+    });
+
+    // Listen for phase changes and question reveal
+    listenToRoom(roomCode, (snapshot) => {
+      const data = snapshot.val();
+      if (!data) return;
+
+      // Check if questions were revealed
+      const newQuestionsRevealed = data.gameData?.fakinIt?.questionsRevealed || false;
+      if (newQuestionsRevealed && !questionsRevealed) {
+        questionsRevealed = true;
+        questionDisplayDiv.style.display = 'block';
+        revealQuestionsBtn.style.display = 'none';
+      }
+
+      if (data.phase === 'lobby') {
+        window.location.href = `../../lobby.html?roomCode=${roomCode}&playerId=${playerId}`;
+      }
+    });
+
+    returnBtn.addEventListener('click', async () => {
+      try {
+        const roomRef = getRoomRef(roomCode);
+        const snapshot = await get(roomRef);
+        const data = snapshot.val();
+
+        // Only host can return to lobby
+        if (data.hostId === playerId) {
+          returnBtn.disabled = true;
+          returnBtn.textContent = 'Returning...';
+
+          const updates = {};
+          updates[`rooms/${roomCode}/phase`] = 'lobby';
+
+          // Clear game data
+          updates[`rooms/${roomCode}/gameData/fakinIt`] = null;
+
+          // Reset all player roles, answers, votes, and inGame flag
+          const players = data.players || {};
+          Object.keys(players).forEach(pid => {
+            updates[`rooms/${roomCode}/players/${pid}/role`] = null;
+            updates[`rooms/${roomCode}/players/${pid}/answer`] = null;
+            updates[`rooms/${roomCode}/players/${pid}/votes`] = null;
+            updates[`rooms/${roomCode}/players/${pid}/inGame`] = null;
+          });
+
+          await update(dbRef(db), updates);
+        } else {
+          // Non-hosts just wait
+          returnBtn.disabled = true;
+          returnBtn.textContent = 'Waiting for host...';
+        }
+      } catch (error) {
+        console.error('Error returning to lobby:', error);
+        returnBtn.disabled = false;
+        returnBtn.textContent = 'Return to Lobby';
+      }
+    });
+  </script>
+</body>
+</html>

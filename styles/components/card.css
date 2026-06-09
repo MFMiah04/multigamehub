@@ -1,0 +1,28 @@
+.card {
+  background: var(--color-white);
+  border-radius: var(--radius-lg);
+  padding: var(--space-xl);
+  box-shadow: var(--shadow-lg);
+}
+
+.card__header {
+  margin-bottom: var(--space-lg);
+}
+
+.card__title {
+  font-size: var(--font-size-xl);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-gray-700);
+  margin: 0;
+  text-align: center;
+}
+
+.card__body {
+  margin-bottom: var(--space-lg);
+}
+
+.card__footer {
+  display: flex;
+  gap: var(--space-md);
+  justify-content: flex-end;
+}

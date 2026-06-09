@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Herd Mentality - Results</title>
+  <link rel="stylesheet" href="../../style.css">
+  <style>
+    .leaderboard {
+      margin: 20px 0;
+      width: 100%;
+      max-width: 500px;
+    }
+
+    .leaderboard-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 15px;
+      margin: 8px 0;
+      background: white;
+      border-radius: 8px;
+      border: 2px solid #ddd;
+      font-size: 1.1rem;
+    }
+
+    .leaderboard-row.pink-cow {
+      border-color: #ff69b4;
+      background: #fff0f5;
+    }
+
+    .player-info {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .pink-cow-label {
+      color: #ff69b4;
+      font-weight: 600;
+      font-size: 0.9rem;
+    }
+
+    .tied-label {
+      color: #ffc107;
+      font-weight: 600;
+      font-size: 0.9rem;
+    }
+
+    .score {
+      font-weight: bold;
+      color: #667eea;
+    }
+
+    .controls {
+      display: flex;
+      gap: 10px;
+      margin-top: 30px;
+      justify-content: center;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🐄 Results</h1>
+
+    <div id="leaderboard" class="leaderboard"></div>
+
+    <div class="controls" id="hostControls" style="display: none;">
+      <button id="returnToLobbyBtn" class="button button--secondary">Return to Lobby</button>
+      <button id="newRoundBtn" class="button">New Round</button>
+    </div>
+  </div>
+
+  <script type="module">
+    import { getRoomRef, listenToRoom, update, get, ref as dbRef } from '../../firebase-config.js';
+    import { getUrlParams } from '../../utils.js';
+    import { db } from '../../firebase-config.js';
+
+    const { roomCode, playerId } = getUrlParams();
+
+    if (!roomCode || !playerId) {
+      window.location.href = '../../index.html';
+    }
+
+    const leaderboardDiv = document.getElementById('leaderboard');
+    const hostControls = document.getElementById('hostControls');
+    const returnToLobbyBtn = document.getElementById('returnToLobbyBtn');
+    const newRoundBtn = document.getElementById('newRoundBtn');
+
+    let isHost = false;
+
+    // Render leaderboard
+    function renderLeaderboard(data) {
+      const players = data.players || {};
+      const pinkCow = data.settings?.herdMentality?.pinkCowHolder;
+
+      // Sort players by score (highest first)
+      const sortedPlayers = Object.entries(players)
+        .filter(([pid, player]) => player.inGame)
+        .map(([pid, player]) => ({
+          id: pid,
+          name: player.name,
+          score: player.score || 0,
+          hasPinkCow: pid === pinkCow
+        }))
+        .sort((a, b) => b.score - a.score);
+
+      // Find highest score without pink cow
+      const highestWithoutPinkCow = sortedPlayers
+        .filter(p => !p.hasPinkCow)
+        .reduce((max, p) => Math.max(max, p.score), 0);
+
+      const topPlayers = sortedPlayers.filter(p => !p.hasPinkCow && p.score === highestWithoutPinkCow);
+      const isTied = topPlayers.length > 1;
+
+      leaderboardDiv.innerHTML = '';
+
+      sortedPlayers.forEach(player => {
+        const row = document.createElement('div');
+        row.className = 'leaderboard-row';
+
+        if (player.hasPinkCow) {
+          row.classList.add('pink-cow');
+        }
+
+        let labels = '';
+
+        // Crown emoji for winner(s)
+        if (!player.hasPinkCow && player.score === highestWithoutPinkCow && player.score > 0) {
+          if (isTied) {
+            labels = '<span class="tied-label">(Tied)</span>';
+          } else {
+            labels = '<span>👑</span>';
+          }
+        }
+
+        // Pink cow label
+        if (player.hasPinkCow) {
+          labels += '<span class="pink-cow-label">(Pink Cow)</span>';
+        }
+
+        row.innerHTML = `
+          <div class="player-info">
+            <span>${player.name}</span>
+            ${labels}
+          </div>
+          <div class="score">${player.score} pts</div>
+        `;
+
+        leaderboardDiv.appendChild(row);
+      });
+    }
+
+    // Return to lobby
+    returnToLobbyBtn.addEventListener('click', async () => {
+      const updates = {};
+      updates[`rooms/${roomCode}/phase`] = 'lobby';
+      updates[`rooms/${roomCode}/selectedGame`] = null;
+      updates[`rooms/${roomCode}/gameData/herdMentality`] = null;
+      updates[`rooms/${roomCode}/settings/herdMentality`] = null;
+
+      // Reset player game state
+      const roomRef = getRoomRef(roomCode);
+      const snapshot = await get(roomRef);
+      const data = snapshot.val();
+
+      Object.keys(data.players || {}).forEach(pid => {
+        updates[`rooms/${roomCode}/players/${pid}/inGame`] = false;
+        updates[`rooms/${roomCode}/players/${pid}/answer`] = null;
+        updates[`rooms/${roomCode}/players/${pid}/score`] = 0;
+      });
+
+      await update(dbRef(db), updates);
+    });
+
+    // New round
+    newRoundBtn.addEventListener('click', async () => {
+      const roomRef = getRoomRef(roomCode);
+      const snapshot = await get(roomRef);
+      const data = snapshot.val();
+
+      const currentRound = data.settings?.herdMentality?.currentRound || 1;
+
+      const updates = {};
+      updates[`rooms/${roomCode}/settings/herdMentality/currentRound`] = currentRound + 1;
+      updates[`rooms/${roomCode}/gameData/herdMentality/currentQuestion`] = null;
+      updates[`rooms/${roomCode}/gameData/herdMentality/answerGroupings`] = null;
+      updates[`rooms/${roomCode}/gameData/herdMentality/scoresCalculated`] = false;
+      updates[`rooms/${roomCode}/phase`] = 'question';
+
+      // Clear answers
+      Object.keys(data.players || {}).forEach(pid => {
+        if (data.players[pid].inGame) {
+          updates[`rooms/${roomCode}/players/${pid}/answer`] = null;
+        }
+      });
+
+      await update(dbRef(db), updates);
+    });
+
+    // Initialize
+    async function initResults() {
+      try {
+        const roomRef = getRoomRef(roomCode);
+        const snapshot = await get(roomRef);
+        const data = snapshot.val();
+
+        if (!data || !data.players || !data.players[playerId]) {
+          window.location.href = '../../index.html';
+          return;
+        }
+
+        isHost = data.hostId === playerId;
+
+        if (isHost) {
+          hostControls.style.display = 'flex';
+        }
+
+        renderLeaderboard(data);
+      } catch (error) {
+        console.error('Error initializing results:', error);
+      }
+    }
+
+    // Listen for phase changes
+    listenToRoom(roomCode, (snapshot) => {
+      const data = snapshot.val();
+      if (!data) return;
+
+      if (data.phase === 'question') {
+        window.location.href = `game.html?roomCode=${roomCode}&playerId=${playerId}`;
+      } else if (data.phase === 'lobby') {
+        window.location.href = `../../lobby.html?roomCode=${roomCode}&playerId=${playerId}`;
+      }
+
+      renderLeaderboard(data);
+    });
+
+    initResults();
+  </script>
+</body>
+</html>

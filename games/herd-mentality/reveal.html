@@ -1,0 +1,659 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Herd Mentality - Reveal</title>
+  <link rel="stylesheet" href="../../style.css">
+  <link rel="stylesheet" href="../../styles/components/player-card.css">
+  <style>
+    .answer-groups {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      margin: 20px 0;
+    }
+
+    .answer-group {
+      border: 2px solid #667eea;
+      border-radius: 10px;
+      padding: 15px;
+      background: #f9f9f9;
+    }
+
+    .answer-group.majority {
+      border-color: #28a745;
+      background: #d4edda;
+    }
+
+    .answer-group.pink-cow {
+      border-color: #ff69b4;
+      background: #fff0f5;
+    }
+
+    .answer-group-header {
+      font-weight: bold;
+      font-size: 1.2rem;
+      margin-bottom: 10px;
+      color: #667eea;
+    }
+
+    .majority-label {
+      color: #28a745;
+      font-weight: 600;
+    }
+
+    .pink-cow-label {
+      color: #ff69b4;
+      font-weight: 600;
+    }
+
+    .points-indicator {
+      font-size: 0.9rem;
+      font-weight: 600;
+      margin-left: 5px;
+    }
+
+    .points-positive {
+      color: #28a745;
+    }
+
+    .points-zero {
+      color: #999;
+    }
+
+    .answer-cards {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    /* Override player-card for draggable cards */
+    .player-card--draggable {
+      min-width: 150px;
+    }
+
+    .answer-text {
+      color: #333;
+      margin-top: 5px;
+    }
+
+    /* Prevent child elements from interfering with drag */
+    .player-card--draggable * {
+      pointer-events: none;
+    }
+
+    .player-card--draggable {
+      pointer-events: auto;
+    }
+
+    .host-controls {
+      margin-top: 20px;
+      text-align: center;
+    }
+
+    .new-group-zone {
+      border: 3px dashed #667eea;
+      border-radius: 10px;
+      padding: 30px;
+      text-align: center;
+      color: #667eea;
+      font-weight: 600;
+      font-size: 1.1rem;
+      background: #f0f4ff;
+      margin: 20px 0;
+      min-height: 100px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.3s;
+    }
+
+    .new-group-zone.drag-over {
+      background: #e0ebff;
+      border-color: #4a5fd9;
+      transform: scale(1.02);
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🐄 Answers Revealed</h1>
+
+    <div id="answerGroups" class="answer-groups"></div>
+
+    <div id="newGroupZone" class="new-group-zone" style="display: none;">
+      📋 Drop here to create a new group
+    </div>
+
+    <div class="host-controls" id="hostControls" style="display: none;">
+      <p style="color: #666; font-size: 0.9rem; margin-bottom: 10px;">
+        Drag cards to regroup answers or create new groups
+      </p>
+      <button id="showResultsBtn" class="button">Show Results</button>
+    </div>
+  </div>
+
+  <script type="module">
+    import { getRoomRef, listenToRoom, update, get, ref as dbRef } from '../../firebase-config.js';
+    import { getUrlParams } from '../../utils.js';
+    import { db } from '../../firebase-config.js';
+
+    const { roomCode, playerId } = getUrlParams();
+
+    if (!roomCode || !playerId) {
+      window.location.href = '../../index.html';
+    }
+
+    const answerGroupsDiv = document.getElementById('answerGroups');
+    const hostControls = document.getElementById('hostControls');
+    const showResultsBtn = document.getElementById('showResultsBtn');
+    const newGroupZone = document.getElementById('newGroupZone');
+
+    let isHost = false;
+    let currentGroupings = {};
+
+    // Normalize answer for grouping (remove case, punctuation, extra spaces, handle plurals)
+    function normalizeAnswer(answer) {
+      return answer
+        .toLowerCase()
+        .replace(/[^\w\s]/g, '') // Remove punctuation
+        .replace(/s\s*$/i, '')   // Remove trailing 's' (basic plural handling)
+        .trim();
+    }
+
+    // Group answers automatically
+    function groupAnswers(players) {
+      const groups = {};
+
+      Object.entries(players).forEach(([pid, player]) => {
+        if (!player.inGame || !player.answer) return;
+
+        const normalized = normalizeAnswer(player.answer);
+
+        if (!groups[normalized]) {
+          groups[normalized] = [];
+        }
+
+        groups[normalized].push({
+          playerId: pid,
+          playerName: player.name,
+          answer: player.answer
+        });
+      });
+
+      return groups;
+    }
+
+    // Render answer groups
+    async function renderAnswerGroups(groupings) {
+      answerGroupsDiv.innerHTML = '';
+
+      // Get current pink cow holder
+      const roomRef = getRoomRef(roomCode);
+      const snapshot = await get(roomRef);
+      const data = snapshot.val();
+      const pinkCowHolder = data?.settings?.herdMentality?.pinkCowHolder;
+
+      // Sort groups by size (largest first)
+      const sortedGroups = Object.entries(groupings).sort((a, b) => b[1].length - a[1].length);
+
+      // Find majority group (largest unique size)
+      const groupSizes = sortedGroups.map(([_, answers]) => answers.length);
+      const maxSize = Math.max(...groupSizes);
+      const groupsWithMaxSize = groupSizes.filter(size => size === maxSize).length;
+      const hasMajority = groupsWithMaxSize === 1;
+      const majorityGroupKey = hasMajority ? sortedGroups[0][0] : null;
+
+      // Find the NEW pink cow group (single-player groups)
+      const singlePlayerGroups = sortedGroups.filter(([_, answers]) => answers.length === 1);
+      const hasNewPinkCow = singlePlayerGroups.length === 1;
+      const newPinkCowGroupKey = hasNewPinkCow ? singlePlayerGroups[0][0] : null;
+
+      sortedGroups.forEach(([groupKey, answers], index) => {
+        const groupDiv = document.createElement('div');
+        groupDiv.className = 'answer-group';
+        groupDiv.dataset.groupKey = groupKey;
+
+        const isMajority = groupKey === majorityGroupKey;
+        const isNewPinkCow = groupKey === newPinkCowGroupKey;
+
+        if (isMajority) {
+          groupDiv.classList.add('majority');
+        }
+        if (isNewPinkCow) {
+          groupDiv.classList.add('pink-cow');
+        }
+
+        const header = document.createElement('div');
+        header.className = 'answer-group-header';
+
+        let headerText = `Group ${index + 1} (${answers.length} ${answers.length === 1 ? 'player' : 'players'})`;
+
+        if (isMajority) {
+          headerText += ' <span class="majority-label">(Majority)</span>';
+        }
+        if (isNewPinkCow) {
+          headerText += ' <span class="pink-cow-label">(New Pink Cow)</span>';
+        }
+
+        header.innerHTML = headerText;
+        groupDiv.appendChild(header);
+
+        const cardsDiv = document.createElement('div');
+        cardsDiv.className = 'answer-cards';
+
+        answers.forEach(ans => {
+          const card = document.createElement('div');
+          card.className = 'player-card player-card--draggable';
+          card.draggable = isHost;
+          card.dataset.playerId = ans.playerId;
+          card.dataset.currentGroup = groupKey;
+
+          // Check if this player currently holds the pink cow from previous rounds
+          const hasPinkCow = ans.playerId === pinkCowHolder;
+
+          // Points: majority gets +1, but NOT if they currently hold pink cow
+          const points = (isMajority && !hasPinkCow) ? 1 : 0;
+
+          let playerNameHTML = ans.playerName;
+          // Show pink cow label if player currently holds it
+          if (hasPinkCow) {
+            playerNameHTML += ' <span class="pink-cow-label">(Pink Cow)</span>';
+          }
+
+          const pointsHTML = points > 0
+            ? `<span class="points-indicator points-positive">+${points}</span>`
+            : `<span class="points-indicator points-zero">+0</span>`;
+
+          card.innerHTML = `
+            <div class="player-card__name">${playerNameHTML} ${pointsHTML}</div>
+            <div class="answer-text">${ans.answer}</div>
+          `;
+
+          // Drag and drop event listeners (host only)
+          if (isHost) {
+            card.addEventListener('dragstart', handleDragStart);
+            card.addEventListener('dragend', handleDragEnd);
+            // Touch support for mobile
+            card.addEventListener('touchstart', handleTouchStart, { passive: false });
+            card.addEventListener('touchmove', handleTouchMove, { passive: false });
+            card.addEventListener('touchend', handleTouchEnd, { passive: false });
+          }
+
+          cardsDiv.appendChild(card);
+        });
+
+        groupDiv.appendChild(cardsDiv);
+
+        // Drop zone for dragging cards into this group
+        if (isHost) {
+          groupDiv.addEventListener('dragover', handleDragOver);
+          groupDiv.addEventListener('drop', handleDrop);
+        }
+
+        answerGroupsDiv.appendChild(groupDiv);
+      });
+    }
+
+    // Drag and drop handlers
+    let draggedCard = null;
+    let touchStartX = 0;
+    let touchStartY = 0;
+
+    function handleDragStart(e) {
+      // Get the card element even if clicking on child elements like text
+      draggedCard = e.target.closest('.player-card');
+      if (!draggedCard) return;
+
+      draggedCard.classList.add('player-card--dragging');
+
+      // Show new group zone when dragging
+      if (isHost) {
+        newGroupZone.style.display = 'flex';
+      }
+    }
+
+    function handleDragEnd(e) {
+      if (!draggedCard) return;
+
+      draggedCard.classList.remove('player-card--dragging');
+
+      // Hide new group zone when done dragging
+      if (isHost) {
+        newGroupZone.style.display = 'none';
+        newGroupZone.classList.remove('drag-over');
+      }
+
+      draggedCard = null;
+    }
+
+    function handleDragOver(e) {
+      e.preventDefault();
+    }
+
+    async function handleDrop(e) {
+      e.preventDefault();
+
+      if (!draggedCard) return;
+
+      const targetGroup = e.currentTarget;
+      const targetGroupKey = targetGroup.dataset.groupKey;
+      const draggedPlayerId = draggedCard.dataset.playerId;
+      const sourceGroupKey = draggedCard.dataset.currentGroup;
+
+      if (targetGroupKey === sourceGroupKey) return;
+
+      await moveCardToGroup(draggedPlayerId, sourceGroupKey, targetGroupKey);
+    }
+
+    // New group zone handlers
+    function handleNewGroupDragOver(e) {
+      e.preventDefault();
+      newGroupZone.classList.add('drag-over');
+    }
+
+    function handleNewGroupDragLeave(e) {
+      newGroupZone.classList.remove('drag-over');
+    }
+
+    async function handleNewGroupDrop(e) {
+      e.preventDefault();
+      newGroupZone.classList.remove('drag-over');
+
+      if (!draggedCard) return;
+
+      const draggedPlayerId = draggedCard.dataset.playerId;
+      const sourceGroupKey = draggedCard.dataset.currentGroup;
+
+      await createNewGroup(draggedPlayerId, sourceGroupKey);
+    }
+
+    // Touch handlers for mobile
+    function handleTouchStart(e) {
+      draggedCard = e.target.closest('.player-card');
+      if (!draggedCard) return;
+
+      draggedCard.classList.add('player-card--dragging');
+
+      const touch = e.touches[0];
+      touchStartX = touch.clientX;
+      touchStartY = touch.clientY;
+
+      // Show new group zone when dragging
+      if (isHost) {
+        newGroupZone.style.display = 'flex';
+      }
+
+      e.preventDefault();
+    }
+
+    function handleTouchMove(e) {
+      if (!draggedCard) return;
+
+      e.preventDefault();
+
+      const touch = e.touches[0];
+      const x = touch.clientX;
+      const y = touch.clientY;
+
+      // Move the card visually
+      draggedCard.style.position = 'fixed';
+      draggedCard.style.zIndex = '1000';
+      draggedCard.style.left = `${x - 75}px`;
+      draggedCard.style.top = `${y - 40}px`;
+      draggedCard.style.pointerEvents = 'none';
+
+      // Check if over new group zone
+      const elementAtPoint = document.elementFromPoint(x, y);
+      if (elementAtPoint && elementAtPoint.closest('.new-group-zone')) {
+        newGroupZone.classList.add('drag-over');
+      } else {
+        newGroupZone.classList.remove('drag-over');
+      }
+    }
+
+    async function handleTouchEnd(e) {
+      if (!draggedCard) return;
+
+      e.preventDefault();
+
+      const touch = e.changedTouches[0];
+      const x = touch.clientX;
+      const y = touch.clientY;
+
+      // Find what we dropped on BEFORE resetting styles (while card is still at touch position)
+      const elementAtPoint = document.elementFromPoint(x, y);
+      const targetNewGroupZone = elementAtPoint?.closest('.new-group-zone');
+      const targetGroup = elementAtPoint?.closest('.answer-group');
+
+      const draggedPlayerId = draggedCard.dataset.playerId;
+      const sourceGroupKey = draggedCard.dataset.currentGroup;
+
+      // NOW reset visual style
+      draggedCard.style.position = '';
+      draggedCard.style.zIndex = '';
+      draggedCard.style.left = '';
+      draggedCard.style.top = '';
+      draggedCard.style.pointerEvents = '';
+      draggedCard.classList.remove('player-card--dragging');
+
+      // Hide new group zone
+      if (isHost) {
+        newGroupZone.style.display = 'none';
+        newGroupZone.classList.remove('drag-over');
+      }
+
+      // Process the drop
+      if (targetNewGroupZone) {
+        // Create new group
+        await createNewGroup(draggedPlayerId, sourceGroupKey);
+      } else if (targetGroup && draggedCard) {
+        // Move to existing group
+        const targetGroupKey = targetGroup.dataset.groupKey;
+
+        if (targetGroupKey !== sourceGroupKey) {
+          await moveCardToGroup(draggedPlayerId, sourceGroupKey, targetGroupKey);
+        }
+      }
+
+      draggedCard = null;
+    }
+
+    // Create new group with a single card
+    async function createNewGroup(draggedPlayerId, sourceGroupKey) {
+      // Get player data
+      const player = currentGroupings[sourceGroupKey].find(a => a.playerId === draggedPlayerId);
+      if (!player) return;
+
+      const answerText = player.answer;
+      const playerName = player.playerName;
+
+      // Remove from source group
+      currentGroupings[sourceGroupKey] = currentGroupings[sourceGroupKey].filter(a => a.playerId !== draggedPlayerId);
+
+      // Clean up empty source group
+      if (currentGroupings[sourceGroupKey].length === 0) {
+        delete currentGroupings[sourceGroupKey];
+      }
+
+      // Create new unique group key based on player ID to ensure uniqueness
+      const newGroupKey = `group_${draggedPlayerId}_${Date.now()}`;
+
+      // Create new group with this player
+      currentGroupings[newGroupKey] = [{
+        playerId: draggedPlayerId,
+        playerName: playerName,
+        answer: answerText
+      }];
+
+      // Save to Firebase
+      const updates = {};
+      updates[`rooms/${roomCode}/gameData/herdMentality/answerGroupings`] = currentGroupings;
+      await update(dbRef(db), updates);
+
+      // Re-render
+      await renderAnswerGroups(currentGroupings);
+    }
+
+    // Shared function to move card between groups
+    async function moveCardToGroup(draggedPlayerId, sourceGroupKey, targetGroupKey) {
+      // Update groupings
+      const answerText = currentGroupings[sourceGroupKey].find(a => a.playerId === draggedPlayerId).answer;
+      const playerName = currentGroupings[sourceGroupKey].find(a => a.playerId === draggedPlayerId).playerName;
+
+      // Remove from source group
+      currentGroupings[sourceGroupKey] = currentGroupings[sourceGroupKey].filter(a => a.playerId !== draggedPlayerId);
+
+      // Add to target group
+      if (!currentGroupings[targetGroupKey]) {
+        currentGroupings[targetGroupKey] = [];
+      }
+      currentGroupings[targetGroupKey].push({
+        playerId: draggedPlayerId,
+        playerName: playerName,
+        answer: answerText
+      });
+
+      // Clean up empty groups
+      if (currentGroupings[sourceGroupKey].length === 0) {
+        delete currentGroupings[sourceGroupKey];
+      }
+
+      // Save to Firebase
+      const updates = {};
+      updates[`rooms/${roomCode}/gameData/herdMentality/answerGroupings`] = currentGroupings;
+      await update(dbRef(db), updates);
+
+      // Re-render
+      await renderAnswerGroups(currentGroupings);
+    }
+
+    // Show results (host only)
+    showResultsBtn.addEventListener('click', async () => {
+      try {
+        const roomRef = getRoomRef(roomCode);
+        const snapshot = await get(roomRef);
+        const data = snapshot.val();
+        const players = data.players || {};
+        const currentPinkCow = data.settings?.herdMentality?.pinkCowHolder;
+
+        // Guard: check if groupings exist
+        if (!currentGroupings || Object.keys(currentGroupings).length === 0) {
+          console.error('No answer groupings found');
+          return;
+        }
+
+        // Find majority group
+        const groupSizes = Object.values(currentGroupings).map(g => g.length);
+        if (groupSizes.length === 0) {
+          console.error('No groups found');
+          return;
+        }
+
+        const maxSize = Math.max(...groupSizes);
+        const largestGroups = Object.values(currentGroupings).filter(g => g.length === maxSize);
+        const hasMajority = largestGroups.length === 1;
+
+        // Find unique answers (single-player groups)
+        const uniqueGroups = Object.values(currentGroupings).filter(g => g.length === 1);
+        let newPinkCow = currentPinkCow || null;
+        if (uniqueGroups.length === 1) {
+          newPinkCow = uniqueGroups[0][0].playerId;
+        }
+
+        const updates = {};
+        updates[`rooms/${roomCode}/gameData/herdMentality/answerGroupings`] = currentGroupings;
+
+        // Award points to majority (excluding current pink cow holder)
+        if (hasMajority) {
+          const majorityGroup = largestGroups[0];
+          majorityGroup.forEach(ans => {
+            const pid = ans.playerId;
+            if (pid !== currentPinkCow) {
+              const currentScore = players[pid].score || 0;
+              updates[`rooms/${roomCode}/players/${pid}/score`] = currentScore + 1;
+            }
+          });
+        }
+
+        // Transfer pink cow (ensure it's null instead of undefined)
+        updates[`rooms/${roomCode}/settings/herdMentality/pinkCowHolder`] = newPinkCow;
+
+        // Mark scores as calculated
+        updates[`rooms/${roomCode}/gameData/herdMentality/scoresCalculated`] = true;
+
+        // Transition to results
+        updates[`rooms/${roomCode}/phase`] = 'results';
+
+        await update(dbRef(db), updates);
+      } catch (error) {
+        console.error('Error showing results:', error);
+        alert('Failed to show results. Check console for details.');
+      }
+    });
+
+    // Initialize
+    async function initReveal() {
+      try {
+        const roomRef = getRoomRef(roomCode);
+        const snapshot = await get(roomRef);
+        const data = snapshot.val();
+
+        if (!data || !data.players || !data.players[playerId]) {
+          window.location.href = '../../index.html';
+          return;
+        }
+
+        isHost = data.hostId === playerId;
+
+        if (isHost) {
+          hostControls.style.display = 'block';
+
+          // Setup new group zone event listeners
+          newGroupZone.addEventListener('dragover', handleNewGroupDragOver);
+          newGroupZone.addEventListener('dragleave', handleNewGroupDragLeave);
+          newGroupZone.addEventListener('drop', handleNewGroupDrop);
+        }
+
+        // Get or create groupings
+        if (data.gameData?.herdMentality?.answerGroupings) {
+          currentGroupings = data.gameData.herdMentality.answerGroupings;
+        } else {
+          currentGroupings = groupAnswers(data.players);
+
+          if (isHost) {
+            const updates = {};
+            updates[`rooms/${roomCode}/gameData/herdMentality/answerGroupings`] = currentGroupings;
+            await update(dbRef(db), updates);
+          }
+        }
+
+        await renderAnswerGroups(currentGroupings);
+      } catch (error) {
+        console.error('Error initializing reveal:', error);
+      }
+    }
+
+    // Listen for phase changes
+    listenToRoom(roomCode, async (snapshot) => {
+      const data = snapshot.val();
+      if (!data) return;
+
+      if (data.phase === 'results') {
+        window.location.href = `results.html?roomCode=${roomCode}&playerId=${playerId}`;
+      } else if (data.phase === 'lobby') {
+        window.location.href = `../../lobby.html?roomCode=${roomCode}&playerId=${playerId}`;
+      }
+
+      // Update groupings if host modified them
+      if (data.gameData?.herdMentality?.answerGroupings) {
+        currentGroupings = data.gameData.herdMentality.answerGroupings;
+        await renderAnswerGroups(currentGroupings);
+      }
+    });
+
+    initReveal();
+  </script>
+</body>
+</html>

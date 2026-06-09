@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Fakin' It - Answer</title>
+  <link rel="stylesheet" href="../../style.css">
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="../../styles/components/timer.css">
+  <link rel="stylesheet" href="../../styles/components/question-display.css">
+  <link rel="stylesheet" href="../../styles/components/input-field.css">
+</head>
+<body>
+  <div class="container">
+    <h1>🎮 Answer Round</h1>
+
+    <div id="timerDisplay" class="timer"></div>
+
+    <div class="question-display">
+      <h3>Question</h3>
+      <p id="questionText">Loading...</p>
+    </div>
+
+    <div class="status-message" id="overseerWaiting" style="display: none;">
+      Waiting for players to answer...
+    </div>
+
+    <div class="input-group" id="answerGroup">
+      <label for="answerInput">Your Answer</label>
+      <textarea id="answerInput" placeholder="Type your answer here..."></textarea>
+    </div>
+
+    <div class="submission-status" id="submissionStatus"></div>
+
+    <div id="errorMessage" class="error" style="display: none;"></div>
+
+    <button id="submitBtn" class="button">Submit Answer</button>
+    <button id="changeAnswerBtn" class="button button--secondary" style="display: none;">Change Answer</button>
+    <button id="forceNextBtn" class="button button--secondary" style="display: none; margin-top: 10px;">Force Voting (Host)</button>
+  </div>
+
+  <script type="module">
+    import { getRoomRef, listenToRoom, update, get, ref as dbRef } from '../../firebase-config.js';
+    import { getUrlParams } from '../../utils.js';
+    import { db } from '../../firebase-config.js';
+    import { Timer } from '../../src/components/Timer.js';
+
+    const { roomCode, playerId } = getUrlParams();
+
+    if (!roomCode || !playerId) {
+      window.location.href = '../../index.html';
+    }
+
+    const questionText = document.getElementById('questionText');
+    const overseerWaiting = document.getElementById('overseerWaiting');
+    const answerGroup = document.getElementById('answerGroup');
+    const answerInput = document.getElementById('answerInput');
+    const submitBtn = document.getElementById('submitBtn');
+    const changeAnswerBtn = document.getElementById('changeAnswerBtn');
+    const forceNextBtn = document.getElementById('forceNextBtn');
+    const errorMessage = document.getElementById('errorMessage');
+    const submissionStatus = document.getElementById('submissionStatus');
+
+    let myRole = null;
+    let hasSubmitted = false;
+    let totalPlayers = 0;
+    let submittedCount = 0;
+    let isOverseer = false;
+    let isHost = false;
+    let timer = null;
+
+    function showError(message) {
+      errorMessage.textContent = message;
+      errorMessage.style.display = 'block';
+    }
+
+    // Load question based on role
+    async function loadQuestion() {
+      try {
+        const roomRef = getRoomRef(roomCode);
+        const snapshot = await get(roomRef);
+        const data = snapshot.val();
+
+        if (!data || !data.players || !data.players[playerId]) {
+          window.location.href = '../../index.html';
+          return;
+        }
+
+        const player = data.players[playerId];
+        const overseer = data.settings?.fakinIt?.overseer;
+        isHost = data.hostId === playerId;
+        const timerDuration = data.settings?.fakinIt?.answerTimer || 300;
+
+        // Check if player is a late joiner (not in game when it started)
+        if (!player.inGame) {
+          window.location.href = 'waiting.html?roomCode=' + roomCode + '&playerId=' + playerId;
+          return;
+        }
+
+        myRole = player.role;
+
+        // Check if this player is the overseer
+        if (playerId === overseer) {
+          isOverseer = true;
+          overseerWaiting.style.display = 'block';
+          answerGroup.style.display = 'none';
+          submitBtn.style.display = 'none';
+          if (isHost) forceNextBtn.style.display = 'block';
+
+          timer = new Timer({
+            element: document.getElementById('timerDisplay'),
+            duration: timerDuration,
+            warningAt: 60,
+            onComplete: () => {
+              if (isHost) updatePhaseToVoting();
+            }
+          });
+          timer.start();
+          return;
+        }
+
+        // Check if player has already submitted
+        if (player.answer) {
+          hasSubmitted = true;
+          answerInput.value = player.answer;
+          answerInput.disabled = true;
+          submitBtn.style.display = 'none';
+          changeAnswerBtn.style.display = 'block';
+        }
+
+        if (isHost) forceNextBtn.style.display = 'block';
+
+        timer = new Timer({
+          element: document.getElementById('timerDisplay'),
+          duration: timerDuration,
+          warningAt: 60,
+          onComplete: () => {
+            if (isHost) updatePhaseToVoting();
+          }
+        });
+        timer.start();
+
+        // Get appropriate question
+        const questions = data.gameData?.fakinIt?.questions;
+        if (myRole === 'faker') {
+          questionText.textContent = questions.faker;
+        } else if (myRole === 'innocent') {
+          questionText.textContent = questions.real;
+        } else {
+          // Role not set - redirect to lobby
+          window.location.href = `../../lobby.html?roomCode=${roomCode}&playerId=${playerId}`;
+          return;
+        }
+      } catch (error) {
+        console.error('Error loading question:', error);
+        showError('Failed to load question');
+      }
+    }
+
+    loadQuestion();
+
+    // Listen for submission updates
+    listenToRoom(roomCode, (snapshot) => {
+      const data = snapshot.val();
+      if (!data) return;
+
+      const players = data.players || {};
+      const overseer = data.settings?.fakinIt?.overseer;
+
+      // Count non-overseer players and submissions (exclude late joiners)
+      const playerIds = Object.keys(players);
+      const nonOverseerIds = playerIds.filter(pid => pid !== overseer && players[pid].inGame);
+
+      totalPlayers = nonOverseerIds.length;
+      submittedCount = nonOverseerIds.filter(pid => players[pid].answer).length;
+
+      submissionStatus.textContent = `${submittedCount}/${totalPlayers} players submitted`;
+
+      // Check if all submitted
+      if (submittedCount === totalPlayers && data.phase === 'answer') {
+        // Transition to voting
+        if (data.hostId === playerId) {
+          updatePhaseToVoting();
+        }
+      }
+
+      // Handle phase change
+      if (data.phase === 'voting') {
+        window.location.href = `voting.html?roomCode=${roomCode}&playerId=${playerId}`;
+      }
+    });
+
+    async function updatePhaseToVoting() {
+      try {
+        const updates = {};
+        updates[`rooms/${roomCode}/phase`] = 'voting';
+        await update(dbRef(db), updates);
+      } catch (error) {
+        console.error('Error updating phase:', error);
+      }
+    }
+
+    submitBtn.addEventListener('click', async () => {
+      const answer = answerInput.value.trim();
+
+      if (!answer) {
+        showError('Please enter an answer');
+        return;
+      }
+
+      if (hasSubmitted) {
+        return;
+      }
+
+      try {
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Submitting...';
+
+        const updates = {};
+        updates[`rooms/${roomCode}/players/${playerId}/answer`] = answer;
+        await update(dbRef(db), updates);
+
+        hasSubmitted = true;
+        answerInput.disabled = true;
+        submitBtn.style.display = 'none';
+        changeAnswerBtn.style.display = 'block';
+      } catch (error) {
+        console.error('Error submitting answer:', error);
+        showError('Failed to submit answer');
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Submit Answer';
+      }
+    });
+
+    changeAnswerBtn.addEventListener('click', async () => {
+      await update(dbRef(db), { [`rooms/${roomCode}/players/${playerId}/answer`]: null });
+      hasSubmitted = false;
+      answerInput.value = '';
+      answerInput.disabled = false;
+      changeAnswerBtn.style.display = 'none';
+      submitBtn.style.display = 'block';
+      submitBtn.disabled = false;
+    });
+
+    forceNextBtn.addEventListener('click', () => {
+      if (confirm('Skip to voting?')) updatePhaseToVoting();
+    });
+
+    import { updatePhase } from '../../firebase-config.js';
+  </script>
+</body>
+</html>

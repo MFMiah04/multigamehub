@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Imposter - Waiting</title>
+  <link rel="stylesheet" href="../../style.css">
+</head>
+<body>
+  <div class="container">
+    <h1>🕵️ Imposter</h1>
+
+    <div class="status-message">
+      <h2>Game in Progress</h2>
+      <p>Please wait for the current round to finish...</p>
+      <p>You'll be able to join when the host returns to the lobby.</p>
+    </div>
+
+    <div id="errorMessage" class="error" style="display: none;"></div>
+  </div>
+
+  <script type="module">
+    import { listenToRoom } from '../../firebase-config.js';
+    import { getUrlParams } from '../../utils.js';
+
+    const { roomCode, playerId } = getUrlParams();
+
+    if (!roomCode || !playerId) {
+      window.location.href = '../../index.html';
+    }
+
+    const errorMessage = document.getElementById('errorMessage');
+
+    function showError(message) {
+      errorMessage.textContent = message;
+      errorMessage.style.display = 'block';
+    }
+
+    // Listen for phase changes
+    listenToRoom(roomCode, (snapshot) => {
+      const data = snapshot.val();
+      if (!data) {
+        window.location.href = '../../index.html';
+        return;
+      }
+
+      // Check if phase changed back to lobby
+      if (data.phase === 'lobby') {
+        window.location.href = `../../lobby.html?roomCode=${roomCode}&playerId=${playerId}`;
+      }
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,1157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Multi-Game Hub - Lobby</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="container">
+    <div style="text-align: center; margin-bottom: 12px;">
+      <h1 style="margin-bottom: 8px;">🎮 Lobby</h1>
+      <button class="button button--room-code" id="roomCodeDisplay" title="Click to copy"></button>
+    </div>
+
+    <!-- Game Selection Section -->
+    <div class="game-selection-panel" style="margin: 12px 0;">
+      <h2>Select Game</h2>
+      <div id="gameCards" style="display: flex; flex-wrap: wrap; gap: 10px; justify-content: center;"></div>
+      <div id="gameNote" style="text-align: center; color: #666; margin-top: 10px; font-size: 14px;">
+        Only the host can select the game
+      </div>
+    </div>
+
+    <div class="player-list">
+      <h2>Players</h2>
+      <div id="playersList"></div>
+    </div>
+
+    <!-- Settings Panel -->
+    <div class="settings-panel" id="settingsPanel" style="display: none; margin: 12px 0;">
+      <h2 style="cursor: pointer; user-select: none;" id="settingsHeader">
+        Game Settings <span id="settingsToggle">▶</span>
+      </h2>
+      <div id="settingsContent" style="display: none;">
+        <!-- Settings populated dynamically based on selected game -->
+      </div>
+    </div>
+
+    <div id="errorMessage" class="error" style="display: none;"></div>
+    <div id="waitingMessage" class="status-message" style="display: none;"></div>
+
+    <div id="actionButtons" style="display: flex; gap: 10px;">
+      <button id="leaveBtn" class="button button--secondary button--flex">Leave Lobby</button>
+      <button id="startBtn" class="button button--flex" style="display: none;" disabled>Start Game</button>
+    </div>
+
+    <!-- Kick Player Confirmation Modal -->
+    <div id="kickModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.5); z-index: 1000; align-items: center; justify-content: center;">
+      <div style="background: white; padding: 30px; border-radius: 15px; max-width: 400px; text-align: center;">
+        <h3 style="margin-top: 0;">Kick Player?</h3>
+        <p id="kickPlayerName" style="color: #666;"></p>
+        <div style="display: flex; gap: 10px; margin-top: 20px;">
+          <button id="cancelKickBtn" class="button button--secondary button--flex">Cancel</button>
+          <button id="confirmKickBtn" class="button button--danger button--flex">Kick</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script type="module">
+    import { getRoomRef, getPlayersRef, getSettingsRef, updatePhase, listenToRoom, update, remove, get, ref as dbRef } from './firebase-config.js';
+    import { getUrlParams, navigateToPage } from './utils.js';
+    import { db } from './firebase-config.js';
+
+    const { roomCode, playerId } = getUrlParams();
+
+    if (!roomCode || !playerId) {
+      window.location.href = 'index.html';
+    }
+
+    const roomCodeDisplay = document.getElementById('roomCodeDisplay');
+    const playersList = document.getElementById('playersList');
+    const gameCards = document.getElementById('gameCards');
+    const gameNote = document.getElementById('gameNote');
+    const settingsPanel = document.getElementById('settingsPanel');
+    const settingsHeader = document.getElementById('settingsHeader');
+    const settingsToggle = document.getElementById('settingsToggle');
+    const settingsContent = document.getElementById('settingsContent');
+    const startBtn = document.getElementById('startBtn');
+    const leaveBtn = document.getElementById('leaveBtn');
+    const errorMessage = document.getElementById('errorMessage');
+    const waitingMessage = document.getElementById('waitingMessage');
+    const kickModal = document.getElementById('kickModal');
+    const kickPlayerName = document.getElementById('kickPlayerName');
+    const cancelKickBtn = document.getElementById('cancelKickBtn');
+    const confirmKickBtn = document.getElementById('confirmKickBtn');
+
+    let playerToKick = null;
+
+    roomCodeDisplay.textContent = roomCode;
+
+    // Copy room code when clicked
+    roomCodeDisplay.addEventListener('click', () => {
+      navigator.clipboard.writeText(roomCode).then(() => {
+        const originalText = roomCodeDisplay.textContent;
+        roomCodeDisplay.textContent = 'Copied!';
+        setTimeout(() => {
+          roomCodeDisplay.textContent = originalText;
+        }, 2000);
+      }).catch(() => {
+        const originalText = roomCodeDisplay.textContent;
+        roomCodeDisplay.textContent = 'Failed to copy';
+        setTimeout(() => {
+          roomCodeDisplay.textContent = originalText;
+        }, 2000);
+      });
+    });
+
+    let isHost = false;
+    let selectedGame = null;
+    let allPlayers = {};
+    let roomData = null;
+    let settingsExpanded = false;
+
+    // Game definitions
+    const games = {
+      'fakin-it': {
+        name: "Fakin' It",
+        emoji: '🎭',
+        description: 'Social deception game',
+        settings: ['overseer', 'numFakers']
+      },
+      'imposter': {
+        name: 'Imposter',
+        emoji: '🕵️',
+        description: 'Find the imposters',
+        settings: ['numImposters', 'gameDuration']
+      },
+      'spyfall': {
+        name: 'Spyfall',
+        emoji: '🔍',
+        description: 'Find the spy',
+        settings: ['numSpies', 'timer', 'locations']
+      },
+      'herd-mentality': {
+        name: 'Herd Mentality',
+        emoji: '🐄',
+        description: 'Think like the herd',
+        settings: ['timer']
+      }
+    };
+
+    function showError(message) {
+      errorMessage.textContent = message;
+      errorMessage.style.display = 'block';
+    }
+
+    function showWaiting(message) {
+      waitingMessage.textContent = message;
+      waitingMessage.style.display = 'block';
+    }
+
+    function hideWaiting() {
+      waitingMessage.style.display = 'none';
+    }
+
+    // Render game selection cards
+    function renderGameCards() {
+      gameCards.innerHTML = '';
+
+      Object.keys(games).forEach(gameId => {
+        const game = games[gameId];
+        const card = document.createElement('div');
+        card.className = 'game-card';
+        card.style.cssText = `
+          padding: 10px 20px;
+          background: ${selectedGame === gameId ? '#667eea' : '#f9f9f9'};
+          color: ${selectedGame === gameId ? 'white' : '#333'};
+          border-radius: 10px;
+          cursor: ${isHost ? 'pointer' : 'default'};
+          border: 2px solid ${selectedGame === gameId ? '#667eea' : '#ddd'};
+          transition: all 0.3s;
+          text-align: center;
+          min-width: 150px;
+        `;
+
+        card.innerHTML = `
+          <div style="font-size: 2rem; margin-bottom: 5px;">${game.emoji}</div>
+          <div style="font-weight: 600;">${game.name}</div>
+          <div style="font-size: 12px; opacity: 0.8;">${game.description}</div>
+        `;
+
+        if (isHost) {
+          card.addEventListener('click', () => selectGame(gameId));
+          card.addEventListener('mouseenter', () => {
+            if (selectedGame !== gameId) {
+              card.style.background = '#e8eaf6';
+            }
+          });
+          card.addEventListener('mouseleave', () => {
+            if (selectedGame !== gameId) {
+              card.style.background = '#f9f9f9';
+            }
+          });
+        }
+
+        gameCards.appendChild(card);
+      });
+
+      gameNote.textContent = isHost ? 'Click a game to select it' : 'Only the host can select the game';
+    }
+
+    async function selectGame(gameId) {
+      if (!isHost) return;
+
+      try {
+        const updates = {};
+        updates[`rooms/${roomCode}/selectedGame`] = gameId;
+
+        // Initialize game-specific settings
+        if (gameId === 'fakin-it') {
+          updates[`rooms/${roomCode}/settings/fakinIt`] = {
+            overseer: playerId, // Set host as default overseer
+            numFakers: 1,
+            answerTimer: 300,
+            voteTimer: 300
+          };
+        } else if (gameId === 'imposter') {
+          updates[`rooms/${roomCode}/settings/imposter`] = {
+            numImposters: 1,
+            gameDuration: 5,
+            voteTimer: 60
+          };
+        } else if (gameId === 'spyfall') {
+          // Load default locations
+          const response = await fetch('games/spyfall/locations.json');
+          const locations = await response.json();
+
+          updates[`rooms/${roomCode}/settings/spyfall`] = {
+            numSpies: 1,
+            timer: 5,
+            voteTimer: 60,
+            locations: locations
+          };
+        } else if (gameId === 'herd-mentality') {
+          updates[`rooms/${roomCode}/settings/herdMentality`] = {
+            timer: 20,
+            voteTimer: 60
+          };
+        }
+
+        await update(dbRef(db), updates);
+      } catch (error) {
+        console.error('Error selecting game:', error);
+        showError('Failed to select game');
+      }
+    }
+
+    // Render game-specific settings
+    function renderSettings() {
+      if (!selectedGame) {
+        settingsPanel.style.display = 'none';
+        return;
+      }
+
+      settingsPanel.style.display = 'block';
+      settingsContent.innerHTML = '';
+
+      if (selectedGame === 'fakin-it') {
+        // Fakin' It settings
+        const overseerGroup = document.createElement('div');
+        overseerGroup.className = 'input-group';
+        overseerGroup.innerHTML = `
+          <label for="overseerSelect">Overseer (Non-Player)</label>
+          <select id="overseerSelect" ${!isHost ? 'disabled' : ''}>
+          </select>
+        `;
+
+        const fakersGroup = document.createElement('div');
+        fakersGroup.className = 'input-group';
+        fakersGroup.innerHTML = `
+          <label for="numFakers">Number of Fakers</label>
+          <select id="numFakers" ${!isHost ? 'disabled' : ''}>
+            <option value="1">1</option>
+          </select>
+        `;
+
+        const voteTimerGroup = document.createElement('div');
+        voteTimerGroup.className = 'input-group';
+        voteTimerGroup.innerHTML = `
+          <label for="voteTimer">Vote Timer (minutes)</label>
+          <select id="voteTimer" ${!isHost ? 'disabled' : ''}>
+            ${[3,4,5,6,7,8,9,10].map(m =>
+              `<option value="${m}" ${m === Math.floor((roomData.settings?.fakinIt?.voteTimer || 300) / 60) ? 'selected' : ''}>${m}</option>`
+            ).join('')}
+          </select>
+        `;
+
+        settingsContent.appendChild(overseerGroup);
+        settingsContent.appendChild(fakersGroup);
+        settingsContent.appendChild(voteTimerGroup);
+
+        // Populate overseer dropdown
+        const overseerSelect = document.getElementById('overseerSelect');
+        const playerIds = Object.keys(allPlayers);
+        playerIds.forEach(pid => {
+          const option = document.createElement('option');
+          option.value = pid;
+          option.textContent = allPlayers[pid].name;
+          if (pid === roomData.settings?.fakinIt?.overseer) {
+            option.selected = true;
+          }
+          overseerSelect.appendChild(option);
+        });
+
+        // Populate fakers dropdown
+        const numFakersSelect = document.getElementById('numFakers');
+        const currentOverseer = roomData.settings?.fakinIt?.overseer;
+        const nonOverseerCount = currentOverseer ? playerIds.length - 1 : playerIds.length;
+        const maxFakers = Math.floor(nonOverseerCount / 2);
+        const currentNumFakers = roomData.settings?.fakinIt?.numFakers || 1;
+
+        numFakersSelect.innerHTML = '';
+        for (let i = 1; i <= Math.max(1, maxFakers); i++) {
+          const option = document.createElement('option');
+          option.value = i;
+          option.textContent = i;
+          if (i === currentNumFakers) {
+            option.selected = true;
+          }
+          numFakersSelect.appendChild(option);
+        }
+
+        // Event listeners
+        if (isHost) {
+          overseerSelect.addEventListener('change', async () => {
+            const selectedOverseer = overseerSelect.value || null;
+            try {
+              await update(dbRef(db), {
+                [`rooms/${roomCode}/settings/fakinIt/overseer`]: selectedOverseer
+              });
+            } catch (error) {
+              console.error('Error updating overseer:', error);
+              showError('Failed to update overseer');
+            }
+          });
+
+          numFakersSelect.addEventListener('change', async () => {
+            const numFakers = parseInt(numFakersSelect.value);
+            try {
+              await update(dbRef(db), {
+                [`rooms/${roomCode}/settings/fakinIt/numFakers`]: numFakers
+              });
+            } catch (error) {
+              console.error('Error updating fakers:', error);
+              showError('Failed to update number of fakers');
+            }
+          });
+
+          document.getElementById('voteTimer').addEventListener('change', async () => {
+            const minutes = parseInt(document.getElementById('voteTimer').value);
+            try {
+              await update(dbRef(db), {
+                [`rooms/${roomCode}/settings/fakinIt/voteTimer`]: minutes * 60
+              });
+            } catch (error) {
+              console.error('Error updating vote timer:', error);
+              showError('Failed to update vote timer');
+            }
+          });
+        }
+
+        // Update start button
+        const canStart = currentOverseer && nonOverseerCount >= 3;
+        if (isHost) {
+          startBtn.disabled = !canStart;
+          startBtn.textContent = canStart ? 'Start Game' : `Need ${3 - nonOverseerCount} more players`;
+        }
+      } else if (selectedGame === 'imposter') {
+        // Imposter settings
+        const impostersGroup = document.createElement('div');
+        impostersGroup.className = 'input-group';
+        impostersGroup.innerHTML = `
+          <label for="numImposters">Number of Imposters</label>
+          <select id="numImposters" ${!isHost ? 'disabled' : ''}>
+            <option value="1">1</option>
+          </select>
+        `;
+
+        const durationGroup = document.createElement('div');
+        durationGroup.className = 'input-group';
+        durationGroup.innerHTML = `
+          <label for="gameDuration">Game Duration (minutes)</label>
+          <select id="gameDuration" ${!isHost ? 'disabled' : ''}>
+            ${[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(m =>
+              `<option value="${m}" ${m === (roomData.settings?.imposter?.gameDuration || 5) ? 'selected' : ''}>${m}</option>`
+            ).join('')}
+          </select>
+        `;
+
+        const voteTimerGroup = document.createElement('div');
+        voteTimerGroup.className = 'input-group';
+        voteTimerGroup.innerHTML = `
+          <label for="voteTimer">Vote Timer (minutes)</label>
+          <select id="voteTimer" ${!isHost ? 'disabled' : ''}>
+            ${[1,2,3,4,5].map(m =>
+              `<option value="${m}" ${m === Math.floor((roomData.settings?.imposter?.voteTimer || 60) / 60) ? 'selected' : ''}>${m}</option>`
+            ).join('')}
+          </select>
+        `;
+
+        settingsContent.appendChild(impostersGroup);
+        settingsContent.appendChild(durationGroup);
+        settingsContent.appendChild(voteTimerGroup);
+
+        // Populate imposters dropdown
+        const numImpostersSelect = document.getElementById('numImposters');
+        const playerIds = Object.keys(allPlayers);
+        // Max imposters is just under half (e.g., 3 players = max 1, 4 players = max 1, 5 players = max 2)
+        const maxImposters = Math.floor((playerIds.length - 1) / 2);
+        const currentNumImposters = roomData.settings?.imposter?.numImposters || 1;
+
+        numImpostersSelect.innerHTML = '';
+        for (let i = 1; i <= Math.max(1, maxImposters); i++) {
+          const option = document.createElement('option');
+          option.value = i;
+          option.textContent = i;
+          if (i === currentNumImposters) {
+            option.selected = true;
+          }
+          numImpostersSelect.appendChild(option);
+        }
+
+        // Event listeners
+        if (isHost) {
+          numImpostersSelect.addEventListener('change', async () => {
+            const numImposters = parseInt(numImpostersSelect.value);
+            try {
+              await update(dbRef(db), {
+                [`rooms/${roomCode}/settings/imposter/numImposters`]: numImposters
+              });
+            } catch (error) {
+              console.error('Error updating imposters:', error);
+              showError('Failed to update number of imposters');
+            }
+          });
+
+          document.getElementById('gameDuration').addEventListener('change', async () => {
+            const duration = parseInt(document.getElementById('gameDuration').value);
+            try {
+              await update(dbRef(db), {
+                [`rooms/${roomCode}/settings/imposter/gameDuration`]: duration
+              });
+            } catch (error) {
+              console.error('Error updating duration:', error);
+              showError('Failed to update game duration');
+            }
+          });
+
+          document.getElementById('voteTimer').addEventListener('change', async () => {
+            const minutes = parseInt(document.getElementById('voteTimer').value);
+            try {
+              await update(dbRef(db), {
+                [`rooms/${roomCode}/settings/imposter/voteTimer`]: minutes * 60
+              });
+            } catch (error) {
+              console.error('Error updating vote timer:', error);
+              showError('Failed to update vote timer');
+            }
+          });
+        }
+
+        // Update start button
+        const canStart = playerIds.length >= 3;
+        if (isHost) {
+          startBtn.disabled = !canStart;
+          startBtn.textContent = canStart ? 'Start Game' : `Need ${3 - playerIds.length} more players`;
+        }
+      } else if (selectedGame === 'spyfall') {
+        // Spyfall settings
+        const spiesGroup = document.createElement('div');
+        spiesGroup.className = 'input-group';
+        spiesGroup.innerHTML = `
+          <label for="numSpies">Number of Spies</label>
+          <select id="numSpies" ${!isHost ? 'disabled' : ''}>
+            <option value="1">1</option>
+          </select>
+        `;
+
+        const timerGroup = document.createElement('div');
+        timerGroup.className = 'input-group';
+        timerGroup.innerHTML = `
+          <label for="timer">Game Timer (minutes)</label>
+          <select id="timer" ${!isHost ? 'disabled' : ''}>
+            ${[3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15].map(m =>
+              `<option value="${m}" ${m === (roomData.settings?.spyfall?.timer || 5) ? 'selected' : ''}>${m}</option>`
+            ).join('')}
+          </select>
+        `;
+
+        const voteTimerGroup = document.createElement('div');
+        voteTimerGroup.className = 'input-group';
+        voteTimerGroup.innerHTML = `
+          <label for="voteTimer">Vote Timer (minutes)</label>
+          <select id="voteTimer" ${!isHost ? 'disabled' : ''}>
+            ${[1,2,3,4,5].map(m =>
+              `<option value="${m}" ${m === Math.floor((roomData.settings?.spyfall?.voteTimer || 60) / 60) ? 'selected' : ''}>${m}</option>`
+            ).join('')}
+          </select>
+        `;
+
+        const locationsGroup = document.createElement('div');
+        locationsGroup.className = 'input-group';
+        locationsGroup.style.cssText = 'margin-top: 10px;';
+
+        const locationsHeader = document.createElement('div');
+        locationsHeader.style.cssText = 'cursor: pointer; user-select: none; padding: 8px; background: #f0f0f0; border-radius: 5px; margin-bottom: 8px; font-size: 0.85rem;';
+        locationsHeader.innerHTML = '<strong>Locations</strong> <span id="locationsToggle">▶</span>';
+
+        const locationsList = document.createElement('div');
+        locationsList.id = 'locationsList';
+        locationsList.style.cssText = 'display: none; max-height: 180px; overflow-y: auto; border: 1px solid #ddd; padding: 8px; border-radius: 5px;';
+
+        const locations = roomData.settings?.spyfall?.locations || [];
+        locations.forEach((loc, index) => {
+          const locDiv = document.createElement('div');
+          locDiv.style.cssText = 'padding: 3px 0; display: flex; align-items: center; font-size: 0.85rem;';
+
+          const checkbox = document.createElement('input');
+          checkbox.type = 'checkbox';
+          checkbox.id = `loc-${index}`;
+          checkbox.checked = loc.enabled;
+          checkbox.disabled = !isHost;
+          checkbox.style.marginRight = '8px';
+
+          const label = document.createElement('label');
+          label.htmlFor = `loc-${index}`;
+          label.textContent = loc.location;
+          label.style.cursor = isHost ? 'pointer' : 'default';
+
+          if (isHost) {
+            checkbox.addEventListener('change', async () => {
+              try {
+                await update(dbRef(db), {
+                  [`rooms/${roomCode}/settings/spyfall/locations/${index}/enabled`]: checkbox.checked
+                });
+              } catch (error) {
+                console.error('Error updating location:', error);
+              }
+            });
+          }
+
+          locDiv.appendChild(checkbox);
+          locDiv.appendChild(label);
+          locationsList.appendChild(locDiv);
+        });
+
+        locationsHeader.addEventListener('click', () => {
+          const isVisible = locationsList.style.display === 'block';
+          locationsList.style.display = isVisible ? 'none' : 'block';
+          document.getElementById('locationsToggle').textContent = isVisible ? '▶' : '▼';
+        });
+
+        locationsGroup.appendChild(locationsHeader);
+        locationsGroup.appendChild(locationsList);
+
+        settingsContent.appendChild(spiesGroup);
+        settingsContent.appendChild(timerGroup);
+        settingsContent.appendChild(voteTimerGroup);
+        settingsContent.appendChild(locationsGroup);
+
+        // Populate spies dropdown
+        const numSpiesSelect = document.getElementById('numSpies');
+        const playerIds = Object.keys(allPlayers);
+        const maxSpies = playerIds.length >= 5 ? 2 : 1;
+        const currentNumSpies = roomData.settings?.spyfall?.numSpies || 1;
+
+        numSpiesSelect.innerHTML = '';
+        for (let i = 1; i <= maxSpies; i++) {
+          const option = document.createElement('option');
+          option.value = i;
+          option.textContent = i;
+          if (i === currentNumSpies) {
+            option.selected = true;
+          }
+          numSpiesSelect.appendChild(option);
+        }
+
+        // Event listeners
+        if (isHost) {
+          numSpiesSelect.addEventListener('change', async () => {
+            const numSpies = parseInt(numSpiesSelect.value);
+            try {
+              await update(dbRef(db), {
+                [`rooms/${roomCode}/settings/spyfall/numSpies`]: numSpies
+              });
+            } catch (error) {
+              console.error('Error updating spies:', error);
+              showError('Failed to update number of spies');
+            }
+          });
+
+          document.getElementById('timer').addEventListener('change', async () => {
+            const timer = parseInt(document.getElementById('timer').value);
+            try {
+              await update(dbRef(db), {
+                [`rooms/${roomCode}/settings/spyfall/timer`]: timer
+              });
+            } catch (error) {
+              console.error('Error updating timer:', error);
+              showError('Failed to update timer');
+            }
+          });
+
+          document.getElementById('voteTimer').addEventListener('change', async () => {
+            const minutes = parseInt(document.getElementById('voteTimer').value);
+            try {
+              await update(dbRef(db), {
+                [`rooms/${roomCode}/settings/spyfall/voteTimer`]: minutes * 60
+              });
+            } catch (error) {
+              console.error('Error updating vote timer:', error);
+              showError('Failed to update vote timer');
+            }
+          });
+        }
+
+        // Update start button
+        const canStart = playerIds.length >= 3;
+        if (isHost) {
+          startBtn.disabled = !canStart;
+          startBtn.textContent = canStart ? 'Start Game' : `Need ${3 - playerIds.length} more players`;
+        }
+      } else if (selectedGame === 'herd-mentality') {
+        // Herd Mentality settings
+        const timerGroup = document.createElement('div');
+        timerGroup.className = 'input-group';
+        timerGroup.innerHTML = `
+          <label for="timerSetting">Answer Timer (seconds)</label>
+          <select id="timerSetting" ${!isHost ? 'disabled' : ''}>
+            ${[10, 20, 30, 40, 50, 60].map(s =>
+              `<option value="${s}" ${s === (roomData.settings?.herdMentality?.timer || 20) ? 'selected' : ''}>${s}</option>`
+            ).join('')}
+          </select>
+        `;
+
+        const voteTimerGroup = document.createElement('div');
+        voteTimerGroup.className = 'input-group';
+        voteTimerGroup.innerHTML = `
+          <label for="voteTimer">Vote Timer (minutes)</label>
+          <select id="voteTimer" ${!isHost ? 'disabled' : ''}>
+            ${[1,2,3,4,5].map(m =>
+              `<option value="${m}" ${m === Math.floor((roomData.settings?.herdMentality?.voteTimer || 60) / 60) ? 'selected' : ''}>${m}</option>`
+            ).join('')}
+          </select>
+        `;
+
+        settingsContent.appendChild(timerGroup);
+        settingsContent.appendChild(voteTimerGroup);
+
+        // Event listener for timer changes
+        if (isHost) {
+          document.getElementById('timerSetting').addEventListener('change', async () => {
+            const timer = parseInt(document.getElementById('timerSetting').value);
+            try {
+              await update(dbRef(db), {
+                [`rooms/${roomCode}/settings/herdMentality/timer`]: timer
+              });
+            } catch (error) {
+              console.error('Error updating timer:', error);
+              showError('Failed to update timer');
+            }
+          });
+
+          document.getElementById('voteTimer').addEventListener('change', async () => {
+            const minutes = parseInt(document.getElementById('voteTimer').value);
+            try {
+              await update(dbRef(db), {
+                [`rooms/${roomCode}/settings/herdMentality/voteTimer`]: minutes * 60
+              });
+            } catch (error) {
+              console.error('Error updating vote timer:', error);
+              showError('Failed to update vote timer');
+            }
+          });
+        }
+
+        // Update start button
+        const playerIds = Object.keys(allPlayers);
+        const canStart = playerIds.length >= 3;
+        if (isHost) {
+          startBtn.disabled = !canStart;
+          startBtn.textContent = canStart ? 'Start Game' : `Need ${3 - playerIds.length} more players`;
+        }
+      }
+    }
+
+    // Toggle settings collapse
+    settingsHeader.addEventListener('click', () => {
+      settingsExpanded = !settingsExpanded;
+      settingsContent.style.display = settingsExpanded ? 'block' : 'none';
+      settingsToggle.textContent = settingsExpanded ? '▼' : '▶';
+    });
+
+    // Listen to room changes
+    listenToRoom(roomCode, (snapshot) => {
+      const data = snapshot.val();
+      if (!data) {
+        window.location.href = 'index.html';
+        return;
+      }
+
+      roomData = data;
+      isHost = data.hostId === playerId;
+      allPlayers = data.players || {};
+      selectedGame = data.selectedGame;
+
+      updateUI();
+      handlePhaseChange(data.phase);
+    });
+
+    function updateUI() {
+      // Update players list
+      playersList.innerHTML = '';
+      const playerIds = Object.keys(allPlayers);
+
+      playerIds.forEach(pid => {
+        const player = allPlayers[pid];
+        const div = document.createElement('div');
+        div.className = 'player-item';
+
+        if (pid === roomData.hostId) {
+          div.classList.add('host');
+        }
+        if (selectedGame === 'fakin-it' && pid === roomData.settings?.fakinIt?.overseer) {
+          div.classList.add('overseer');
+        }
+
+        let displayName = player.name;
+        if (pid === roomData.hostId) displayName += ' (Host)';
+        if (selectedGame === 'fakin-it' && pid === roomData.settings?.fakinIt?.overseer) displayName += ' (Overseer)';
+        if (pid === playerId) displayName += ' (You)';
+
+        div.textContent = displayName;
+        playersList.appendChild(div);
+      });
+
+      // Render game cards
+      renderGameCards();
+
+      // Render settings
+      renderSettings();
+
+      // Show start button for host if game selected
+      if (isHost && selectedGame) {
+        startBtn.style.display = 'block';
+      } else {
+        startBtn.style.display = 'none';
+      }
+    }
+
+    function handlePhaseChange(phase) {
+      const playerData = allPlayers[playerId];
+      const isLateJoiner = !playerData?.inGame;
+
+      if (phase === 'questionInput') {
+        if (selectedGame === 'fakin-it') {
+          if (isLateJoiner) {
+            navigateToPage('games/fakin-it/waiting.html', roomCode, playerId);
+          } else {
+            const overseer = roomData.settings?.fakinIt?.overseer;
+            if (playerId === overseer) {
+              navigateToPage('games/fakin-it/question.html', roomCode, playerId);
+            } else {
+              navigateToPage('games/fakin-it/waiting.html', roomCode, playerId);
+            }
+          }
+        }
+      } else if (phase === 'question') {
+        if (selectedGame === 'herd-mentality') {
+          if (isLateJoiner) {
+            navigateToPage('games/herd-mentality/waiting.html', roomCode, playerId);
+          } else {
+            navigateToPage('games/herd-mentality/game.html', roomCode, playerId);
+          }
+        }
+      } else if (phase === 'reveal') {
+        if (selectedGame === 'herd-mentality') {
+          if (isLateJoiner) {
+            navigateToPage('games/herd-mentality/waiting.html', roomCode, playerId);
+          } else {
+            navigateToPage('games/herd-mentality/reveal.html', roomCode, playerId);
+          }
+        }
+      } else if (phase === 'playing') {
+        if (selectedGame === 'imposter') {
+          if (isLateJoiner) {
+            navigateToPage('games/imposter/waiting.html', roomCode, playerId);
+          } else {
+            navigateToPage('games/imposter/game.html', roomCode, playerId);
+          }
+        } else if (selectedGame === 'spyfall') {
+          if (isLateJoiner) {
+            navigateToPage('games/spyfall/waiting.html', roomCode, playerId);
+          } else {
+            navigateToPage('games/spyfall/game.html', roomCode, playerId);
+          }
+        }
+      } else if (phase === 'answer') {
+        if (selectedGame === 'fakin-it') {
+          if (isLateJoiner) {
+            navigateToPage('games/fakin-it/waiting.html', roomCode, playerId);
+          } else {
+            navigateToPage('games/fakin-it/answer.html', roomCode, playerId);
+          }
+        }
+      } else if (phase === 'voting') {
+        if (selectedGame === 'fakin-it') {
+          if (isLateJoiner) {
+            navigateToPage('games/fakin-it/waiting.html', roomCode, playerId);
+          } else {
+            navigateToPage('games/fakin-it/voting.html', roomCode, playerId);
+          }
+        } else if (selectedGame === 'imposter') {
+          if (isLateJoiner) {
+            navigateToPage('games/imposter/waiting.html', roomCode, playerId);
+          } else {
+            navigateToPage('games/imposter/voting.html', roomCode, playerId);
+          }
+        } else if (selectedGame === 'spyfall') {
+          if (isLateJoiner) {
+            navigateToPage('games/spyfall/waiting.html', roomCode, playerId);
+          } else {
+            navigateToPage('games/spyfall/voting.html', roomCode, playerId);
+          }
+        }
+      } else if (phase === 'results') {
+        if (selectedGame === 'fakin-it') {
+          if (isLateJoiner) {
+            navigateToPage('games/fakin-it/waiting.html', roomCode, playerId);
+          } else {
+            navigateToPage('games/fakin-it/results.html', roomCode, playerId);
+          }
+        } else if (selectedGame === 'imposter') {
+          if (isLateJoiner) {
+            navigateToPage('games/imposter/waiting.html', roomCode, playerId);
+          } else {
+            navigateToPage('games/imposter/results.html', roomCode, playerId);
+          }
+        } else if (selectedGame === 'spyfall') {
+          if (isLateJoiner) {
+            navigateToPage('games/spyfall/waiting.html', roomCode, playerId);
+          } else {
+            navigateToPage('games/spyfall/results.html', roomCode, playerId);
+          }
+        } else if (selectedGame === 'herd-mentality') {
+          if (isLateJoiner) {
+            navigateToPage('games/herd-mentality/waiting.html', roomCode, playerId);
+          } else {
+            navigateToPage('games/herd-mentality/results.html', roomCode, playerId);
+          }
+        }
+      } else if (phase === 'lobby') {
+        hideWaiting();
+        if (isHost && selectedGame) {
+          startBtn.style.display = 'block';
+        }
+      }
+    }
+
+    // Start game
+    startBtn.addEventListener('click', async () => {
+      if (!isHost || !selectedGame) return;
+
+      if (selectedGame === 'fakin-it') {
+        const playerIds = Object.keys(allPlayers);
+        const currentOverseer = roomData.settings?.fakinIt?.overseer;
+        const nonOverseerCount = currentOverseer ? playerIds.length - 1 : playerIds.length;
+
+        if (!currentOverseer) {
+          showError('Please select an overseer');
+          return;
+        }
+
+        if (nonOverseerCount < 3) {
+          showError('Need at least 3 players (excluding overseer)');
+          return;
+        }
+
+        try {
+          startBtn.disabled = true;
+          startBtn.textContent = 'Starting...';
+
+          // Mark all current players as in-game
+          const updates = {};
+          playerIds.forEach(pid => {
+            updates[`rooms/${roomCode}/players/${pid}/inGame`] = true;
+          });
+          updates[`rooms/${roomCode}/phase`] = 'questionInput';
+
+          await update(dbRef(db), updates);
+        } catch (error) {
+          console.error('Error starting game:', error);
+          showError('Failed to start game');
+          startBtn.disabled = false;
+          startBtn.textContent = 'Start Game';
+        }
+      } else if (selectedGame === 'imposter') {
+        const playerIds = Object.keys(allPlayers);
+
+        if (playerIds.length < 3) {
+          showError('Need at least 3 players');
+          return;
+        }
+
+        try {
+          startBtn.disabled = true;
+          startBtn.textContent = 'Starting...';
+
+          // Fetch words from JSON
+          const response = await fetch('games/imposter/words.json');
+          const words = await response.json();
+          const randomWord = words[Math.floor(Math.random() * words.length)];
+
+          // Assign roles
+          const numImposters = roomData.settings?.imposter?.numImposters || 1;
+          const shuffled = [...playerIds].sort(() => Math.random() - 0.5);
+          const imposterIds = shuffled.slice(0, numImposters);
+
+          // Assign unique hints to imposters
+          const shuffledHints = [...randomWord.hints].sort(() => Math.random() - 0.5);
+
+          // Generate turn order
+          const turnOrder = [...playerIds].sort(() => Math.random() - 0.5);
+
+          const updates = {};
+          updates[`rooms/${roomCode}/phase`] = 'playing';
+          updates[`rooms/${roomCode}/gameData/imposter/word`] = randomWord.word;
+          updates[`rooms/${roomCode}/gameData/imposter/startTime`] = Date.now();
+          updates[`rooms/${roomCode}/gameData/imposter/turnOrder`] = turnOrder;
+
+          playerIds.forEach((pid, index) => {
+            // Mark player as in-game
+            updates[`rooms/${roomCode}/players/${pid}/inGame`] = true;
+
+            if (imposterIds.includes(pid)) {
+              const hintIndex = imposterIds.indexOf(pid);
+              updates[`rooms/${roomCode}/players/${pid}/role`] = 'imposter';
+              updates[`rooms/${roomCode}/players/${pid}/hint`] = shuffledHints[hintIndex];
+              updates[`rooms/${roomCode}/players/${pid}/votes`] = {};
+            } else {
+              updates[`rooms/${roomCode}/players/${pid}/role`] = 'innocent';
+              updates[`rooms/${roomCode}/players/${pid}/hint`] = null;
+              updates[`rooms/${roomCode}/players/${pid}/votes`] = {};
+            }
+          });
+
+          await update(dbRef(db), updates);
+        } catch (error) {
+          console.error('Error starting game:', error);
+          showError('Failed to start game');
+          startBtn.disabled = false;
+          startBtn.textContent = 'Start Game';
+        }
+      } else if (selectedGame === 'spyfall') {
+        const playerIds = Object.keys(allPlayers);
+
+        if (playerIds.length < 3) {
+          showError('Need at least 3 players');
+          return;
+        }
+
+        try {
+          startBtn.disabled = true;
+          startBtn.textContent = 'Starting...';
+
+          // Get enabled locations
+          const allLocations = roomData.settings?.spyfall?.locations || [];
+          const enabledLocations = allLocations.filter(loc => loc.enabled);
+
+          if (enabledLocations.length === 0) {
+            showError('Please enable at least one location');
+            startBtn.disabled = false;
+            startBtn.textContent = 'Start Game';
+            return;
+          }
+
+          // Select random location
+          const randomLocation = enabledLocations[Math.floor(Math.random() * enabledLocations.length)];
+
+          // Assign spies
+          const numSpies = roomData.settings?.spyfall?.numSpies || 1;
+          const shuffled = [...playerIds].sort(() => Math.random() - 0.5);
+          const spyIds = shuffled.slice(0, numSpies);
+
+          // Assign roles to innocents
+          const innocentIds = playerIds.filter(pid => !spyIds.includes(pid));
+          const shuffledRoles = [...randomLocation.roles].sort(() => Math.random() - 0.5);
+
+          const updates = {};
+          updates[`rooms/${roomCode}/phase`] = 'playing';
+          updates[`rooms/${roomCode}/gameData/spyfall/location`] = randomLocation.location;
+          updates[`rooms/${roomCode}/gameData/spyfall/startTime`] = Date.now();
+
+          playerIds.forEach((pid) => {
+            // Mark player as in-game
+            updates[`rooms/${roomCode}/players/${pid}/inGame`] = true;
+
+            if (spyIds.includes(pid)) {
+              updates[`rooms/${roomCode}/players/${pid}/role`] = 'spy';
+              updates[`rooms/${roomCode}/players/${pid}/location`] = null;
+              updates[`rooms/${roomCode}/players/${pid}/votes`] = {};
+            } else {
+              const roleIndex = innocentIds.indexOf(pid);
+              const assignedRole = shuffledRoles[roleIndex % shuffledRoles.length];
+              updates[`rooms/${roomCode}/players/${pid}/role`] = 'innocent';
+              updates[`rooms/${roomCode}/players/${pid}/location`] = randomLocation.location;
+              updates[`rooms/${roomCode}/players/${pid}/assignedRole`] = assignedRole;
+              updates[`rooms/${roomCode}/players/${pid}/votes`] = {};
+            }
+          });
+
+          await update(dbRef(db), updates);
+        } catch (error) {
+          console.error('Error starting game:', error);
+          showError('Failed to start game');
+          startBtn.disabled = false;
+          startBtn.textContent = 'Start Game';
+        }
+      } else if (selectedGame === 'herd-mentality') {
+        const playerIds = Object.keys(allPlayers);
+
+        if (playerIds.length < 3) {
+          showError('Need at least 3 players');
+          return;
+        }
+
+        try {
+          startBtn.disabled = true;
+          startBtn.textContent = 'Starting...';
+
+          const updates = {};
+          updates[`rooms/${roomCode}/phase`] = 'question';
+
+          // Initialize game settings
+          if (!roomData.settings?.herdMentality?.timer) {
+            updates[`rooms/${roomCode}/settings/herdMentality/timer`] = 20;
+          }
+          updates[`rooms/${roomCode}/settings/herdMentality/currentRound`] = 1;
+          updates[`rooms/${roomCode}/settings/herdMentality/pinkCowHolder`] = null;
+
+          // Clear any previous game data
+          updates[`rooms/${roomCode}/gameData/herdMentality/currentQuestion`] = null;
+          updates[`rooms/${roomCode}/gameData/herdMentality/answerGroupings`] = null;
+          updates[`rooms/${roomCode}/gameData/herdMentality/scoresCalculated`] = false;
+          updates[`rooms/${roomCode}/gameData/herdMentality/usedQuestions`] = [];
+
+          // Mark all players as in-game and initialize scores
+          playerIds.forEach(pid => {
+            updates[`rooms/${roomCode}/players/${pid}/inGame`] = true;
+            updates[`rooms/${roomCode}/players/${pid}/score`] = 0;
+            updates[`rooms/${roomCode}/players/${pid}/answer`] = null;
+          });
+
+          await update(dbRef(db), updates);
+        } catch (error) {
+          console.error('Error starting game:', error);
+          showError('Failed to start game');
+          startBtn.disabled = false;
+          startBtn.textContent = 'Start Game';
+        }
+      }
+    });
+
+    // Leave lobby
+    leaveBtn.addEventListener('click', async () => {
+      const confirmLeave = confirm('Are you sure you want to leave?');
+      if (!confirmLeave) return;
+
+      try {
+        // Get current room data
+        const roomRef = getRoomRef(roomCode);
+        const snapshot = await get(roomRef);
+        const data = snapshot.val();
+
+        if (!data) {
+          window.location.href = 'index.html';
+          return;
+        }
+
+        const playerIds = Object.keys(data.players || {});
+        const currentHostId = data.hostId;
+
+        // Check if this is the last player
+        if (playerIds.length === 1 && playerIds[0] === playerId) {
+          // Delete the entire room
+          await remove(roomRef);
+        } else {
+          // Remove player from room
+          const playerRef = dbRef(db, `rooms/${roomCode}/players/${playerId}`);
+          await remove(playerRef);
+
+          // If leaving player is the host, transfer host to another player
+          if (currentHostId === playerId) {
+            const remainingPlayers = playerIds.filter(pid => pid !== playerId);
+            const newHostId = remainingPlayers[0];
+
+            const updates = {};
+            updates[`rooms/${roomCode}/hostId`] = newHostId;
+
+            // If the leaving host was the overseer in Fakin' It, update overseer
+            if (data.selectedGame === 'fakin-it' && data.settings?.fakinIt?.overseer === playerId) {
+              updates[`rooms/${roomCode}/settings/fakinIt/overseer`] = newHostId;
+            }
+
+            await update(dbRef(db), updates);
+          }
+        }
+
+        // Clear localStorage
+        localStorage.removeItem('roomCode');
+        localStorage.removeItem('playerId');
+
+        window.location.href = 'index.html';
+      } catch (error) {
+        console.error('Error leaving room:', error);
+        window.location.href = 'index.html';
+      }
+    });
+
+    // Kick player modal functions
+    function showKickModal(pid, name) {
+      playerToKick = pid;
+      kickPlayerName.textContent = `Are you sure you want to kick ${name}?`;
+      kickModal.style.display = 'flex';
+    }
+
+    function hideKickModal() {
+      playerToKick = null;
+      kickModal.style.display = 'none';
+    }
+
+    cancelKickBtn.addEventListener('click', hideKickModal);
+
+    confirmKickBtn.addEventListener('click', async () => {
+      if (!playerToKick || !isHost) return;
+
+      try {
+        confirmKickBtn.disabled = true;
+        confirmKickBtn.textContent = 'Kicking...';
+
+        await remove(dbRef(db, `rooms/${roomCode}/players/${playerToKick}`));
+
+        hideKickModal();
+        confirmKickBtn.disabled = false;
+        confirmKickBtn.textContent = 'Kick';
+      } catch (error) {
+        console.error('Error kicking player:', error);
+        showError('Failed to kick player');
+        confirmKickBtn.disabled = false;
+        confirmKickBtn.textContent = 'Kick';
+      }
+    });
+  </script>
+</body>
+</html>

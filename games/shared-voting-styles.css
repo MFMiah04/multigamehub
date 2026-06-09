@@ -1,0 +1,210 @@
+/* Shared Voting & Results Styles - Consistent across all games */
+@import url('../styles/components/player-card.css');
+
+/* Voting Instructions */
+.vote-instructions {
+  text-align: center;
+  font-size: 0.95rem;
+  color: #555;
+  margin: 10px 0 15px 0;
+}
+
+/* Vote Status */
+.vote-status {
+  text-align: center;
+  margin: 10px 0;
+  font-size: 0.9rem;
+  color: #667eea;
+  font-weight: 600;
+}
+
+/* Reveal Display (Word/Location/Questions) */
+.reveal-display {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  padding: 10px;
+  border-radius: 8px;
+  text-align: center;
+  margin: 8px 0;
+  display: none;
+}
+
+.reveal-display h2 {
+  margin: 0;
+  font-size: 1.3rem;
+  color: white;
+}
+
+.reveal-display h3 {
+  margin: 0 0 6px 0;
+  color: white;
+  font-size: 1rem;
+}
+
+.reveal-display p {
+  margin: 0 0 4px 0;
+  font-size: 0.85rem;
+  color: white;
+  opacity: 0.9;
+}
+
+/* Result Cards */
+.result-card,
+.result-item {
+  background: white;
+  padding: 12px;
+  border-radius: 8px;
+  margin: 6px 0;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.08);
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 10px;
+  transition: all 0.2s ease;
+}
+
+.result-card:hover,
+.result-item:hover {
+  box-shadow: 0 4px 8px rgba(0,0,0,0.12);
+  transform: translateY(-1px);
+}
+
+.result-card.spy,
+.result-card.imposter,
+.result-card.faker,
+.result-item.imposter {
+  background: #ffcdd2;
+  border-left: 3px solid #ef5350;
+}
+
+.player-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.player-info h3 {
+  margin: 0 0 4px 0;
+  font-size: 0.95rem;
+  color: #333;
+  font-weight: 600;
+}
+
+.player-info p {
+  margin: 0;
+  font-size: 0.85rem;
+  color: #666;
+  font-style: italic;
+}
+
+.result-card.spy .player-info h3,
+.result-card.imposter .player-info h3,
+.result-card.faker .player-info h3,
+.result-item.imposter .player-info h3 {
+  color: #c62828;
+}
+
+.result-card.faker .player-info p {
+  color: #a94442;
+}
+
+.vote-section {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.vote-count {
+  background: #667eea;
+  color: white;
+  padding: 3px 10px;
+  border-radius: 12px;
+  font-weight: 600;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: background 0.2s;
+  white-space: nowrap;
+}
+
+.vote-count:hover {
+  background: #5568d3;
+}
+
+.voters-list {
+  font-size: 0.8rem;
+  color: #666;
+  text-align: right;
+  display: none;
+  max-width: 200px;
+  word-wrap: break-word;
+}
+
+.voters-list.show {
+  display: block;
+}
+
+/* Question Display (for Fakin' It) */
+.question-display {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  padding: 10px;
+  border-radius: 8px;
+  margin: 8px 0;
+}
+
+.question-display h3 {
+  margin: 0 0 6px 0;
+  color: white;
+  font-size: 1rem;
+}
+
+.question-display p {
+  margin: 3px 0;
+  font-size: 0.85rem;
+  color: white;
+}
+
+/* Status Message (for overseers, etc.) */
+.status-message {
+  background: #e7f3ff;
+  padding: 10px;
+  border-radius: 8px;
+  text-align: center;
+  margin: 10px 0;
+  color: #004085;
+  font-size: 0.9rem;
+}
+
+/* Mobile-specific voting/results styles */
+@media (max-width: 768px) {
+  .player-card,
+  .answer-card {
+    padding: 14px;
+    margin: 8px 0;
+  }
+
+  .result-card,
+  .result-item {
+    padding: 14px;
+    margin: 8px 0;
+  }
+
+  .vote-count {
+    padding: 4px 12px;
+    font-size: 0.9rem;
+  }
+
+  .player-info h3 {
+    font-size: 1rem;
+  }
+
+  .reveal-display {
+    padding: 12px;
+    margin: 10px 0;
+  }
+
+  .reveal-display h2 {
+    font-size: 1.4rem;
+  }
+}

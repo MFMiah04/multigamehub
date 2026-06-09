@@ -1,0 +1,24 @@
+.container {
+  background: var(--color-white);
+  border-radius: var(--radius-xl);
+  padding: 25px;
+  max-width: 600px;
+  width: 100%;
+  box-shadow: var(--shadow-xl);
+  position: relative;
+  margin: 0 auto;
+}
+
+.app-wrapper {
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 15px;
+}
+
+@media (max-width: 768px) {
+  .container {
+    padding: 20px;
+  }
+}

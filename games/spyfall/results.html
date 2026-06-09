@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Spyfall - Results</title>
+  <link rel="stylesheet" href="../../style.css">
+  <link rel="stylesheet" href="../shared-voting-styles.css">
+</head>
+<body>
+  <div class="container">
+    <h1>🔍 Results</h1>
+
+    <button id="revealLocationBtn" class="button" style="display: none;">Reveal Location</button>
+
+    <div class="reveal-display" id="locationDisplay">
+      <p>The location was:</p>
+      <h2 id="locationText">Loading...</h2>
+    </div>
+
+    <div id="resultsContainer"></div>
+
+    <button id="returnBtn" class="button">Return to Lobby</button>
+  </div>
+
+  <script type="module">
+    import { getRoomRef, listenToRoom, update, get, ref as dbRef } from '../../firebase-config.js';
+    import { getUrlParams } from '../../utils.js';
+    import { db } from '../../firebase-config.js';
+
+    const { roomCode, playerId } = getUrlParams();
+
+    if (!roomCode || !playerId) {
+      window.location.href = '../../index.html';
+    }
+
+    const locationDisplay = document.getElementById('locationDisplay');
+    const locationText = document.getElementById('locationText');
+    const revealLocationBtn = document.getElementById('revealLocationBtn');
+    const resultsContainer = document.getElementById('resultsContainer');
+    const returnBtn = document.getElementById('returnBtn');
+
+    let isHost = false;
+    let locationRevealed = false;
+
+    async function loadResults() {
+      try {
+        const roomRef = getRoomRef(roomCode);
+        const snapshot = await get(roomRef);
+        const data = snapshot.val();
+
+        if (!data) {
+          window.location.href = '../../index.html';
+          return;
+        }
+
+        const playerData = data.players?.[playerId];
+
+        // Check if player is in game
+        if (!playerData?.inGame) {
+          window.location.href = `waiting.html?roomCode=${roomCode}&playerId=${playerId}`;
+          return;
+        }
+
+        isHost = data.hostId === playerId;
+        const players = data.players || {};
+        const gameData = data.gameData?.spyfall || {};
+        locationRevealed = gameData.locationRevealed || false;
+
+        const actualLocation = gameData.location;
+        locationText.textContent = actualLocation;
+
+        // Show reveal button for host if location not revealed yet
+        if (isHost && !locationRevealed) {
+          revealLocationBtn.style.display = 'block';
+        }
+
+        // Show location if already revealed
+        if (locationRevealed) {
+          locationDisplay.style.display = 'block';
+          revealLocationBtn.style.display = 'none';
+        }
+
+        // Calculate vote counts for each player
+        const playerIds = Object.keys(players).filter(pid => players[pid].inGame);
+
+        const voteCounts = {};
+        const votersFor = {};
+
+        // Initialize
+        playerIds.forEach(pid => {
+          voteCounts[pid] = 0;
+          votersFor[pid] = [];
+        });
+
+        // Count votes
+        playerIds.forEach(pid => {
+          const votes = players[pid].spyVotes || [];
+          votes.forEach(vote => {
+            if (vote && voteCounts[vote] !== undefined) {
+              voteCounts[vote]++;
+              votersFor[vote].push(players[pid].name);
+            }
+          });
+        });
+
+        // Sort players by vote count (descending)
+        const sortedPlayers = playerIds.sort((a, b) => voteCounts[b] - voteCounts[a]);
+
+        // Display results
+        resultsContainer.innerHTML = '';
+
+        sortedPlayers.forEach(pid => {
+          const player = players[pid];
+          const card = document.createElement('div');
+          card.className = 'result-card';
+
+          if (player.role === 'spy') {
+            card.classList.add('spy');
+          }
+
+          // Player info section
+          const playerInfo = document.createElement('div');
+          playerInfo.className = 'player-info';
+
+          const nameEl = document.createElement('h3');
+          const spyLabel = player.role === 'spy' ? ' (Spy)' : '';
+          const youLabel = pid === playerId ? ' (You)' : '';
+          nameEl.textContent = player.name + spyLabel + youLabel;
+
+          playerInfo.appendChild(nameEl);
+
+          // Vote section
+          const voteSection = document.createElement('div');
+          voteSection.className = 'vote-section';
+
+          const voteCount = document.createElement('div');
+          voteCount.className = 'vote-count';
+          voteCount.textContent = `${voteCounts[pid]} vote${voteCounts[pid] !== 1 ? 's' : ''}`;
+
+          voteSection.appendChild(voteCount);
+
+          // Add expandable voters list
+          if (voteCounts[pid] > 0) {
+            const votersList = document.createElement('div');
+            votersList.className = 'voters-list';
+            votersList.textContent = votersFor[pid].join(', ');
+
+            voteCount.addEventListener('click', () => {
+              votersList.classList.toggle('show');
+            });
+
+            voteSection.appendChild(votersList);
+          }
+
+          card.appendChild(playerInfo);
+          card.appendChild(voteSection);
+
+          resultsContainer.appendChild(card);
+        });
+      } catch (error) {
+        console.error('Error loading results:', error);
+      }
+    }
+
+    loadResults();
+
+    // Reveal location
+    revealLocationBtn.addEventListener('click', async () => {
+      if (!isHost) return;
+
+      try {
+        revealLocationBtn.disabled = true;
+        revealLocationBtn.textContent = 'Revealing...';
+
+        const updates = {};
+        updates[`rooms/${roomCode}/gameData/spyfall/locationRevealed`] = true;
+        await update(dbRef(db), updates);
+
+        locationRevealed = true;
+        locationDisplay.style.display = 'block';
+        revealLocationBtn.style.display = 'none';
+      } catch (error) {
+        console.error('Error revealing location:', error);
+        revealLocationBtn.disabled = false;
+        revealLocationBtn.textContent = 'Reveal Location';
+      }
+    });
+
+    // Listen for phase changes and location reveal
+    listenToRoom(roomCode, (snapshot) => {
+      const data = snapshot.val();
+      if (!data) return;
+
+      // Check if location was revealed
+      const newLocationRevealed = data.gameData?.spyfall?.locationRevealed || false;
+      if (newLocationRevealed && !locationRevealed) {
+        locationRevealed = true;
+        locationDisplay.style.display = 'block';
+        revealLocationBtn.style.display = 'none';
+      }
+
+      if (data.phase === 'lobby') {
+        window.location.href = `../../lobby.html?roomCode=${roomCode}&playerId=${playerId}`;
+      }
+    });
+
+    returnBtn.addEventListener('click', async () => {
+      try {
+        const roomRef = getRoomRef(roomCode);
+        const snapshot = await get(roomRef);
+        const data = snapshot.val();
+
+        // Only host can return to lobby
+        if (data.hostId === playerId) {
+          returnBtn.disabled = true;
+          returnBtn.textContent = 'Returning...';
+
+          const updates = {};
+          updates[`rooms/${roomCode}/phase`] = 'lobby';
+
+          // Clear game data
+          updates[`rooms/${roomCode}/gameData/spyfall`] = null;
+
+          // Reset all player roles, votes, guesses, and inGame flag
+          const players = data.players || {};
+          Object.keys(players).forEach(pid => {
+            updates[`rooms/${roomCode}/players/${pid}/role`] = null;
+            updates[`rooms/${roomCode}/players/${pid}/location`] = null;
+            updates[`rooms/${roomCode}/players/${pid}/assignedRole`] = null;
+            updates[`rooms/${roomCode}/players/${pid}/spyVotes`] = null;
+            updates[`rooms/${roomCode}/players/${pid}/locationGuess`] = null;
+            updates[`rooms/${roomCode}/players/${pid}/inGame`] = null;
+          });
+
+          await update(dbRef(db), updates);
+        } else {
+          // Non-hosts just wait
+          returnBtn.disabled = true;
+          returnBtn.textContent = 'Waiting for host...';
+        }
+      } catch (error) {
+        console.error('Error returning to lobby:', error);
+        returnBtn.disabled = false;
+        returnBtn.textContent = 'Return to Lobby';
+      }
+    });
+  </script>
+</body>
+</html>

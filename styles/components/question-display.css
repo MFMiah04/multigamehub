@@ -1,0 +1,20 @@
+@import url('../variables.css');
+
+.question-display {
+  background: var(--color-primary-light);
+  padding: var(--space-lg);
+  border-radius: var(--radius-md);
+  margin: var(--space-lg) 0;
+  text-align: center;
+}
+
+.question-display h3 {
+  color: var(--color-primary);
+  margin-bottom: var(--space-md);
+  font-size: var(--font-size-base);
+}
+
+.question-display p {
+  font-size: var(--font-size-base-plus);
+  color: var(--color-gray-700);
+}

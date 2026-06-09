@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Imposter - Voting</title>
+  <link rel="stylesheet" href="../../style.css">
+  <link rel="stylesheet" href="../shared-voting-styles.css">
+  <link rel="stylesheet" href="../../styles/components/timer.css">
+</head>
+<body>
+  <div class="container">
+    <h1>🕵️ Voting Round</h1>
+
+    <div id="timerDisplay" class="timer"></div>
+
+    <div class="vote-instructions" id="voteInstructions">
+      Vote for up to <strong id="maxVotes">1</strong> <strong>imposter(s)</strong>
+    </div>
+
+    <div id="playerCards"></div>
+
+    <div class="vote-status" id="voteStatus">0/0 players voted</div>
+
+    <button id="submitVoteBtn" class="button" disabled>Submit Votes</button>
+    <button id="changeVoteBtn" class="button button--secondary" style="display: none;">Change Vote</button>
+    <button id="forceNextBtn" class="button button--secondary" style="display: none; margin-top: 10px;">Force Results (Host)</button>
+  </div>
+
+  <script type="module">
+    import { getRoomRef, listenToRoom, update, get, ref as dbRef } from '../../firebase-config.js';
+    import { getUrlParams } from '../../utils.js';
+    import { db } from '../../firebase-config.js';
+    import { Timer } from '../../src/components/Timer.js';
+
+    const { roomCode, playerId } = getUrlParams();
+
+    if (!roomCode || !playerId) {
+      window.location.href = '../../index.html';
+    }
+
+    const playerCards = document.getElementById('playerCards');
+    const voteStatus = document.getElementById('voteStatus');
+    const submitVoteBtn = document.getElementById('submitVoteBtn');
+    const changeVoteBtn = document.getElementById('changeVoteBtn');
+    const forceNextBtn = document.getElementById('forceNextBtn');
+    const errorMessage = document.getElementById('errorMessage');
+    const maxVotesEl = document.getElementById('maxVotes');
+
+    let allPlayers = {};
+    let selectedVotes = new Set();
+    let maxVotes = 1;
+    let hasVoted = false;
+    let isHost = false;
+    let totalPlayers = 0;
+    let timer = null;
+
+    function showError(message) {
+      errorMessage.textContent = message;
+      errorMessage.style.display = 'block';
+    }
+
+    // Load players and setup voting
+    async function loadVoting() {
+      try {
+        const roomRef = getRoomRef(roomCode);
+        const snapshot = await get(roomRef);
+        const data = snapshot.val();
+
+        if (!data || !data.players || !data.players[playerId]) {
+          window.location.href = '../../index.html';
+          return;
+        }
+
+        isHost = data.hostId === playerId;
+        allPlayers = data.players || {};
+        maxVotes = data.settings?.imposter?.numImposters || 1;
+        maxVotesEl.textContent = maxVotes;
+
+        // Check if player is a late joiner (not in game when it started)
+        if (!data.players[playerId].inGame) {
+          window.location.href = 'waiting.html?roomCode=' + roomCode + '&playerId=' + playerId;
+          return;
+        }
+
+        // Check if already voted
+        const myVotes = data.players[playerId].votes || {};
+        if (Object.keys(myVotes).length > 0) {
+          hasVoted = true;
+          // Restore selections
+          Object.keys(myVotes).forEach(vid => {
+            if (myVotes[vid]) selectedVotes.add(vid);
+          });
+        }
+
+        renderPlayers();
+        updateVoteStatus();
+        if (isHost) forceNextBtn.style.display = 'block';
+
+        const timerDuration = data.settings?.imposter?.votingTimer || 60;
+        timer = new Timer({
+          element: document.getElementById('timerDisplay'),
+          duration: timerDuration,
+          warningAt: 60,
+          onComplete: () => {
+            if (isHost) {
+              const updates = {};
+              updates[`rooms/${roomCode}/phase`] = 'results';
+              update(dbRef(db), updates);
+            }
+          }
+        });
+        timer.start();
+      } catch (error) {
+        console.error('Error loading voting:', error);
+        showError('Failed to load voting');
+      }
+    }
+
+    function renderPlayers() {
+      playerCards.innerHTML = '';
+
+      const playerIds = Object.keys(allPlayers).filter(pid => allPlayers[pid].inGame); // Only players in game (exclude late joiners)
+      totalPlayers = playerIds.length;
+
+      playerIds.forEach(pid => {
+        const player = allPlayers[pid];
+        const card = document.createElement('div');
+        card.className = 'player-card';
+
+        if (pid === playerId) {
+          card.classList.add('player-card--disabled');
+        }
+
+        if (selectedVotes.has(pid)) {
+          card.classList.add('player-card--selected');
+        }
+
+        const nameEl = document.createElement('p');
+        nameEl.className = 'player-card__name';
+        nameEl.textContent = player.name;
+        if (pid === playerId) nameEl.textContent += ' (You)';
+
+        card.appendChild(nameEl);
+
+        // Click handler
+        if (pid !== playerId && !hasVoted) {
+          card.addEventListener('click', () => toggleVote(pid));
+        }
+
+        playerCards.appendChild(card);
+      });
+
+      // Update submit button
+      submitVoteBtn.disabled = selectedVotes.size === 0 || hasVoted;
+      if (hasVoted) {
+        submitVoteBtn.textContent = 'Voted ✓';
+      }
+    }
+
+    function toggleVote(votedId) {
+      if (selectedVotes.has(votedId)) {
+        selectedVotes.delete(votedId);
+      } else {
+        if (selectedVotes.size < maxVotes) {
+          selectedVotes.add(votedId);
+        } else {
+          showError(`You can only vote for up to ${maxVotes} player(s)`);
+          setTimeout(() => {
+            errorMessage.style.display = 'none';
+          }, 2000);
+          return;
+        }
+      }
+
+      renderPlayers();
+    }
+
+    function updateVoteStatus() {
+      const playerIds = Object.keys(allPlayers).filter(pid => allPlayers[pid].inGame);
+      const votedCount = playerIds.filter(pid => {
+        const votes = allPlayers[pid].votes || {};
+        return Object.keys(votes).length > 0;
+      }).length;
+
+      voteStatus.textContent = `${votedCount}/${playerIds.length} players voted`;
+    }
+
+    // Submit votes
+    submitVoteBtn.addEventListener('click', async () => {
+      if (hasVoted || selectedVotes.size === 0) return;
+      const updates = {};
+      const playerIds = Object.keys(allPlayers).filter(pid => allPlayers[pid].inGame);
+      playerIds.forEach(pid => updates[`rooms/${roomCode}/players/${playerId}/votes/${pid}`] = false);
+      selectedVotes.forEach(vid => updates[`rooms/${roomCode}/players/${playerId}/votes/${vid}`] = true);
+      await update(dbRef(db), updates);
+      hasVoted = true;
+      submitVoteBtn.style.display = 'none';
+      changeVoteBtn.style.display = 'block';
+    });
+
+    // Change vote
+    changeVoteBtn.addEventListener('click', async () => {
+      const playerIds = Object.keys(allPlayers).filter(pid => allPlayers[pid].inGame);
+      const updates = {};
+      playerIds.forEach(pid => updates[`rooms/${roomCode}/players/${playerId}/votes/${pid}`] = null);
+      await update(dbRef(db), updates);
+      hasVoted = false;
+      selectedVotes.clear();
+      changeVoteBtn.style.display = 'none';
+      submitVoteBtn.style.display = 'block';
+      loadVoting();
+    });
+
+    // Force-next
+    forceNextBtn.addEventListener('click', () => {
+      if (confirm('Skip to results?')) {
+        const updates = {};
+        updates[`rooms/${roomCode}/phase`] = 'results';
+        update(dbRef(db), updates);
+      }
+    });
+
+    // Listen for updates
+    listenToRoom(roomCode, (snapshot) => {
+      const data = snapshot.val();
+      if (!data) {
+        window.location.href = '../../index.html';
+        return;
+      }
+
+      allPlayers = data.players || {};
+      updateVoteStatus();
+
+      // Check if all players voted (exclude late joiners)
+      const playerIds = Object.keys(allPlayers).filter(pid => allPlayers[pid].inGame);
+      const votedCount = playerIds.filter(pid => {
+        const votes = allPlayers[pid].votes || {};
+        return Object.keys(votes).length > 0;
+      }).length;
+
+      if (votedCount === playerIds.length && data.phase === 'voting' && isHost) {
+        // Transition to results
+        setTimeout(async () => {
+          try {
+            const updates = {};
+            updates[`rooms/${roomCode}/phase`] = 'results';
+            await update(dbRef(db), updates);
+          } catch (error) {
+            console.error('Error transitioning to results:', error);
+          }
+        }, 1000);
+      }
+
+      // Handle phase change
+      if (data.phase === 'results') {
+        window.location.href = `results.html?roomCode=${roomCode}&playerId=${playerId}`;
+      }
+    });
+
+    loadVoting();
+  </script>
+</body>
+</html>

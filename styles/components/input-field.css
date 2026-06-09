@@ -1,0 +1,35 @@
+@import url('../variables.css');
+
+.input-group {
+  margin-bottom: var(--space-md-plus);
+}
+
+label {
+  display: block;
+  margin-bottom: var(--space-sm);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-gray-600);
+  font-size: var(--font-size-sm);
+}
+
+input[type="text"], textarea, select {
+  width: 100%;
+  padding: var(--space-md-plus) var(--space-lg);
+  border: 2px solid var(--color-gray-300);
+  border-radius: var(--radius-sm);
+  font-size: 14px;
+  transition: all var(--transition-base);
+  box-shadow: var(--shadow-sm);
+}
+
+input[type="text"]:focus, textarea:focus, select:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: var(--shadow-focus);
+}
+
+textarea {
+  min-height: 100px;
+  resize: vertical;
+  font-family: inherit;
+}

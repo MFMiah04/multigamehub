@@ -1,0 +1,152 @@
+[
+  {
+    "location": "Hospital",
+    "roles": ["Doctor", "Nurse", "Patient", "Surgeon", "Receptionist"],
+    "enabled": true
+  },
+  {
+    "location": "Airplane",
+    "roles": ["Pilot", "Flight Attendant", "Passenger", "Engineer", "Air Marshal"],
+    "enabled": true
+  },
+  {
+    "location": "Bank",
+    "roles": ["Manager", "Teller", "Customer", "Security Guard", "Accountant"],
+    "enabled": true
+  },
+  {
+    "location": "Beach",
+    "roles": ["Lifeguard", "Surfer", "Tourist", "Vendor", "Photographer"],
+    "enabled": true
+  },
+  {
+    "location": "Casino",
+    "roles": ["Dealer", "Gambler", "Bartender", "Security", "Pit Boss"],
+    "enabled": true
+  },
+  {
+    "location": "Cathedral",
+    "roles": ["Priest", "Choir Member", "Tourist", "Organist", "Bell Ringer"],
+    "enabled": true
+  },
+  {
+    "location": "Circus Tent",
+    "roles": ["Acrobat", "Clown", "Ringmaster", "Spectator", "Animal Trainer"],
+    "enabled": true
+  },
+  {
+    "location": "Corporate Party",
+    "roles": ["CEO", "Manager", "Employee", "Caterer", "Entertainer"],
+    "enabled": true
+  },
+  {
+    "location": "Crusader Army",
+    "roles": ["Knight", "Squire", "Archer", "Medic", "Commander"],
+    "enabled": true
+  },
+  {
+    "location": "Day Spa",
+    "roles": ["Masseuse", "Customer", "Receptionist", "Dermatologist", "Manicurist"],
+    "enabled": true
+  },
+  {
+    "location": "Embassy",
+    "roles": ["Ambassador", "Security", "Tourist", "Diplomat", "Secretary"],
+    "enabled": true
+  },
+  {
+    "location": "Movie Studio",
+    "roles": ["Director", "Actor", "Producer", "Cameraman", "Costume Designer"],
+    "enabled": true
+  },
+  {
+    "location": "Museum",
+    "roles": ["Curator", "Tourist", "Security Guard", "Art Critic", "Archaeologist"],
+    "enabled": true
+  },
+  {
+    "location": "Ocean Liner",
+    "roles": ["Captain", "Passenger", "Bartender", "Musician", "Waiter"],
+    "enabled": true
+  },
+  {
+    "location": "Passenger Train",
+    "roles": ["Conductor", "Passenger", "Engineer", "Chef", "Ticket Inspector"],
+    "enabled": true
+  },
+  {
+    "location": "Pirate Ship",
+    "roles": ["Captain", "Cook", "Sailor", "Prisoner", "Navigator"],
+    "enabled": true
+  },
+  {
+    "location": "Polar Station",
+    "roles": ["Scientist", "Medic", "Geologist", "Engineer", "Biologist"],
+    "enabled": true
+  },
+  {
+    "location": "Police Station",
+    "roles": ["Detective", "Officer", "Criminal", "Lawyer", "Dispatcher"],
+    "enabled": true
+  },
+  {
+    "location": "Restaurant",
+    "roles": ["Chef", "Waiter", "Customer", "Manager", "Food Critic"],
+    "enabled": true
+  },
+  {
+    "location": "School",
+    "roles": ["Teacher", "Student", "Principal", "Janitor", "Librarian"],
+    "enabled": true
+  },
+  {
+    "location": "Service Station",
+    "roles": ["Mechanic", "Customer", "Cashier", "Car Washer", "Manager"],
+    "enabled": true
+  },
+  {
+    "location": "Space Station",
+    "roles": ["Astronaut", "Engineer", "Scientist", "Commander", "Doctor"],
+    "enabled": true
+  },
+  {
+    "location": "Submarine",
+    "roles": ["Captain", "Sonar Operator", "Engineer", "Sailor", "Radio Officer"],
+    "enabled": true
+  },
+  {
+    "location": "Supermarket",
+    "roles": ["Cashier", "Customer", "Manager", "Stocker", "Security"],
+    "enabled": true
+  },
+  {
+    "location": "Theater",
+    "roles": ["Actor", "Director", "Audience Member", "Stagehand", "Prompter"],
+    "enabled": true
+  },
+  {
+    "location": "University",
+    "roles": ["Professor", "Student", "Dean", "Researcher", "Janitor"],
+    "enabled": true
+  },
+  {
+    "location": "Military Base",
+    "roles": ["Soldier", "Officer", "Medic", "Engineer", "Cook"],
+    "enabled": true
+  },
+  {
+    "location": "Amusement Park",
+    "roles": ["Ride Operator", "Visitor", "Security", "Food Vendor", "Mascot"],
+    "enabled": true
+  },
+  {
+    "location": "Hotel",
+    "roles": ["Receptionist", "Guest", "Bellhop", "Manager", "Housekeeper"],
+    "enabled": true
+  },
+  {
+    "location": "Library",
+    "roles": ["Librarian", "Student", "Author", "Janitor", "Security"],
+    "enabled": true
+  }
+]
