@@ -12,11 +12,8 @@ export default {
   players: '3–12',
   blurb: 'Everyone knows the secret word, except the imposter.',
   art: html`<svg class="art" viewBox="0 0 64 56" aria-hidden="true"><g fill="none" stroke="#222" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round">
-    <path d="M46 36 l9 17" />
-    <path d="M6 20 C14 12, 24 14, 32 19 C40 14, 50 12, 58 20 C57 33, 48 38, 40 35 C36 34, 34 31, 32 29 C30 31, 28 34, 24 35 C16 38, 7 33, 6 20 Z" fill="#fff" />
-    <path d="M14 24 q5 -5 11 0 q-5 4 -11 0 Z M39 24 q5 -5 11 0 q-5 4 -11 0 Z" fill="#222" />
-    <path d="M10 18 q3 -5 7 -6 M54 18 q-3 -5 -7 -6" />
-    <path d="M32 19 v3" />
+    <path fill="#fff" fill-rule="evenodd" d="M32 28 C28 25.5, 25 24, 20 24 C13 24, 8 22, 5 18.5 C5.5 23, 7 27, 10.5 29.5 C8 30, 5 29, 2.5 26 C5 33, 12 38.5, 22 38.5 C26 38.5, 29 37.5, 32 36.8 C35 37.5, 38 38.5, 42 38.5 C52 38.5, 59 33, 61.5 26 C59 29, 56 30, 53.5 29.5 C57 27, 58.5 23, 59 18.5 C56 22, 51 24, 44 24 C39 24, 36 25.5, 32 28 Z
+      M14 29.5 C14 27, 20.5 27, 26.5 31.5 C22.5 35, 15 35, 14 29.5 Z M50 29.5 C50 27, 43.5 27, 37.5 31.5 C41.5 35, 49 35, 50 29.5 Z" />
   </g></svg>`,
   rules: [
     'Everyone sees the same secret word. The imposter only gets a one-word hint.',
