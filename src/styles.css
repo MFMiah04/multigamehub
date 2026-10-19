@@ -392,7 +392,7 @@ details.field summary { cursor: pointer; text-decoration: underline wavy; text-u
 
 .spectrum { margin: 14px 0; }
 .spectrum__labels { display: flex; justify-content: space-between; font-weight: 700; font-size: 18px; line-height: var(--row); }
-.spectrum__track { position: relative; height: calc(var(--row) * 2); background: linear-gradient(90deg, #a8d4f7, #fff 50%, #ffaebc); overflow: hidden; }
+.spectrum__track { position: relative; height: calc(var(--row) * 2); background: #fff; overflow: hidden; }
 .spectrum__band { position: absolute; top: 0; bottom: 0; display: grid; place-items: start center; font-style: normal; font-size: 13px; font-weight: 700; }
 .spectrum__band span { line-height: 18px; }
 .spectrum__band--2, .spectrum__band--3 { place-items: start start; }

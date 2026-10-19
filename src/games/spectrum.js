@@ -3,12 +3,13 @@ import { shuffle } from '../room.js';
 import { isTimeUp, pickUnused, turnOf, roundsField, secondsOptions, leaderboard, nextOrFinalButton, finalScores } from './common.js';
 import spectrums from '../data/spectrums.json';
 
-// Scoring bands, measured from the target on a 0–100 scale.
+// Scoring bands, measured from the target on a 0–100 scale that wraps round at the ends.
 const BANDS = [[4, 4], [10, 3], [17, 2]];
-const pointsFor = (guess, target) => BANDS.find(([w]) => Math.abs(guess - target) <= w)?.[1] || 0;
+const distance = (a, b) => Math.min(Math.abs(a - b), 100 - Math.abs(a - b));
+const pointsFor = (guess, target) => BANDS.find(([w]) => distance(guess, target) <= w)?.[1] || 0;
 
 const guessersOf = ctx => ctx.inGame.filter(p => p.id !== ctx.round.psychic);
-const newTarget = () => 5 + Math.floor(Math.random() * 91);
+const newTarget = () => Math.floor(Math.random() * 101);
 
 function scoreRound(ctx) {
   const { round } = ctx;
@@ -27,7 +28,9 @@ function scale(ctx, { target, markers = [], slider }) {
   return html`<div class="spectrum">
     <div class="spectrum__labels"><span>← ${left}</span><span>${right} →</span></div>
     <div class="spectrum__track wobble">
-      ${target !== undefined ? BANDS.slice().reverse().map(([w, pts]) => html`<i class="spectrum__band spectrum__band--${pts}" style="left:${target - w}%;width:${w * 2}%"><span>${pts}</span></i>`) : nothing}
+      ${target !== undefined ? BANDS.slice().reverse().flatMap(([w, pts]) =>
+        // Draw each zone three times, shifted a full width either way, so it wraps round the edges.
+        [-100, 0, 100].map(shift => html`<i class="spectrum__band spectrum__band--${pts}" style="left:${target - w + shift}%;width:${w * 2}%"><span>${pts}</span></i>`)) : nothing}
       ${markers.map(({ value, player }) => html`<span class="spectrum__marker" style="left:${value}%">${avatar(player, 26)}</span>`)}
     </div>
     ${slider || nothing}
