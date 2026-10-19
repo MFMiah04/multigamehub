@@ -34,7 +34,11 @@ export function lobbyView(ctx) {
   const reason = game ? game.canStart(ctx, settings) : 'Pick a game first';
   const host = room.players[room.hostId];
 
-  const pickGame = g => ctx.update({ game: g.id, ...(room.settings?.[g.id] ? {} : { [`settings/${g.id}`]: g.defaults(ctx) }) });
+  const pickGame = async g => {
+    await ctx.update({ game: g.id, ...(room.settings?.[g.id] ? {} : { [`settings/${g.id}`]: g.defaults(ctx) }) });
+    // Bring the game's settings into view once they've rendered.
+    requestAnimationFrame(() => document.getElementById('settings')?.scrollIntoView({ behavior: 'smooth', block: 'start' }));
+  };
   const setSetting = changes => ctx.update(Object.fromEntries(Object.entries(changes).map(([k, v]) => [`settings/${game.id}/${k}`, v])));
   const kick = async p => { if (await confirmDialog(`Remove ${p.name} from the room?`, 'Remove')) await kickPlayer(room, p.id); };
 
@@ -71,7 +75,7 @@ export function lobbyView(ctx) {
     </div>
 
     ${game ? html`
-      <h2 class="section-title">Settings</h2>
+      <h2 class="section-title" id="settings">Settings</h2>
       <div class="settings">${game.settingsView(ctx, settings, setSetting)}</div>` : nothing}
 
     <div class="push"></div>
