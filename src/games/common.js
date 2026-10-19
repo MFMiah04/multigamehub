@@ -18,6 +18,71 @@ export function startVoting(ctx, seconds) {
 
 export const isTimeUp = ctx => ctx.round.endsAt && ctx.now() >= ctx.round.endsAt;
 
+// Extra time after a typing timer ends, so everyone's auto-sent answers arrive first.
+export const GRACE_MS = 2500;
+export const isGraceOver = ctx => ctx.round.endsAt && ctx.now() >= ctx.round.endsAt + GRACE_MS;
+
+// "The Beatles!" and "beatles" should count as the same answer.
+export const normalize = answer => String(answer || '').toLowerCase()
+  .replace(/[^\p{L}\p{N}\s]/gu, '')
+  .replace(/^(the|a|an)\s+/, '')
+  .replace(/\s+/g, ' ')
+  .trim()
+  .replace(/(?<=\w{2})(ch|sh|x|z|ss)es$/, '$1') // watches → watch, boxes → box
+  .replace(/(?<=\w{3})s$/, '');
+
+// Index of a random item not used yet this game (starts over once everything's been used).
+export function pickUnused(list, used = {}) {
+  const open = list.map((_, i) => i).filter(i => !used[i]);
+  const pool = open.length ? open : list.map((_, i) => i);
+  return pool[Math.floor(Math.random() * pool.length)];
+}
+
+// Whose turn it is in round `no`, skipping anyone who has left.
+export function turnOf(ctx, order, no) {
+  const present = (order || []).filter(id => ctx.room.players[id]);
+  return present.length ? present[(no - 1) % present.length] : null;
+}
+
+export function leaderboard(ctx, scores = {}, delta = {}) {
+  const board = [...ctx.inGame].sort((a, b) => (scores[b.id] || 0) - (scores[a.id] || 0));
+  return html`<div class="results">
+    ${board.map((p, i) => html`<div class="result wobble">
+      <span class="rank">${i + 1}</span>${avatar(p, 40)}
+      <div class="result__body"><span><b>${p.name}${p.id === ctx.uid ? ' (you)' : ''}</b></span>
+        ${delta[p.id] ? html`<small>+${delta[p.id]} this round</small>` : nothing}</div>
+      <span class="result__votes">${scores[p.id] || 0}<small>pts</small></span>
+    </div>`)}
+  </div>`;
+}
+
+export const roundsField = (value, set, disabled) =>
+  html`<label class="field"><span>Rounds</span>
+    <select class="wobble" ?disabled=${disabled} @change=${e => set({ rounds: +e.target.value })}>
+      ${[5, 8, 10, 12].map(n => html`<option value=${n} ?selected=${n === value}>${n} rounds</option>`)}
+    </select></label>`;
+
+export const secondsOptions = list => list.map(v => [v, v >= 60 && v % 60 === 0 ? `${v / 60} min` : `${v} seconds`]);
+
+export function finalScores(ctx) {
+  const scores = ctx.round.scores || {};
+  const top = Math.max(0, ...ctx.inGame.map(p => scores[p.id] || 0));
+  const winners = ctx.inGame.filter(p => (scores[p.id] || 0) === top && top > 0);
+  return html`
+    <h1 class="center scribble">${winners.length === 1 ? `${winners[0].name} wins!` : winners.length ? "It's a tie!" : 'Nobody scored!'}</h1>
+    ${leaderboard(ctx, scores)}
+    <div class="push"></div>
+    ${ctx.isHost ? button('Play again', action(ctx.startGame)) : nothing}
+    ${backToLobbyButton(ctx)}`;
+}
+
+export function nextOrFinalButton(ctx, round, next) {
+  if (!ctx.isHost) return html`<p class="note center">Waiting for the host…</p>`;
+  return round.no < round.total
+    ? button('Next round', action(next))
+    : button('See the final scores', action(() => ctx.update({ phase: 'final' })));
+}
+
 // ----- asking the host to start voting -----
 
 export function voteRequestBar(ctx, seconds) {

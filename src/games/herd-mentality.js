@@ -1,22 +1,8 @@
 import { html, nothing, button, timer, selectField, action, progress, toast, avatar } from '../ui.js';
-import { randomItem } from '../room.js';
-import { isTimeUp, backToLobbyButton } from './common.js';
+import { isTimeUp, backToLobbyButton, normalize, pickUnused, GRACE_MS } from './common.js';
 import questions from '../data/herd-questions.json';
 
-const GRACE_MS = 2500;
-
-// "The Beatles!" and "beatles" should land in the same group.
-const normalize = answer => answer.toLowerCase()
-  .replace(/[^\p{L}\p{N}\s]/gu, '')
-  .replace(/^(the|a|an)\s+/, '')
-  .replace(/\s+/g, ' ')
-  .trim()
-  .replace(/(?<=\w{3})s$/, '');
-
-function pickQuestion(used = {}) {
-  const open = questions.map((_, i) => i).filter(i => !used[i]);
-  return randomItem(open.length ? open : questions.map((_, i) => i));
-}
+const pickQuestion = used => pickUnused(questions, used);
 
 // Turns { playerId: groupNumber } into groups sorted biggest first, with herd and pink cow worked out.
 function groupsOf(ctx) {
