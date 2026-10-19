@@ -112,7 +112,7 @@ small.hl { font-size: 15px; }
   line-height: 1;
   background: var(--yellow);
   box-shadow: var(--shadow);
-  transition: transform 0.08s, box-shadow 0.08s;
+  transition: transform 0.15s, box-shadow 0.08s;
 }
 .btn:active:not(:disabled) { transform: translate(2px, 2px); box-shadow: 1px 1px 0 rgba(0, 0, 0, 0.13); }
 .btn:disabled { opacity: 0.55; border-style: dashed; box-shadow: none; }
@@ -234,7 +234,7 @@ details.field summary { cursor: pointer; text-decoration: underline wavy; text-u
 .sticky__pick { all: unset; display: flex; flex-direction: column; align-items: center; gap: 0; cursor: pointer; flex: 1; width: 100%; }
 .sticky__pick .art { width: 60px; height: 52px; }
 .sticky__pick:disabled { cursor: default; }
-.sticky__rules { all: unset; cursor: pointer; font-size: 15px; line-height: 20px; color: var(--ink-soft); text-decoration: underline wavy; text-underline-offset: 3px; }
+.sticky__rules { all: unset; display: inline-block; cursor: pointer; font-size: 15px; line-height: 20px; color: var(--ink-soft); text-decoration: underline wavy; text-underline-offset: 3px; }
 
 /* ---------- room ---------- */
 
@@ -383,6 +383,19 @@ details.field summary { cursor: pointer; text-decoration: underline wavy; text-u
   pointer-events: none;
 }
 .toast--show { transform: translate(-50%, 0) rotate(-1deg); opacity: 1; }
+
+/* Every button gives the same little tilt and grow on hover (mouse only, so taps don't stick). */
+.arrow, .kick, .cross, .link, .room-header__code, .sticky__rules, .group--new, .vote-card { transition: transform 0.15s; }
+@media (hover: hover) {
+  .btn:not(:disabled):hover, .arrow:hover, .kick:hover, .cross:hover, .link:hover, .room-header__code:hover,
+  .sticky__rules:hover, .group--new:hover, .vote-card:not(:disabled):not(.vote-card--picked):hover {
+    transform: rotate(-1.5deg) scale(1.05);
+  }
+  .arrow:hover, .kick:hover { transform: rotate(-6deg) scale(1.15); }
+  /* Still "press in" when clicked. */
+  .btn:not(:disabled):active { transform: rotate(-1.5deg) scale(1.02) translate(2px, 2px); }
+  .arrow:active { transform: rotate(-6deg) scale(1.05); }
+}
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; }
