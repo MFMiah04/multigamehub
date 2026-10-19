@@ -118,9 +118,9 @@ function rerender() {
   if (!state.room) {
     render(homeView({
       rerender,
-      onHost: async name => enterRoom(await createRoom(state.uid, name)),
-      onJoin: async (code, name) => {
-        const problem = await joinRoom(code, state.uid, name);
+      onHost: async (name, look) => enterRoom(await createRoom(state.uid, name, look)),
+      onJoin: async (code, name, look) => {
+        const problem = await joinRoom(code, state.uid, name, look);
         if (problem) return toast(problem);
         enterRoom(code);
       },

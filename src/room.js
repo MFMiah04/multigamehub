@@ -2,7 +2,6 @@ import { ref, get, set, update, remove, onValue, onDisconnect, serverTimestamp, 
 import { db, serverNow } from './firebase.js';
 
 const CODE_LETTERS = 'ABCDEFGHJKLMNPQRSTUVWXYZ'; // no I or O, they look like 1 and 0
-export const AVATAR_COLORS = ['#a0e7e5', '#ffaebc', '#ffe066', '#b4f8c8', '#c3b1e1', '#ffc48c', '#9ad0f5', '#f7a8d8', '#d4e79e', '#f5b7a1', '#b8c0ff', '#ffd6a5'];
 const HOST_GRACE_MS = 15000;
 
 export const roomRef = (code, path = '') => ref(db, `rooms/${code}${path ? '/' + path : ''}`);
@@ -17,11 +16,11 @@ export function shuffle(list) {
   return out;
 }
 
-function newPlayer(name, color) {
-  return { name, color, joinedAt: serverTimestamp(), online: true };
+function newPlayer(name, look) {
+  return { name, look, joinedAt: serverTimestamp(), online: true };
 }
 
-export async function createRoom(uid, name) {
+export async function createRoom(uid, name, look) {
   for (let attempt = 0; attempt < 10; attempt++) {
     const code = Array.from({ length: 4 }, () => randomItem(CODE_LETTERS)).join('');
     if ((await get(roomRef(code))).exists()) continue;
@@ -30,7 +29,7 @@ export async function createRoom(uid, name) {
       createdAt: serverTimestamp(),
       phase: 'lobby',
       game: null,
-      players: { [uid]: newPlayer(name, 0) },
+      players: { [uid]: newPlayer(name, look) },
     });
     return code;
   }
@@ -38,20 +37,18 @@ export async function createRoom(uid, name) {
 }
 
 // Returns null on success, or a message explaining why the player can't join.
-export async function joinRoom(code, uid, name) {
+export async function joinRoom(code, uid, name, look) {
   const snap = await get(roomRef(code));
   if (!snap.exists()) return "That room doesn't exist. Check the code?";
   const room = snap.val();
   if (room.kicked?.[uid]) return 'The host removed you from this room.';
   const players = room.players || {};
   if (players[uid]) {
-    await update(roomRef(code, `players/${uid}`), { name, online: true });
+    await update(roomRef(code, `players/${uid}`), { name, look, online: true });
     return null;
   }
   if (Object.keys(players).length >= 16) return 'That room is full.';
-  const used = new Set(Object.values(players).map(p => p.color));
-  const color = AVATAR_COLORS.findIndex((_, i) => !used.has(i));
-  await set(roomRef(code, `players/${uid}`), newPlayer(name, Math.max(color, 0)));
+  await set(roomRef(code, `players/${uid}`), newPlayer(name, look));
   return null;
 }
 

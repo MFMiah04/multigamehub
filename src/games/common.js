@@ -71,7 +71,7 @@ export function voteView(ctx, { candidates, voters, max, prompt, details }) {
       ${candidates.map(p => html`
         <button class="vote-card wobble ${picks.has(p.id) ? 'vote-card--picked' : ''} ${p.id === ctx.uid ? 'vote-card--me' : ''}"
           ?disabled=${!canVote || locked || p.id === ctx.uid} @click=${() => toggle(p.id)}>
-          ${avatar(p, 34)}
+          ${avatar(p, 48)}
           <b>${p.name}${p.id === ctx.uid ? ' (you)' : ''}</b>
           ${details ? details(p) : nothing}
         </button>`)}
@@ -104,7 +104,7 @@ export function resultsList(ctx, rows, { badge, detail }) {
     ${rows.map(r => {
       const label = badge(r.player);
       return html`<div class="result wobble ${label ? 'result--marked' : ''}">
-        ${avatar(r.player, 30)}
+        ${avatar(r.player, 40)}
         <div class="result__body">
           <span><b>${r.player.name}${r.player.id === ctx.uid ? ' (you)' : ''}</b> ${label ? html`<span class="hl">${label}</span>` : nothing}</span>
           ${detail ? detail(r.player) : nothing}

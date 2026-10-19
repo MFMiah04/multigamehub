@@ -39,7 +39,7 @@ export function lobbyView(ctx) {
   const kick = async p => { if (await confirmDialog(`Remove ${p.name} from the room?`, 'Remove')) await kickPlayer(room, p.id); };
 
   return html`
-    <section class="invite wobble">
+    <section class="invite wobble ${local.qr ? 'invite--qr' : ''}">
       <small>Room code</small>
       <div class="code">${[...room.code].map(c => html`<span class="wobble">${c}</span>`)}</div>
       <div class="row">
@@ -52,7 +52,7 @@ export function lobbyView(ctx) {
     <h2 class="section-title">Players <small>(${ctx.players.length})</small></h2>
     <div class="lineup">
       ${ctx.players.map(p => html`<div class="lineup__player ${p.online === false ? 'lineup__player--away' : ''}">
-        ${avatar(p, 40)}
+        ${avatar(p, 56)}
         <span>${p.name}${p.id === ctx.uid ? ' (you)' : ''}</span>
         ${p.id === room.hostId ? html`<small class="hl">host</small>` : nothing}
         ${p.online === false ? html`<small>away</small>` : nothing}
@@ -64,7 +64,7 @@ export function lobbyView(ctx) {
     <div class="notes">
       ${gameList.map(g => html`<div class="sticky sticky--${g.color} wobble ${room.game === g.id ? 'sticky--picked' : ''} ${!isHost && room.game !== g.id ? 'sticky--faded' : ''}">
         <button class="sticky__pick" ?disabled=${!isHost} @click=${action(() => pickGame(g))}>
-          <b>${g.name}</b><small>${g.players} players</small>
+          <b>${g.name}</b>${g.art}<small>${g.players} players</small>
         </button>
         <button class="sticky__rules" @click=${() => showRules(g)}>how to play</button>
       </div>`)}

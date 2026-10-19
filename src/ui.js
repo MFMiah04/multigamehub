@@ -1,21 +1,8 @@
-import { html, render, svg, nothing } from 'lit-html';
-import { AVATAR_COLORS } from './room.js';
+import { html, render, nothing } from 'lit-html';
 import { serverNow } from './firebase.js';
+import { avatar } from './avatar.js';
 
-export { html, nothing };
-
-export function avatar(player, size = 40) {
-  const fill = AVATAR_COLORS[player?.color ?? 0];
-  return html`<svg class="avatar ${player?.online === false ? 'avatar--away' : ''}" width=${size} height=${size * 1.4} viewBox="0 0 40 56" aria-hidden="true">
-    ${svg`<g fill="none" stroke="#222" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-      <path d="M8 15 C8 4, 32 4, 32 15 C32 27, 8 27, 8 15 Z" fill=${fill} />
-      <circle cx="16" cy="15" r="1.2" fill="#222" stroke="none" />
-      <circle cx="24" cy="15" r="1.2" fill="#222" stroke="none" />
-      <path d="M16 20 q4 3 8 0" />
-      <path d="M20 26 v15 M20 30 l-9 6 M20 30 l9 5 M20 41 l-7 12 M20 41 l7 12" />
-    </g>`}
-  </svg>`;
-}
+export { html, nothing, avatar };
 
 export function playerTag(player, { you, host, extra } = {}) {
   return html`<span class="tag wobble">${avatar(player, 22)}<span>${player.name}</span>

@@ -11,6 +11,13 @@ export default {
   color: 'pink',
   players: '3–12',
   blurb: 'Everyone knows the secret word, except the imposter.',
+  art: html`<svg class="art" viewBox="0 0 64 56" aria-hidden="true"><g fill="none" stroke="#222" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M46 36 l9 17" />
+    <path d="M6 20 C14 12, 24 14, 32 19 C40 14, 50 12, 58 20 C57 33, 48 38, 40 35 C36 34, 34 31, 32 29 C30 31, 28 34, 24 35 C16 38, 7 33, 6 20 Z" fill="#fff" />
+    <path d="M14 24 q5 -5 11 0 q-5 4 -11 0 Z M39 24 q5 -5 11 0 q-5 4 -11 0 Z" fill="#222" />
+    <path d="M10 18 q3 -5 7 -6 M54 18 q-3 -5 -7 -6" />
+    <path d="M32 19 v3" />
+  </g></svg>`,
   rules: [
     'Everyone sees the same secret word. The imposter only gets a one-word hint.',
     'Go round in the turn order. Each person says one word linked to the secret word.',

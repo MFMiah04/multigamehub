@@ -57,6 +57,15 @@ export default {
   color: 'mint',
   players: '3–12',
   blurb: 'Answer the same as everyone else to score.',
+  art: html`<svg class="art" viewBox="0 0 64 56" aria-hidden="true"><g fill="none" stroke="#222" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M22 12 C20 7, 21 4, 24 2 M42 12 C44 7, 43 4, 40 2" />
+    <path d="M19 18 C11 14, 5 17, 5 21 C10 24, 16 23, 20 21 M45 18 C53 14, 59 17, 59 21 C54 24, 48 23, 44 21" fill="#fff" />
+    <path d="M18 14 C25 8, 39 8, 46 14 C49 23, 48 31, 46 36 C39 40, 25 40, 18 36 C16 31, 15 23, 18 14 Z" fill="#fff" />
+    <path d="M25 12 C29 10, 34 13, 32 18 C29 22, 23 19, 25 12 Z" fill="#222" />
+    <circle cx="25" cy="25" r="1.8" fill="#222" stroke="none" /><circle cx="39" cy="25" r="1.8" fill="#222" stroke="none" />
+    <path d="M17 41 C17 33, 47 33, 47 41 C47 50, 17 50, 17 41 Z" fill="#ffaebc" />
+    <path d="M26 41 v2 M38 41 v2" stroke-width="3" />
+  </g></svg>`,
   rules: [
     'Everyone answers the same question at the same time.',
     "You score a point if you're in the biggest group with the same answer (the herd).",

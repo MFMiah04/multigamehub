@@ -12,6 +12,15 @@ export default {
   color: 'peach',
   players: '4–12',
   blurb: 'One player gets a different question. Spot the faker.',
+  art: html`<svg class="art" viewBox="0 0 64 56" aria-hidden="true"><g fill="none" stroke="#222" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M6 30 C6 15, 30 15, 30 30 C30 45, 6 46, 6 30 Z" fill="#fff" />
+    <path d="M12 25 q2.5 -2 5 0 M20 25 q2.5 -2 5 0" />
+    <circle cx="16" cy="27" r="1.4" fill="#222" stroke="none" /><circle cx="24" cy="27" r="1.4" fill="#222" stroke="none" />
+    <path d="M13 37 q4 2 8 -1" />
+    <path d="M27 30 L57 31 L27 34" fill="#fff" />
+    <path d="M46 31 q2 -6 7 -7 q-1 5 -7 7" fill="#b4f8c8" />
+    <path d="M42 10 q0 -5 5 -5 q5 0 5 4 q0 3 -4 4 v3 M48 21 v0.5" />
+  </g></svg>`,
   rules: [
     "One player is the overseer. They don't play, they write two similar questions.",
     "Everyone answers the real question, except the faker, who secretly gets the other one. They might not even realise!",

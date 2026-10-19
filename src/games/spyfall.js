@@ -11,6 +11,13 @@ export default {
   color: 'cyan',
   players: '3–12',
   blurb: "One of you is a spy who doesn't know where you are.",
+  art: html`<svg class="art" viewBox="0 0 64 56" aria-hidden="true"><g fill="none" stroke="#222" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M18 27 C19 13, 25 10, 32 13 C39 10, 45 13, 46 27" fill="#5a5650" />
+    <path d="M19 23 C27 26, 37 26, 45 23" stroke="#fdf8ec" stroke-width="3" />
+    <path d="M7 29 C20 23, 44 23, 57 29 C46 32, 18 32, 7 29 Z" fill="#5a5650" />
+    <path d="M15 37 h13 c0 6 -3 9 -6.5 9 S15 43 15 37 Z M36 37 h13 c0 6 -3 9 -6.5 9 S36 43 36 37 Z" fill="#222" />
+    <path d="M28 38 q4 -2 8 0" />
+  </g></svg>`,
   rules: [
     'Everyone gets the same secret location and a role there, except the spy.',
     'Take turns asking each other questions about the location.',

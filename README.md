@@ -1,6 +1,6 @@
 # MultigameHub
 
-Party games for your phone. One person hosts a room, everyone joins with a 4-letter code (or the invite link / QR code), and you play together in the same room or on a call.
+Party games to play together on phones or computers. Make a character, then one person hosts a room and everyone joins with a 4-letter code (or the invite link / QR code), and you play together in the same room or on a call.
 
 **Live:** https://multigame-hub.web.app
 
