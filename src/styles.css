@@ -137,8 +137,10 @@ small.hl { font-size: 15px; }
 .btn--pink { background: var(--pink-strong); }
 .btn--mint { background: var(--mint); }
 .btn--small { font-size: 17px; height: 36px; margin: 0; }
-/* Home screen buttons fit in a single line gap, with an empty line above each. */
-.home .btn { height: calc(var(--row) - 4px); margin: calc(var(--line-y) + 2px) 0 calc(var(--row) - var(--line-y) - 2px); font-size: 18px; }
+/* Home screen buttons: a pair, 1½ lines each, together filling three line gaps. */
+.home-actions { display: flex; flex-direction: column; gap: 4px; height: calc(var(--row) * 4); padding-top: var(--line-y); }
+.home-actions .btn { height: calc(var(--row) * 1.5 - 2px); margin: 0; font-size: 19px; }
+@media (min-width: 900px) { .home-actions { width: 100%; max-width: 460px; align-self: center; } }
 .row { display: flex; gap: 10px; }
 .row > * { flex: 1; }
 

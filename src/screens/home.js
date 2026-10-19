@@ -80,10 +80,14 @@ export function homeView({ onHost, onJoin, rerender }) {
             <input id="code" class="code-input" maxlength="4" autocomplete="off" autocapitalize="characters" .value=${s.code}
               placeholder="ABCD" @input=${e => { e.target.value = e.target.value.toUpperCase().replace(/[^A-Z]/g, ''); s.code = e.target.value; }}
               @keydown=${enter(join)}></label>
-          ${button('Join the room', action(join), { kind: 'mint' })}
-          ${button('Back', () => { s.joining = false; rerender(); }, { kind: 'white' })}`
-        : html`${button('Host a game', action(host))}
-          ${button('Join with a code', () => { s.joining = true; rerender(); setTimeout(() => document.getElementById('code')?.focus()); }, { kind: 'white' })}`}
+          <div class="home-actions">
+            ${button('Join the room', action(join), { kind: 'mint' })}
+            ${button('Back', () => { s.joining = false; rerender(); }, { kind: 'white' })}
+          </div>`
+        : html`<div class="home-actions">
+            ${button('Host a game', action(host))}
+            ${button('Join with a code', () => { s.joining = true; rerender(); setTimeout(() => document.getElementById('code')?.focus()); }, { kind: 'white' })}
+          </div>`}
 
       <h2 class="section-title">The rules</h2>
       <div class="notes">
