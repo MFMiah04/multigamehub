@@ -1,0 +1,21 @@
+{
+  "name": "multigamehub",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "dev:emu": "vite --mode emulator",
+    "emulators": "firebase emulators:start --only auth,database --project demo-multigamehub",
+    "build": "vite build",
+    "preview": "vite preview",
+    "deploy": "vite build && firebase deploy --only hosting,database"
+  },
+  "dependencies": {
+    "firebase": "^11.10.0",
+    "lit-html": "^3.3.3",
+    "qrcode-generator": "^1.5.2"
+  },
+  "devDependencies": {
+    "vite": "^6.4.4"
+  }
+}

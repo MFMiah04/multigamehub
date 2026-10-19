@@ -1,151 +1,179 @@
-import { GameStateManager } from './core/GameStateManager.js';
-import { eventBus } from './core/EventBus.js';
-import { getGameView } from './games/registry.js';
-import '../styles/main.css';
+import { render } from 'lit-html';
+import { onValue, get, update } from 'firebase/database';
+import { signIn, serverNow } from './firebase.js';
+import { roomRef, createRoom, joinRoom, leaveRoom, trackPresence, stopPresence, sortedPlayers, claimHostIfNeeded } from './room.js';
+import { html, nothing, toast, confirmDialog, action, avatar } from './ui.js';
+import { games } from './games/index.js';
+import { backToLobby } from './games/common.js';
+import { homeView, homeState } from './screens/home.js';
+import { lobbyView, shareInvite } from './screens/lobby.js';
+import './styles.css';
 
-/**
- * Main Application Class
- */
-class App {
-  constructor() {
-    this.stateManager = null;
-    this.currentView = null;
-    this.appContainer = document.getElementById('app');
+const app = document.getElementById('app');
+const state = { uid: null, code: null, room: null, loading: true };
+let stopRoom = null;
+let stopPresenceTracking = null;
+let leaving = false;
+
+// Per-screen scratch state (typed text, picks, toggles). Reset whenever the screen changes.
+let local = {};
+let localKey = '';
+let lastAutoUpdate = '';
+
+async function boot() {
+  try {
+    state.uid = await signIn();
+    app.replaceChildren(); // drop the static loading message before lit-html takes over
+  } catch (err) {
+    app.replaceChildren();
+    console.error(err);
+    render(html`<main class="page"><h1 class="logo">Oops</h1><p>Couldn't connect. Check your internet and refresh.</p></main>`, app);
+    return;
   }
-
-  /**
-   * Initialize the application
-   */
-  async init() {
-    // Get URL parameters
-    const urlParams = new URLSearchParams(window.location.search);
-    const roomCode = urlParams.get('roomCode');
-    const playerId = urlParams.get('playerId');
-
-    // Validate parameters
-    if (!roomCode || !playerId) {
-      console.error('Missing roomCode or playerId');
-      window.location.href = '/index.html';
-      return;
-    }
-
-    try {
-      // Initialize state manager
-      this.stateManager = new GameStateManager(roomCode, playerId);
-      await this.stateManager.init();
-
-      // Listen for phase changes
-      eventBus.on('phase:change', (data) => {
-        this.handlePhaseChange(data);
-      });
-
-      // Render initial view based on current phase
-      const state = this.stateManager.state;
-      this.handlePhaseChange({
-        from: null,
-        to: state.phase,
-        game: state.selectedGame
-      });
-
-    } catch (error) {
-      console.error('Error initializing app:', error);
-      this.showError('Failed to connect to room');
-    }
+  const code = new URLSearchParams(location.search).get('room')?.toUpperCase();
+  state.loading = false;
+  if (code && /^[A-Z]{4}$/.test(code)) {
+    const already = (await get(roomRef(code, `players/${state.uid}`))).exists();
+    if (already) return enterRoom(code);
+    homeState.joining = true;
+    homeState.code = code;
   }
-
-  /**
-   * Handle phase transitions
-   * @param {Object} data - Phase change data
-   */
-  async handlePhaseChange(data) {
-    const { to: phase, game } = data;
-
-    console.log(`Phase change: ${data.from} -> ${phase}`, { game });
-
-    // Destroy current view
-    if (this.currentView) {
-      this.currentView.destroy();
-      this.currentView = null;
-    }
-
-    // Render appropriate view
-    if (phase === 'lobby') {
-      await this.renderLobby();
-    } else if (game) {
-      await this.renderGame(game, phase);
-    }
-  }
-
-  /**
-   * Render lobby view
-   */
-  async renderLobby() {
-    try {
-      const { LobbyView } = await import('./views/LobbyView.js');
-      this.currentView = new LobbyView(this.stateManager);
-      this.currentView.render(this.appContainer);
-    } catch (error) {
-      console.error('Error rendering lobby:', error);
-      this.showError('Failed to load lobby');
-    }
-  }
-
-  /**
-   * Render game view
-   * @param {string} gameId - Game identifier
-   * @param {string} phase - Current phase
-   */
-  async renderGame(gameId, phase) {
-    try {
-      const ViewClass = await getGameView(gameId);
-      this.currentView = new ViewClass(phase, this.stateManager);
-      this.currentView.render(this.appContainer);
-    } catch (error) {
-      console.error(`Error rendering game ${gameId}:`, error);
-      this.showError(`Failed to load ${gameId}`);
-    }
-  }
-
-  /**
-   * Show error message
-   * @param {string} message - Error message
-   */
-  showError(message) {
-    if (this.appContainer) {
-      this.appContainer.innerHTML = `
-        <div class="app-wrapper">
-          <div class="container">
-            <div class="card">
-              <div class="card__header">
-                <h1 class="card__title">❌ Error</h1>
-              </div>
-              <div class="card__body">
-                <p style="text-align: center; color: var(--color-danger);">
-                  ${message}
-                </p>
-              </div>
-              <div class="card__footer">
-                <button class="button button--primary button--full" onclick="window.location.href='/index.html'">
-                  Return to Home
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      `;
-    }
-  }
+  rerender();
 }
 
-// Initialize app when DOM is ready
-if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', () => {
-    const app = new App();
-    app.init();
+function enterRoom(code) {
+  state.code = code;
+  history.replaceState(null, '', `/?room=${code}`);
+  stopPresenceTracking = trackPresence(code, state.uid);
+  stopRoom = onValue(roomRef(code), snap => {
+    const room = snap.val();
+    if (!room || !room.players?.[state.uid]) {
+      const message = leaving ? null : !room ? 'That room has closed.' : room.kicked?.[state.uid] ? 'The host removed you from the room.' : 'You left the room.';
+      return exitRoom(message);
+    }
+    state.room = { ...room, code };
+    rerender();
   });
-} else {
-  const app = new App();
-  app.init();
 }
 
-export { App };
+function exitRoom(message) {
+  stopRoom?.();
+  stopPresenceTracking?.();
+  if (state.code) stopPresence(state.code, state.uid);
+  Object.assign(state, { code: null, room: null });
+  leaving = false;
+  homeState.joining = false;
+  history.replaceState(null, '', '/');
+  rerender();
+  if (message) toast(message);
+}
+
+function makeCtx() {
+  const room = state.room;
+  const players = sortedPlayers(room);
+  const game = games[room.game] || null;
+  const round = room.round || {};
+  const key = `${room.game}:${room.phase}:${round.id}:${round.no}`;
+  if (key !== localKey) { local = {}; localKey = key; }
+
+  const ctx = {
+    room, players, game, round, local,
+    uid: state.uid,
+    me: room.players[state.uid],
+    isHost: room.hostId === state.uid,
+    settings: game ? { ...game.defaults({ room }), ...room.settings?.[game.id] } : {},
+    inGame: players.filter(p => p.inGame),
+    now: serverNow,
+    rerender,
+    update: changes => update(roomRef(room.code), changes),
+    share: () => shareInvite(room.code),
+  };
+  ctx.startGame = () => {
+    const changes = game.start(ctx, ctx.settings);
+    changes.round = { ...changes.round, id: Date.now() };
+    players.forEach(p => { changes[`players/${p.id}/inGame`] = true; });
+    return ctx.update(changes);
+  };
+  return ctx;
+}
+
+// Timed or automatic phase changes. The host drives them; everyone else just watches.
+function runAutomaticUpdates(ctx) {
+  claimHostIfNeeded(ctx.room, ctx.uid);
+  if (!ctx.game || ctx.room.phase === 'lobby' || !ctx.me.inGame) return;
+  const own = ctx.game.clientTick?.(ctx, ctx.settings);
+  if (own) ctx.update(own);
+  if (!ctx.isHost) return;
+  const changes = ctx.game.tick?.(ctx, ctx.settings);
+  if (!changes) return;
+  // Don't fire the same change twice while waiting for Firebase to echo it back.
+  const signature = localKey + JSON.stringify(changes);
+  if (signature === lastAutoUpdate) return;
+  lastAutoUpdate = signature;
+  ctx.update(changes).catch(err => { console.error(err); lastAutoUpdate = ''; });
+}
+
+function rerender() {
+  if (state.loading) return;
+  if (!state.room) {
+    render(homeView({
+      rerender,
+      onHost: async name => enterRoom(await createRoom(state.uid, name)),
+      onJoin: async (code, name) => {
+        const problem = await joinRoom(code, state.uid, name);
+        if (problem) return toast(problem);
+        enterRoom(code);
+      },
+    }), app);
+    return;
+  }
+  const ctx = makeCtx();
+  render(roomView(ctx), app);
+  runAutomaticUpdates(ctx);
+}
+
+function roomView(ctx) {
+  const { room, game } = ctx;
+  const inLobby = room.phase === 'lobby' || !game;
+  let body;
+  if (inLobby) body = lobbyView(ctx);
+  else if (!ctx.me.inGame) body = waitingView(ctx);
+  else body = game.view(ctx, ctx.settings);
+
+  return html`
+    <main class="page room ${game && !inLobby ? `room--${game.color}` : ''}">
+      ${roomHeader(ctx, inLobby)}
+      ${body}
+    </main>`;
+}
+
+function roomHeader(ctx, inLobby) {
+  const leave = async () => {
+    if (!(await confirmDialog('Leave this room?', 'Leave'))) return;
+    leaving = true;
+    await leaveRoom(ctx.room, ctx.uid);
+  };
+  const endGame = async () => {
+    if (await confirmDialog('End the game for everyone and go back to the lobby?', 'End game')) await backToLobby(ctx);
+  };
+  return html`<header class="room-header">
+    <button class="room-header__code" @click=${ctx.share} title="Share invite">${inLobby ? 'Lobby' : ctx.game.name} · <b>${ctx.room.code}</b></button>
+    <span class="room-header__actions">
+      ${!inLobby && ctx.isHost ? html`<button class="link" @click=${action(endGame)}>End game</button>` : nothing}
+      <button class="link" @click=${action(leave)}>Leave</button>
+    </span>
+  </header>`;
+}
+
+function waitingView(ctx) {
+  return html`<div class="waiting">
+    <h2 class="center">A round of ${ctx.game.name} is in progress</h2>
+    <p class="note center">Sit tight. You'll be in the next one.</p>
+    <div class="lineup">${ctx.inGame.map(p => html`<div class="lineup__player">${avatar(p, 34)}<span>${p.name}</span></div>`)}</div>
+  </div>`;
+}
+
+// Keep timers ticking and catch time-based phase changes.
+setInterval(() => { if (state.room) rerender(); }, 500);
+
+boot();

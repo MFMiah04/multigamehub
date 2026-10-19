@@ -76,3 +76,6 @@ nul
 
 # Backup files
 *.backup
+
+# Build output
+dist/
