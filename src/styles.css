@@ -8,7 +8,6 @@
   --ink-soft: #5a5650;
   --paper: #fdf8ec;
   --line: #c7d4e8;
-  --desk: #e8e1d0;
   --yellow: #ffe066;
   --pink: #ffaebc;
   --pink-strong: #ff8fab;
@@ -25,9 +24,10 @@
 
 * { box-sizing: border-box; }
 html { -webkit-text-size-adjust: 100%; }
+/* The whole window is one sheet of ruled paper; content sits in a centred column on it. */
 body {
   margin: 0;
-  background: var(--desk);
+  background: var(--paper) var(--ruled) 0 env(safe-area-inset-top) / 100% var(--row);
   color: var(--ink);
   font: 18px/var(--row) var(--hand);
   -webkit-tap-highlight-color: transparent;
@@ -49,28 +49,11 @@ button:disabled { cursor: default; }
   min-height: round(down, 100dvh, var(--row));
   margin: 0 auto;
   padding: calc(var(--row) + env(safe-area-inset-top)) 18px var(--row);
-  background-color: var(--paper);
-  /* ruled line along the bottom of every row */
-  background-image: var(--ruled);
-  background-size: 100% var(--row);
-  background-position: 0 env(safe-area-inset-top);
   display: flex;
   flex-direction: column;
 }
-/* On phones the page fills the screen, so carry the paper on past it to the very bottom. */
-@media (max-width: 519px) {
-  body { background: var(--paper) var(--ruled) 0 env(safe-area-inset-top) / 100% var(--row); }
-}
 @media (min-width: 520px) {
-  body { padding: 24px 0; }
-  .page {
-    min-height: calc(100dvh - 48px);
-    min-height: round(down, 100dvh - 48px, var(--row));
-    border-radius: 6px;
-    box-shadow: 0 10px 30px rgba(60, 40, 10, 0.15);
-    padding-left: 28px;
-    padding-right: 28px;
-  }
+  .page { padding-left: 28px; padding-right: 28px; }
 }
 @media (min-width: 900px) {
   .page { max-width: 760px; }
