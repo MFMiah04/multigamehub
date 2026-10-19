@@ -137,6 +137,8 @@ small.hl { font-size: 15px; }
 .btn--pink { background: var(--pink-strong); }
 .btn--mint { background: var(--mint); }
 .btn--small { font-size: 17px; height: 36px; margin: 0; }
+/* Home screen buttons fit in a single line gap, with an empty line above each. */
+.home .btn { height: calc(var(--row) - 4px); margin: calc(var(--line-y) + 2px) 0 calc(var(--row) - var(--line-y) - 2px); font-size: 18px; }
 .row { display: flex; gap: 10px; }
 .row > * { flex: 1; }
 
@@ -199,8 +201,9 @@ details.field summary { cursor: pointer; text-decoration: underline wavy; text-u
 
 /* ---------- character creator ---------- */
 
-.creator { display: flex; align-items: center; justify-content: center; gap: 12px; height: calc(var(--row) * 5); }
-.creator__figure { display: grid; place-items: center; width: 100px; height: 110px; margin-top: -14px; }
+.creator { display: flex; align-items: flex-start; justify-content: center; gap: 12px; height: calc(var(--row) * 4); }
+/* The character spans the same three line gaps as the arrows. */
+.creator__figure { display: grid; place-items: center; width: 80px; height: calc(var(--row) * 3 - 4px); margin-top: calc(var(--line-y) + 2px); overflow: hidden; }
 /* Each arrow sits centred between two ruled lines, in three consecutive line gaps. */
 .creator__arrows { display: flex; flex-direction: column; gap: 4px; align-self: flex-start; margin-top: calc(var(--line-y) + 2px); }
 .arrow { display: grid; place-items: center; width: 32px; height: calc(var(--row) - 4px); padding: 0; background: #fff; box-shadow: 2px 2px 0 rgba(0, 0, 0, 0.13); }

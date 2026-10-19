@@ -47,7 +47,7 @@ function creator(rerender) {
   const parts = [['e', 'eyes'], ['m', 'mouth'], ['b', 'colour']];
   return html`<section class="creator" aria-label="Your character">
     <div class="creator__arrows">${parts.map(([p, label]) => arrow(-1, p, label, cycle))}</div>
-    <div class="creator__figure">${avatar({ look: homeState.look }, 92)}</div>
+    <div class="creator__figure">${avatar({ look: homeState.look }, 74)}</div>
     <div class="creator__arrows">${parts.map(([p, label]) => arrow(1, p, label, cycle))}</div>
   </section>`;
 }
