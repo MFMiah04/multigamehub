@@ -27,7 +27,7 @@ export default {
   id: 'one-word',
   name: 'One Word',
   color: 'lilac',
-  players: '3–12',
+  players: '2–12',
   blurb: 'Work together to get one player to guess the secret word.',
   rules: [
     'Each round, one player is the guesser. Everyone else sees a secret word.',
@@ -52,7 +52,7 @@ export default {
       ${selectField('Time to guess', s.guessTime, secondsOptions([30, 60, 90]), v => set({ guessTime: +v }), disabled)}`;
   },
 
-  canStart: ctx => (ctx.players.length < 3 ? `Need ${3 - ctx.players.length} more to play` : null),
+  canStart: ctx => (ctx.players.length < 2 ? 'Need 1 more to play' : null),
 
   start(ctx, s) {
     const order = shuffle(ctx.players.map(p => p.id));

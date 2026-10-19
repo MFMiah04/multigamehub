@@ -1,6 +1,6 @@
 import { html, nothing, button, timer, selectField, action, progress, toast, avatar } from '../ui.js';
 import { shuffle } from '../room.js';
-import { isTimeUp, pickUnused, turnOf, roundsField, secondsOptions, leaderboard, nextOrFinalButton, finalScores } from './common.js';
+import { isTimeUp, pickUnused, turnOf, roundsField, secondsOptions, leaderboard, nextOrFinalButton, finalScores, backToLobbyButton } from './common.js';
 import spectrums from '../data/spectrums.json';
 
 // Scoring bands, measured from the target on a 0–100 scale that wraps round at the ends.
@@ -41,7 +41,7 @@ export default {
   id: 'spectrum',
   name: 'Spectrum',
   color: 'blue',
-  players: '3–12',
+  players: '2–12',
   blurb: 'Give a clue that lands on just the right spot between two extremes.',
   rules: [
     'Each round one player is the psychic. They see a scale, like Cold ↔ Hot, and a secret target somewhere on it.',
@@ -67,7 +67,7 @@ export default {
       ${selectField('Time to guess', s.guessTime, secondsOptions([30, 45, 60, 90]), v => set({ guessTime: +v }), disabled)}`;
   },
 
-  canStart: ctx => (ctx.players.length < 3 ? `Need ${3 - ctx.players.length} more to play` : null),
+  canStart: ctx => (ctx.players.length < 2 ? 'Need 1 more to play' : null),
 
   start(ctx, s) {
     const order = shuffle(ctx.players.map(p => p.id));
@@ -90,12 +90,29 @@ export default {
   },
 
   view(ctx, s) {
-    const views = { final: finalScores, clue, guess, reveal };
+    const views = { final: isTeam(ctx) ? teamFinal : finalScores, clue, guess, reveal };
     return views[ctx.room.phase]?.(ctx, s) ?? nothing;
   },
 };
 
 const header = ctx => html`<p class="note center">Round ${ctx.round.no} of ${ctx.round.total}</p>`;
+
+// With two players you always score the same points, so it's a team game with one shared score.
+const isTeam = ctx => ctx.inGame.length === 2;
+const teamScore = ctx => Math.max(0, ...ctx.inGame.map(p => ctx.round.scores?.[p.id] || 0));
+
+function teamFinal(ctx) {
+  const score = teamScore(ctx);
+  const ratio = score / (ctx.round.total * 4);
+  const verdict = ratio >= 0.75 ? 'Total mind-readers!' : ratio >= 0.5 ? 'On the same wavelength!' : ratio >= 0.25 ? 'Getting there…' : 'Are you sure you know each other?';
+  return html`
+    <h1 class="center scribble">Team score: ${score}</h1>
+    <p class="note center">Out of a possible ${ctx.round.total * 4}. ${verdict}</p>
+    <div class="push"></div>
+    ${ctx.isHost ? button('Play again', action(ctx.startGame)) : nothing}
+    ${backToLobbyButton(ctx)}`;
+}
+
 const psychicName = ctx => ctx.room.players[ctx.round.psychic]?.name || 'The psychic';
 
 function clue(ctx, s) {
@@ -161,8 +178,9 @@ function reveal(ctx, s) {
     <h1 class="center scribble">${best === 4 ? 'Bullseye!' : best >= 2 ? 'Close!' : 'Way off!'}</h1>
     <div class="question wobble center"><small>${psychicName(ctx)}'s clue</small>"${round.clue}"</div>
     ${scale(ctx, { target: round.target, markers: guessers.map(p => ({ value: round.guesses[p.id], player: p })) })}
-    <h2 class="section-title">Scores</h2>
-    ${leaderboard(ctx, round.scores, round.delta)}
+    ${isTeam(ctx)
+      ? html`<h2 class="section-title center">Team score: ${teamScore(ctx)} <small>(+${round.delta?.[guessers[0]?.id] || 0} this round)</small></h2>`
+      : html`<h2 class="section-title">Scores</h2>${leaderboard(ctx, round.scores, round.delta)}`}
     <div class="push"></div>
     ${nextOrFinalButton(ctx, round, next)}`;
 }

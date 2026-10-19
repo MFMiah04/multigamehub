@@ -9,9 +9,9 @@ Party games to play together on phones or computers. Make a character, then one 
 - **Imposter**: everyone knows the secret word except the imposter, who only gets a hint.
 - **Fakin' It**: the overseer writes two questions; the faker secretly answers the other one.
 - **Herd Mentality**: answer the same as the majority to score. Don't get stuck with the pink cow.
-- **One Word**: a team game. Everyone writes a one-word clue for the guesser, but matching clues get cancelled.
+- **One Word** (2+ players): a team game. Everyone writes a one-word clue for the guesser, but matching clues get cancelled.
 - **Fake Answer**: write a believable fake answer to a strange true fact, then try to spot the real one.
-- **Spectrum**: the psychic gives a clue for a secret spot between two extremes; everyone else slides to guess it.
+- **Spectrum** (2+ players): the psychic gives a clue for a secret spot between two extremes; everyone else slides to guess it.
 
 ## Tech
 Vite, [lit-html](https://lit.dev/docs/libraries/standalone-templates/) for rendering, Firebase Realtime Database, Firebase anonymous auth and Firebase Hosting.
