@@ -194,10 +194,11 @@ details.field summary { cursor: pointer; text-decoration: underline wavy; text-u
 
 /* ---------- character creator ---------- */
 
-.creator { display: flex; align-items: center; justify-content: center; gap: 18px; height: calc(var(--row) * 6); }
-.creator__figure { display: grid; place-items: center; width: 150px; height: 150px; }
-.creator__arrows { display: flex; flex-direction: column; justify-content: space-between; height: 100%; padding: 23px 0; }
-.arrow { display: grid; place-items: center; width: 38px; height: 34px; padding: 0; background: #fff; box-shadow: 2px 2px 0 rgba(0, 0, 0, 0.13); }
+.creator { display: flex; align-items: center; justify-content: center; gap: 12px; height: calc(var(--row) * 5); }
+.creator__figure { display: grid; place-items: center; width: 100px; height: 110px; }
+.creator__arrows { display: flex; flex-direction: column; justify-content: space-between; height: 100%; padding: 22px 0; }
+.arrow { display: grid; place-items: center; width: 30px; height: 26px; padding: 0; background: #fff; box-shadow: 2px 2px 0 rgba(0, 0, 0, 0.13); }
+.arrow svg { width: 15px; height: 15px; }
 .arrow:active { transform: translate(1px, 1px); box-shadow: none; }
 
 /* ---------- sticky notes (games) ---------- */
@@ -221,32 +222,17 @@ details.field summary { cursor: pointer; text-decoration: underline wavy; text-u
 .sticky b { font-size: 20px; line-height: 24px; }
 .sticky small { font-size: 15px; color: var(--ink-soft); line-height: 20px; }
 .sticky .art { width: 72px; height: 63px; flex: none; }
-.sticky:nth-child(4n+1) { transform: rotate(-2deg); }
-.sticky:nth-child(4n+2) { transform: rotate(1.8deg); }
-.sticky:nth-child(4n+3) { transform: rotate(1.2deg); }
-.sticky:nth-child(4n+4) { transform: rotate(-1.4deg); }
+.sticky { transform: rotate(var(--tilt, 0deg)); }
+.sticky:nth-child(4n+1) { --tilt: -2deg; }
+.sticky:nth-child(4n+2) { --tilt: 1.8deg; }
+.sticky:nth-child(4n+3) { --tilt: 1.2deg; }
+.sticky:nth-child(4n+4) { --tilt: -1.4deg; }
+/* On hover the note tips the other way and lifts a little. */
+.sticky:hover, .sticky:focus-within { transform: rotate(calc(var(--tilt, 0deg) * -1)) scale(1.05); }
 .sticky--cyan { --note: var(--cyan); }
 .sticky--pink { --note: var(--pink); }
 .sticky--peach { --note: var(--peach); }
 .sticky--mint { --note: var(--mint); }
-
-/* Corner peels up on hover, like lifting a sticky note. */
-.sticky::before {
-  content: '';
-  position: absolute;
-  right: calc(var(--border) * -1);
-  bottom: calc(var(--border) * -1);
-  width: 0;
-  height: 0;
-  background: linear-gradient(to top left,
-    var(--paper) calc(50% - 1.2px), var(--ink) calc(50% - 1.2px), var(--ink) calc(50% + 1.2px),
-    color-mix(in srgb, var(--note) 78%, #000) calc(50% + 1.2px));
-  border-top-left-radius: 4px;
-  box-shadow: -2px -2px 3px rgba(0, 0, 0, 0.12);
-  transition: width 0.18s ease-out, height 0.18s ease-out;
-  pointer-events: none;
-}
-.sticky:hover::before, .sticky:focus-within::before, .sticky:focus-visible::before { width: 30px; height: 30px; }
 
 .sticky--picked { outline: 3px dashed var(--ink); outline-offset: 4px; }
 .sticky--picked::after { content: '✓'; position: absolute; top: -14px; right: -6px; font-size: 30px; font-weight: 700; transform: rotate(8deg); }
