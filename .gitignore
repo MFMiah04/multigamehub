@@ -73,3 +73,6 @@ node_modules/
 
 # Windows artifact
 nul
+
+# Backup files
+*.backup
