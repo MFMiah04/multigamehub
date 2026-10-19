@@ -18,6 +18,9 @@
   --shadow: 3px 3px 0 rgba(0, 0, 0, 0.13);
   --hand: 'Kalam', 'Comic Sans MS', cursive;
   --border: 2.5px;
+  /* Where the ruled line falls in each row: just under the text baseline, so writing sits on it. */
+  --line-y: 21px;
+  --ruled: linear-gradient(transparent calc(var(--line-y) - 1.5px), var(--line) calc(var(--line-y) - 1.5px), var(--line) var(--line-y), transparent var(--line-y));
 }
 
 * { box-sizing: border-box; }
@@ -48,7 +51,7 @@ button:disabled { cursor: default; }
   padding: calc(var(--row) + env(safe-area-inset-top)) 18px var(--row);
   background-color: var(--paper);
   /* ruled line along the bottom of every row */
-  background-image: linear-gradient(transparent calc(var(--row) - 1.5px), var(--line) calc(var(--row) - 1.5px));
+  background-image: var(--ruled);
   background-size: 100% var(--row);
   background-position: 0 env(safe-area-inset-top);
   display: flex;
@@ -56,7 +59,7 @@ button:disabled { cursor: default; }
 }
 /* On phones the page fills the screen, so carry the paper on past it to the very bottom. */
 @media (max-width: 519px) {
-  body { background: var(--paper) linear-gradient(transparent calc(var(--row) - 1.5px), var(--line) calc(var(--row) - 1.5px)) 0 env(safe-area-inset-top) / 100% var(--row); }
+  body { background: var(--paper) var(--ruled) 0 env(safe-area-inset-top) / 100% var(--row); }
 }
 @media (min-width: 520px) {
   body { padding: 24px 0; }
@@ -93,10 +96,11 @@ small.hl { font-size: 15px; }
 .title {
   position: relative;
   align-self: center;
+  height: calc(var(--row) * 2);
+  padding: 14px 6px 0; /* drops the baseline onto the second ruled line */
   font-size: 40px;
   font-weight: 700;
-  line-height: calc(var(--row) * 2);
-  padding: 0 6px;
+  line-height: calc(var(--row) * 2 - 14px);
   white-space: nowrap;
 }
 .title::after {
@@ -104,7 +108,7 @@ small.hl { font-size: 15px; }
   position: absolute;
   left: -4px;
   right: -4px;
-  bottom: 3px;
+  bottom: 1px;
   height: 9px;
   background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 9' preserveAspectRatio='none'%3E%3Cpath d='M2 3 C40 1, 90 4, 130 2 S185 3, 198 2 M6 7.5 C50 6, 110 8.5, 194 6.5' fill='none' stroke='%23222' stroke-width='2.2' stroke-linecap='round'/%3E%3C/svg%3E") no-repeat center / 100% 100%;
 }
@@ -167,12 +171,13 @@ small.hl { font-size: 15px; }
 .field select:disabled { opacity: 0.75; background-image: none; }
 
 /* "Your name: ______" written straight onto the ruled line. */
-.line-field { display: flex; align-items: flex-end; gap: 10px; height: var(--row); margin: 14px 0; font-size: 20px; }
+.line-field { display: flex; align-items: flex-start; gap: 10px; height: var(--row); margin-top: var(--row); font-size: 20px; }
 .line-field span { white-space: nowrap; line-height: var(--row); }
+/* The input's underline lands exactly on the ruled line. */
 .line-field input {
   flex: 1;
   min-width: 0;
-  height: var(--row);
+  height: var(--line-y);
   padding: 0 4px;
   border: 0;
   border-bottom: 2.5px solid var(--ink);
@@ -180,7 +185,7 @@ small.hl { font-size: 15px; }
   background: transparent;
   font-size: 21px;
   font-weight: 700;
-  line-height: var(--row);
+  line-height: 18px;
   outline: none;
 }
 .line-field input::placeholder { color: #b5afa3; font-weight: 400; }
@@ -195,9 +200,10 @@ details.field summary { cursor: pointer; text-decoration: underline wavy; text-u
 /* ---------- character creator ---------- */
 
 .creator { display: flex; align-items: center; justify-content: center; gap: 12px; height: calc(var(--row) * 5); }
-.creator__figure { display: grid; place-items: center; width: 100px; height: 110px; }
-.creator__arrows { display: flex; flex-direction: column; justify-content: space-between; height: 100%; padding: 22px 0; }
-.arrow { display: grid; place-items: center; width: 30px; height: 26px; padding: 0; background: #fff; box-shadow: 2px 2px 0 rgba(0, 0, 0, 0.13); }
+.creator__figure { display: grid; place-items: center; width: 100px; height: 110px; margin-top: -14px; }
+/* Each arrow sits centred between two ruled lines, in three consecutive line gaps. */
+.creator__arrows { display: flex; flex-direction: column; gap: 4px; align-self: flex-start; margin-top: calc(var(--line-y) + 2px); }
+.arrow { display: grid; place-items: center; width: 32px; height: calc(var(--row) - 4px); padding: 0; background: #fff; box-shadow: 2px 2px 0 rgba(0, 0, 0, 0.13); }
 .arrow svg { width: 15px; height: 15px; }
 .arrow:active { transform: translate(1px, 1px); box-shadow: none; }
 
