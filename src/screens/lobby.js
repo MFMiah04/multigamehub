@@ -7,18 +7,23 @@ import { showRules } from './home.js';
 
 export const inviteLink = code => `${location.origin}/?room=${code}`;
 
-export async function shareInvite(code) {
-  const url = inviteLink(code);
-  if (navigator.share) {
-    try { await navigator.share({ title: 'Join my MultigameHub room', text: `Room code ${code}`, url }); return; } catch { /* closed or unsupported: fall back to copying */ }
-  }
+async function copyText(text, done) {
   try {
-    await navigator.clipboard.writeText(url);
-    toast('Invite link copied!');
+    await navigator.clipboard.writeText(text);
   } catch {
-    toast(`Share this link: ${url}`);
+    // Older browsers, or pages not served over https: copy via a hidden text box instead.
+    const box = Object.assign(document.createElement('textarea'), { value: text });
+    document.body.append(box);
+    box.select();
+    const ok = document.execCommand('copy');
+    box.remove();
+    if (!ok) return toast(`Couldn't copy. It's ${text}`);
   }
+  toast(done);
 }
+
+export const copyCode = code => copyText(code, `Room code ${code} copied!`);
+export const copyInviteLink = code => copyText(inviteLink(code), 'Invite link copied!');
 
 function qrSvg(text) {
   const qr = qrcode(0, 'M');
@@ -44,10 +49,12 @@ export function lobbyView(ctx) {
 
   return html`
     <section class="invite wobble ${local.qr ? 'invite--qr' : ''}">
-      <small>Room code</small>
-      <div class="code">${[...room.code].map(c => html`<span class="wobble">${c}</span>`)}</div>
+      <small>Room code (tap to copy)</small>
+      <div class="code" role="button" tabindex="0" title="Copy room code" aria-label="Room code ${room.code}. Copy it"
+        @click=${ctx.copyCode} @keydown=${e => (e.key === 'Enter' || e.key === ' ') && (e.preventDefault(), ctx.copyCode())}
+        >${[...room.code].map(c => html`<span class="wobble">${c}</span>`)}</div>
       <div class="row">
-        ${button('Share invite', () => ctx.share(), { kind: 'white', small: true })}
+        ${button('Copy invite link', () => ctx.share(), { kind: 'white', small: true })}
         ${button(local.qr ? 'Hide QR code' : 'Show QR code', () => { local.qr = !local.qr; ctx.rerender(); }, { kind: 'white', small: true })}
       </div>
       ${local.qr ? html`<div class="qr">${unsafeHTML(qrSvg(inviteLink(room.code)))}</div>` : nothing}

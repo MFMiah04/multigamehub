@@ -6,7 +6,7 @@ import { html, nothing, toast, confirmDialog, action, avatar } from './ui.js';
 import { games } from './games/index.js';
 import { backToLobby } from './games/common.js';
 import { homeView, homeState } from './screens/home.js';
-import { lobbyView, shareInvite } from './screens/lobby.js';
+import { lobbyView, copyCode, copyInviteLink } from './screens/lobby.js';
 import './styles.css';
 
 const app = document.getElementById('app');
@@ -86,7 +86,8 @@ function makeCtx() {
     now: serverNow,
     rerender,
     update: changes => update(roomRef(room.code), changes),
-    share: () => shareInvite(room.code),
+    share: () => copyInviteLink(room.code),
+    copyCode: () => copyCode(room.code),
   };
   ctx.startGame = () => {
     const changes = game.start(ctx, ctx.settings);
@@ -157,7 +158,7 @@ function roomHeader(ctx, inLobby) {
     if (await confirmDialog('End the game for everyone and go back to the lobby?', 'End game')) await backToLobby(ctx);
   };
   return html`<header class="room-header">
-    <button class="room-header__code" @click=${ctx.share} title="Share invite">${inLobby ? 'Lobby' : ctx.game.name} · <b>${ctx.room.code}</b></button>
+    <button class="room-header__code" @click=${ctx.copyCode} title="Copy room code">${inLobby ? 'Lobby' : ctx.game.name} · <b>${ctx.room.code}</b></button>
     <span class="room-header__actions">
       ${!inLobby && ctx.isHost ? html`<button class="link" @click=${action(endGame)}>End game</button>` : nothing}
       <button class="link" @click=${action(leave)}>Leave</button>

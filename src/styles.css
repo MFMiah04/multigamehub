@@ -252,8 +252,10 @@ details.field summary { cursor: pointer; text-decoration: underline wavy; text-u
 .invite--qr { height: calc(var(--row) * 13); }
 .invite small { color: var(--ink-soft); line-height: var(--row); }
 .invite .row { width: 100%; margin-top: 12px; }
-.code { display: flex; justify-content: center; gap: 8px; }
-.code span { width: 50px; height: 56px; display: grid; place-items: center; font-size: 34px; font-weight: 700; background: var(--yellow); }
+/* Inline letters (not flex items) so selecting and copying the code gives "ABCD", not one letter per line. */
+.code { display: block; text-align: center; white-space: nowrap; cursor: pointer; border-radius: 8px; }
+.code span { display: inline-block; margin: 0 4px; vertical-align: top; }
+.code span { width: 50px; height: 56px; line-height: 52px; text-align: center; font-size: 34px; font-weight: 700; background: var(--yellow); }
 .code span:nth-child(odd) { transform: rotate(-3deg); }
 .code span:nth-child(even) { transform: rotate(2deg); }
 .qr { width: 180px; margin-top: 12px; background: #fff; }
@@ -436,10 +438,10 @@ details.field summary { cursor: pointer; text-decoration: underline wavy; text-u
 .toast--show { transform: translate(-50%, 0) rotate(-1deg); opacity: 1; }
 
 /* Every button gives the same little tilt and grow on hover (mouse only, so taps don't stick). */
-.arrow, .kick, .cross, .link, .room-header__code, .sticky__rules, .group--new, .vote-card { transition: transform 0.15s; }
+.arrow, .kick, .cross, .link, .room-header__code, .sticky__rules, .group--new, .code, .vote-card { transition: transform 0.15s; }
 @media (hover: hover) {
   .btn:not(:disabled):hover, .arrow:hover, .kick:hover, .cross:hover, .link:hover, .room-header__code:hover,
-  .sticky__rules:hover, .group--new:hover, .vote-card:not(:disabled):not(.vote-card--picked):hover {
+  .sticky__rules:hover, .group--new:hover, .code:hover, .vote-card:not(:disabled):not(.vote-card--picked):hover {
     transform: rotate(-1.5deg) scale(1.05);
   }
   .arrow:hover, .kick:hover { transform: rotate(-6deg) scale(1.15); }
