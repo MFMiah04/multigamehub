@@ -18,6 +18,7 @@
   --blue: #a8d4f7;
   --lime: #d9ef9e;
   --orange: #ffc48c;
+  --coral: #ffb4a2;
   --shadow: 3px 3px 0 rgba(0, 0, 0, 0.13);
   --hand: 'Kalam', 'Comic Sans MS', cursive;
   --border: 2.5px;
@@ -236,6 +237,7 @@ details.field summary { cursor: pointer; text-decoration: underline wavy; text-u
 .sticky--blue { --note: var(--blue); }
 .sticky--lime { --note: var(--lime); }
 .sticky--orange { --note: var(--orange); }
+.sticky--coral { --note: var(--coral); }
 
 .sticky--picked { outline: 3px dashed var(--ink); outline-offset: 4px; }
 .sticky--picked::after { content: '✓'; position: absolute; top: -14px; right: -6px; font-size: 30px; font-weight: 700; transform: rotate(8deg); }
