@@ -6,7 +6,8 @@ import oneWord from './one-word.js';
 import fakeAnswer from './fake-answer.js';
 import spectrum from './spectrum.js';
 import wordSync from './word-sync.js';
+import numberClimb from './number-climb.js';
 
 // To add a game: create a module with the same shape and list it here.
-export const gameList = [spyfall, imposter, fakinIt, herdMentality, oneWord, fakeAnswer, spectrum, wordSync];
+export const gameList = [spyfall, imposter, fakinIt, herdMentality, oneWord, fakeAnswer, spectrum, wordSync, numberClimb];
 export const games = Object.fromEntries(gameList.map(g => [g.id, g]));

@@ -17,6 +17,7 @@
   --lilac: #d4c4f0;
   --blue: #a8d4f7;
   --lime: #d9ef9e;
+  --orange: #ffc48c;
   --shadow: 3px 3px 0 rgba(0, 0, 0, 0.13);
   --hand: 'Kalam', 'Comic Sans MS', cursive;
   --border: 2.5px;
@@ -234,6 +235,7 @@ details.field summary { cursor: pointer; text-decoration: underline wavy; text-u
 .sticky--yellow { --note: var(--yellow); }
 .sticky--blue { --note: var(--blue); }
 .sticky--lime { --note: var(--lime); }
+.sticky--orange { --note: var(--orange); }
 
 .sticky--picked { outline: 3px dashed var(--ink); outline-offset: 4px; }
 .sticky--picked::after { content: '✓'; position: absolute; top: -14px; right: -6px; font-size: 30px; font-weight: 700; transform: rotate(8deg); }
@@ -461,3 +463,31 @@ details.field summary { cursor: pointer; text-decoration: underline wavy; text-u
 .clue--lime { background: var(--lime); }
 .clue--lime.clue--cancelled { background: #eee; }
 .sync-history { padding-left: 28px; color: var(--ink-soft); line-height: var(--row); }
+
+/* ---------- number climb ---------- */
+
+.nc-lives { line-height: var(--row); font-size: 24px; letter-spacing: 4px; }
+.nc-heart { color: #e0405f; }
+.nc-heart--lost { color: #d8d2c4; }
+.nc-pile { display: flex; flex-direction: column; align-items: center; justify-content: center; width: 180px; height: calc(var(--row) * 6); margin: 14px auto; background: #fff; text-align: center; transform: rotate(-2deg); box-shadow: var(--shadow); }
+.nc-pile b { font-size: 72px; line-height: 84px; }
+.nc-pile small { color: var(--ink-soft); font-size: 16px; line-height: 22px; }
+.nc-pile--count { background: var(--yellow); }
+.nc-pile--count b { animation: pop 0.4s; }
+.nc-oops { color: #d23c5f; font-weight: 700; line-height: var(--row); }
+.nc-others { display: flex; flex-wrap: wrap; justify-content: center; gap: 2px 8px; line-height: var(--row); }
+.nc-hand { display: flex; flex-wrap: wrap; justify-content: center; align-items: flex-end; gap: 8px; margin: 14px 0; }
+.nc-card { display: flex; flex-direction: column; align-items: center; justify-content: center; width: 48px; height: 68px; background: #fff; font-size: 26px; font-weight: 700; line-height: 1; box-shadow: var(--shadow); }
+.nc-card:nth-child(odd) { transform: rotate(-2deg); }
+.nc-card:nth-child(even) { transform: rotate(2deg); }
+.nc-card--next { width: 88px; height: 120px; background: var(--orange); font-size: 44px; }
+.nc-card--next small { margin-top: 6px; font-size: 13px; font-weight: 400; color: var(--ink-soft); }
+.nc-card--next:disabled { opacity: 0.6; }
+@media (hover: hover) { .nc-card--next:not(:disabled):hover { transform: rotate(-3deg) scale(1.06); } }
+.nc-card--next { transition: transform 0.15s; }
+.nc-log { display: flex; flex-wrap: wrap; gap: 8px; margin: 14px 0; }
+.nc-log__card { display: flex; flex-direction: column; align-items: center; width: 52px; padding: 4px 0; border: 2px solid var(--ink); border-radius: 8px 4px 9px 5px; background: #fff; line-height: 1.1; }
+.nc-log__card b { font-size: 20px; }
+.nc-log__card small { max-width: 48px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 11px; color: var(--ink-soft); }
+.nc-log__card--missed { background: #ffd1dc; border-style: dashed; }
+.nc-log__card--missed b { text-decoration: line-through; text-decoration-color: #d23c5f; text-decoration-thickness: 2px; }
