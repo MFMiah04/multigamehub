@@ -19,6 +19,7 @@
   --lime: #d9ef9e;
   --orange: #ffc48c;
   --coral: #ffb4a2;
+  --gold: #f3d38b;
   --shadow: 3px 3px 0 rgba(0, 0, 0, 0.13);
   --hand: 'Kalam', 'Comic Sans MS', cursive;
   --border: 2.5px;
@@ -238,6 +239,7 @@ details.field summary { cursor: pointer; text-decoration: underline wavy; text-u
 .sticky--lime { --note: var(--lime); }
 .sticky--orange { --note: var(--orange); }
 .sticky--coral { --note: var(--coral); }
+.sticky--gold { --note: var(--gold); }
 
 .sticky--picked { outline: 3px dashed var(--ink); outline-offset: 4px; }
 .sticky--picked::after { content: '✓'; position: absolute; top: -14px; right: -6px; font-size: 30px; font-weight: 700; transform: rotate(8deg); }
@@ -273,7 +275,7 @@ details.field summary { cursor: pointer; text-decoration: underline wavy; text-u
 .lineup__player--away { opacity: 0.5; }
 .kick { position: absolute; top: -4px; right: 6px; width: 24px; height: 24px; border-radius: 50%; border: 2px solid var(--ink); background: #fff; font-size: 16px; line-height: 1; padding: 0; }
 
-.avatar { display: block; overflow: visible; flex: none; }
+.avatar { display: block; overflow: hidden; flex: none; }
 .avatar--away { opacity: 0.5; }
 
 .tag { display: inline-flex; align-items: center; gap: 6px; height: 26px; padding: 0 10px 0 4px; background: #fff; vertical-align: middle; line-height: 1; }
@@ -493,3 +495,50 @@ details.field summary { cursor: pointer; text-decoration: underline wavy; text-u
 .nc-log__card small { max-width: 48px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 11px; color: var(--ink-soft); }
 .nc-log__card--missed { background: #ffd1dc; border-style: dashed; }
 .nc-log__card--missed b { text-decoration: line-through; text-decoration-color: #d23c5f; text-decoration-thickness: 2px; }
+
+/* ---------- avalon ---------- */
+
+.quests { display: flex; justify-content: center; gap: 10px; margin-top: 7px; height: 42px; }
+.quest { position: relative; display: grid; place-items: center; width: 42px; height: 42px; border-radius: 50% 45% 55% 48% !important; background: #fff; font-size: 20px; font-weight: 700; }
+.quest sup { position: absolute; top: -4px; right: -2px; font-size: 16px; }
+.quest--current { outline: 3px dashed var(--ink); outline-offset: 3px; }
+.quest--success { background: var(--mint); }
+.quest--fail { background: var(--pink); }
+
+.role-card { display: flex; align-items: center; gap: 12px; width: 100%; min-height: calc(var(--row) * 4); margin: 14px 0; padding: 10px 14px; background: #fff; text-align: left; box-shadow: var(--shadow); transform: rotate(-0.6deg); }
+.role-card--hidden { justify-content: center; flex-direction: column; gap: 2px; text-align: center; background: repeating-linear-gradient(45deg, #fff 0 12px, #f4efe2 12px 24px); }
+.role-card--hidden b { font-size: 22px; }
+.role-card--hidden small { color: var(--ink-soft); }
+.role-card--good:not(.role-card--hidden) { border-left-width: 6px; border-left-color: #3aa76d; }
+.role-card--evil:not(.role-card--hidden) { border-left-width: 6px; border-left-color: #d23c5f; }
+.role-card__text { display: flex; flex-direction: column; gap: 2px; line-height: 1.25; }
+.role-card__text > b { font-size: 22px; }
+.role-card__text > .hl { align-self: flex-start; }
+.role-card__text small { font-size: 15px; color: var(--ink-soft); }
+.role-art { flex: none; }
+
+.vote-result { margin: 14px 0; padding: 10px 12px; background: #fff; text-align: center; line-height: 1.3; }
+.vote-result--yes { background: #e3f9e9; }
+.vote-result--no { background: #ffe6ec; }
+.vote-result > b { display: block; font-size: 20px; }
+.vote-result > small { color: var(--ink-soft); }
+.vote-result__votes { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; margin-top: 8px; }
+.tag--yes b { color: #2f8f5b; }
+.tag--no b { color: #d23c5f; }
+
+.quest-cards { display: flex; flex-wrap: wrap; justify-content: center; gap: 14px; margin: 14px 0; }
+.quest-card { display: flex; flex-direction: column; align-items: center; justify-content: center; width: 96px; height: 128px; background: #fff; font-size: 48px; font-weight: 700; line-height: 1; box-shadow: var(--shadow); }
+.quest-card small { margin-top: 6px; font-size: 16px; font-weight: 400; }
+.quest-card--success { background: var(--mint); }
+.quest-card--fail { background: var(--pink); }
+.quest-card--picked { outline: 3px dashed var(--ink); outline-offset: 4px; transform: rotate(-3deg) scale(1.05); }
+.quest-card--back { background: repeating-linear-gradient(45deg, #fff 0 10px, #f3d38b 10px 20px); font-size: 40px; color: var(--ink-soft); }
+.quest-card--flipped { animation: flip 0.45s ease-out; }
+@keyframes flip { from { transform: rotateY(90deg) scale(0.9); } to { transform: rotateY(0) scale(1); } }
+button.quest-card { transition: transform 0.15s; }
+@media (hover: hover) { button.quest-card:hover { transform: rotate(-3deg) scale(1.05); } }
+
+.toggles { display: flex; flex-direction: column; padding: 4px 0 14px; }
+.toggle { display: flex; align-items: center; gap: 8px; font-size: 17px; line-height: var(--row); }
+.toggle input { width: 20px; height: 20px; accent-color: var(--ink); }
+.role-list { display: flex; flex-direction: column; margin: 14px 0; }

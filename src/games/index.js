@@ -8,7 +8,8 @@ import spectrum from './spectrum.js';
 import wordSync from './word-sync.js';
 import numberClimb from './number-climb.js';
 import insider from './insider.js';
+import avalon from './avalon.js';
 
 // To add a game: create a module with the same shape and list it here.
-export const gameList = [spyfall, imposter, fakinIt, herdMentality, oneWord, fakeAnswer, spectrum, wordSync, numberClimb, insider];
+export const gameList = [spyfall, imposter, fakinIt, herdMentality, oneWord, fakeAnswer, spectrum, wordSync, numberClimb, insider, avalon];
 export const games = Object.fromEntries(gameList.map(g => [g.id, g]));

@@ -39,7 +39,7 @@ function scale(ctx, { target, markers = [], slider }) {
 
 export default {
   id: 'spectrum',
-  name: 'Spectrum',
+  name: 'Wavelength',
   color: 'blue',
   players: '2–12',
   blurb: 'Give a clue that lands on just the right spot between two extremes.',

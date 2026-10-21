@@ -11,10 +11,11 @@ Party games to play together on phones or computers. Make a character, then one 
 - **Herd Mentality**: answer the same as the majority to score. Don't get stuck with the pink cow.
 - **One Word** (2+ players): a team game. Everyone writes a one-word clue for the guesser, but matching clues get cancelled.
 - **Fake Answer**: write a believable fake answer to a strange true fact, then try to spot the real one.
-- **Spectrum** (2+ players): the psychic gives a clue for a secret spot between two extremes; everyone else slides to guess it.
+- **Wavelength** (2+ players): the psychic gives a clue for a secret spot between two extremes; everyone else slides to guess it.
 - **Word Sync** (2+ players): everyone writes a word at once, then keeps linking the last words until everyone writes the same one.
 - **Number Climb** (2+ players): everyone gets secret numbers from 1 to 100 and has to play them all in order, lowest to highest, without talking.
 - **Insider** (4+ players): ask the Master yes/no questions to find the secret word, then vote on who secretly knew it all along.
+- **Avalon** (5–10 players): loyal knights versus hidden traitors. Approve teams, play Success or Fail cards on five quests, and watch out for the Assassin.
 
 ## Tech
 Vite, [lit-html](https://lit.dev/docs/libraries/standalone-templates/) for rendering, Firebase Realtime Database, Firebase anonymous auth and Firebase Hosting.
