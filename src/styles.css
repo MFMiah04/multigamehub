@@ -402,16 +402,12 @@ details.field summary { cursor: pointer; text-decoration: underline wavy; text-u
 
 .spectrum { margin: 14px 0; }
 .spectrum__labels { display: flex; justify-content: space-between; font-weight: 700; font-size: 18px; line-height: var(--row); }
-.spectrum__track { position: relative; height: calc(var(--row) * 2); background: #fff; overflow: hidden; }
-.spectrum__band { position: absolute; top: 0; bottom: 0; display: grid; place-items: start center; font-style: normal; font-size: 13px; font-weight: 700; }
-.spectrum__band span { line-height: 18px; }
-.spectrum__band--2, .spectrum__band--3 { place-items: start start; }
-.spectrum__band--2 span, .spectrum__band--3 span { padding-left: 3px; }
-.spectrum__band--2 { background: #ffe9a3; }
-.spectrum__band--3 { background: #ffd04d; }
-.spectrum__band--4 { background: #ff8fab; border-left: 2px solid var(--ink); border-right: 2px solid var(--ink); }
-.spectrum__marker { position: absolute; bottom: 0; transform: translateX(-50%); transition: left 0.08s; }
-.spectrum__slider { display: block; width: 100%; height: var(--row); margin: 0; background: transparent; cursor: pointer; -webkit-appearance: none; appearance: none; }
+.wheel { position: relative; max-width: 420px; margin: 7px auto 0; }
+.wheel svg { display: block; width: 100%; height: auto; overflow: visible; }
+.wheel--live svg { touch-action: none; cursor: grab; }
+.wheel--live svg:active { cursor: grabbing; }
+.wheel__marker { position: absolute; width: max-content; transform: translate(-50%, -50%); pointer-events: none; }
+.spectrum__slider { display: block; width: 100%; max-width: 420px; margin-left: auto !important; margin-right: auto !important; height: var(--row); margin: 0; background: transparent; cursor: pointer; -webkit-appearance: none; appearance: none; }
 .spectrum__slider::-webkit-slider-runnable-track { height: 6px; border: 2px solid var(--ink); border-radius: 6px; background: #fff; }
 .spectrum__slider::-moz-range-track { height: 6px; border: 2px solid var(--ink); border-radius: 6px; background: #fff; }
 .spectrum__slider::-webkit-slider-thumb { -webkit-appearance: none; width: 26px; height: 26px; margin-top: -12px; border: 2.5px solid var(--ink); border-radius: 50% 45% 55% 50%; background: var(--yellow); box-shadow: 2px 2px 0 rgba(0, 0, 0, 0.15); }

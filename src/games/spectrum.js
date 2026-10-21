@@ -1,12 +1,12 @@
+import { svg } from 'lit-html';
 import { html, nothing, button, timer, selectField, action, progress, toast, avatar } from '../ui.js';
 import { shuffle } from '../room.js';
 import { isTimeUp, pickUnused, turnOf, roundsField, secondsOptions, leaderboard, nextOrFinalButton, finalScores, backToLobbyButton } from './common.js';
 import spectrums from '../data/spectrums.json';
 
-// Scoring bands, measured from the target on a 0–100 scale that wraps round at the ends.
+// Scoring bands, measured from the target on a 0–100 scale. Zones past either end are simply cut off.
 const BANDS = [[4, 4], [10, 3], [17, 2]];
-const distance = (a, b) => Math.min(Math.abs(a - b), 100 - Math.abs(a - b));
-const pointsFor = (guess, target) => BANDS.find(([w]) => distance(guess, target) <= w)?.[1] || 0;
+const pointsFor = (guess, target) => BANDS.find(([w]) => Math.abs(guess - target) <= w)?.[1] || 0;
 
 const guessersOf = ctx => ctx.inGame.filter(p => p.id !== ctx.round.psychic);
 const newTarget = () => Math.floor(Math.random() * 101);
@@ -22,16 +22,74 @@ function scoreRound(ctx) {
   return updates;
 }
 
-// The scale: labels at each end, optional scoring bands around the target, player markers and a slider.
-function scale(ctx, { target, markers = [], slider }) {
+// ----- the wheel: a half-circle dial from 0 (far left) to 100 (far right) -----
+
+const W = 300, H = 172, CX = 150, CY = 160, R = 130;
+const BAND_FILL = { 2: '#ffe9a3', 3: '#ffd04d', 4: '#ff8fab' };
+const point = (value, radius = R) => {
+  const angle = Math.PI * (1 - value / 100);
+  return [CX + radius * Math.cos(angle), CY - radius * Math.sin(angle)];
+};
+const clamp = v => Math.max(0, Math.min(100, v));
+function wedge(from, to) {
+  const [x1, y1] = point(from);
+  const [x2, y2] = point(to);
+  return `M${CX} ${CY} L${x1.toFixed(1)} ${y1.toFixed(1)} A${R} ${R} 0 0 1 ${x2.toFixed(1)} ${y2.toFixed(1)} Z`;
+}
+// Turns a tap or drag on the wheel into a value from 0 to 100.
+function valueAt(event) {
+  const box = event.currentTarget.getBoundingClientRect();
+  const x = ((event.clientX - box.left) / box.width) * W - CX;
+  const y = CY - ((event.clientY - box.top) / box.height) * H;
+  const angle = Math.atan2(Math.max(y, 0), x);
+  return Math.round(clamp(100 * (1 - angle / Math.PI)));
+}
+
+// The dial: labels at each end, scoring zones around the target, a needle per guess, and an optional slider.
+function scale(ctx, { target, markers = [], slider, onPick, covered }) {
   const [left, right] = spectrums[ctx.round.card];
+  // Zones near an edge are cut off at the end of the wheel.
+  const zones = target === undefined ? [] : BANDS.slice().reverse()
+    .map(([w, pts]) => [clamp(target - w), clamp(target + w), pts]).filter(([a, b]) => b - a > 0.5);
+  const drag = onPick && {
+    down: e => { e.currentTarget.setPointerCapture(e.pointerId); onPick(valueAt(e)); },
+    move: e => { if (e.buttons || e.pointerType === 'touch') onPick(valueAt(e)); },
+  };
   return html`<div class="spectrum">
     <div class="spectrum__labels"><span>← ${left}</span><span>${right} →</span></div>
-    <div class="spectrum__track wobble">
-      ${target !== undefined ? BANDS.slice().reverse().flatMap(([w, pts]) =>
-        // Draw each zone three times, shifted a full width either way, so it wraps round the edges.
-        [-100, 0, 100].map(shift => html`<i class="spectrum__band spectrum__band--${pts}" style="left:${target - w + shift}%;width:${w * 2}%"><span>${pts}</span></i>`)) : nothing}
-      ${markers.map(({ value, player }) => html`<span class="spectrum__marker" style="left:${value}%">${avatar(player, 26)}</span>`)}
+    <div class="wheel ${onPick ? 'wheel--live' : ''}">
+      <svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Dial from ${left} to ${right}"
+        @pointerdown=${drag?.down ?? nothing} @pointermove=${drag?.move ?? nothing}>
+        ${svg`
+          <path d=${wedge(0, 100)} fill="#fff" stroke="#222" stroke-width="3.5" stroke-linejoin="round" />
+          ${zones.map(([a, b, pts]) => svg`<path d=${wedge(a, b)} fill=${BAND_FILL[pts]} stroke=${pts === 4 ? '#222' : 'none'} stroke-width="2" />`)}
+          ${target === undefined ? nothing : [[0, 4], [-7, 3], [7, 3], [-13.5, 2], [13.5, 2]]
+            .filter(([offset]) => target + offset >= 1.5 && target + offset <= 98.5)
+            .map(([offset, pts]) => {
+              const [x, y] = point(target + offset, R * 0.86);
+              return svg`<text x=${x} y=${y + 5} text-anchor="middle" font-size="13" font-weight="700" fill="#222">${pts}</text>`;
+            })}
+          ${Array.from({ length: 11 }, (_, i) => {
+            const [x1, y1] = point(i * 10, R);
+            const [x2, y2] = point(i * 10, R - (i % 5 === 0 ? 12 : 7));
+            return svg`<path d="M${x1} ${y1} L${x2} ${y2}" stroke="#222" stroke-width="2" stroke-linecap="round" />`;
+          })}
+          ${covered ? svg`<path d=${wedge(0, 100)} fill="url(#wheel-cover)" stroke="#222" stroke-width="3.5" />
+            <text x=${CX} y=${CY - 52} text-anchor="middle" font-size="44" font-weight="700" fill="#5a5650">?</text>` : nothing}
+          ${markers.map(({ value, mine }) => {
+            const [x, y] = point(value, R - 6);
+            return svg`<path d="M${CX} ${CY} L${x} ${y}" stroke=${mine ? '#d23c5f' : '#222'} stroke-width=${mine ? 5 : 2.5} stroke-linecap="round" />`;
+          })}
+          <path d="M${CX - R - 6} ${CY} H${CX + R + 6}" stroke="#222" stroke-width="3.5" stroke-linecap="round" />
+          <circle cx=${CX} cy=${CY} r="9" fill="#ffe066" stroke="#222" stroke-width="3" />
+          <defs><pattern id="wheel-cover" width="12" height="12" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+            <rect width="12" height="12" fill="#fff" /><rect width="6" height="12" fill="#a8d4f7" /></pattern></defs>
+        `}
+      </svg>
+      ${markers.filter(m => m.player && !m.mine).map(({ value, player }) => {
+        const [x, y] = point(value, R + 20);
+        return html`<span class="wheel__marker" style="left:${(x / W) * 100}%;top:${(y / H) * 100}%">${avatar(player, 24)}</span>`;
+      })}
     </div>
     ${slider || nothing}
   </div>`;
@@ -46,7 +104,7 @@ export default {
   rules: [
     'Each round one player is the psychic. They see a scale, like Cold ↔ Hot, and a secret target somewhere on it.',
     'The psychic writes a clue that points to that spot. For something hot, but not very hot, maybe "a warm bath".',
-    'Everyone else slides their marker to where they think the target is.',
+    'Everyone else turns the dial to where they think the target is.',
     "The closer you get, the more points you score. The psychic scores the group's average.",
   ],
   art: html`<svg class="art" viewBox="0 0 64 56" aria-hidden="true"><g fill="none" stroke="#222" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round">
@@ -120,7 +178,7 @@ function clue(ctx, s) {
   if (ctx.uid !== round.psychic) {
     return html`${header(ctx)}${timer(round.endsAt, 10)}
       <h2 class="center">${psychicName(ctx)} is thinking of a clue…</h2>
-      ${scale(ctx, {})}`;
+      ${scale(ctx, { covered: true })}`;
   }
   const submit = async () => {
     const text = document.getElementById('clue').value.trim().slice(0, 40);
@@ -153,9 +211,10 @@ function guess(ctx) {
   local.value ??= mine ?? 50;
   const slider = html`<input class="spectrum__slider" type="range" min="0" max="100" step="1" .value=${String(local.value)}
     aria-label="Your guess" ?disabled=${mine !== undefined} @input=${e => { local.value = +e.target.value; ctx.rerender(); }}>`;
-  const me = ctx.room.players[ctx.uid];
+  const pick = v => { if (mine === undefined) { local.value = v; ctx.rerender(); } };
   return html`${header(ctx)}${timer(round.endsAt, 10)}${clueCard}
-    ${scale(ctx, { markers: [{ value: local.value, player: me }], slider })}
+    <p class="note center">${mine === undefined ? 'Drag the needle round the wheel, or use the slider.' : 'Locked in!'}</p>
+    ${scale(ctx, { markers: [{ value: local.value, mine: true }], slider, onPick: mine === undefined ? pick : null })}
     ${mine !== undefined
       ? button('Change my guess', action(() => ctx.update({ [`round/guesses/${ctx.uid}`]: null })), { kind: 'white' })
       : button('Lock in', action(() => ctx.update({ [`round/guesses/${ctx.uid}`]: local.value })))}
