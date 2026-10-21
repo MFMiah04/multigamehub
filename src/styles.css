@@ -469,6 +469,7 @@ details.field summary { cursor: pointer; text-decoration: underline wavy; text-u
 .nc-lives { line-height: var(--row); font-size: 24px; letter-spacing: 4px; }
 .nc-heart { color: #e0405f; }
 .nc-heart--lost { color: #d8d2c4; }
+.nc-last-life { margin-left: 6px; letter-spacing: 0; color: #d23c5f; font-weight: 700; }
 .nc-pile { display: flex; flex-direction: column; align-items: center; justify-content: center; width: 180px; height: calc(var(--row) * 6); margin: 14px auto; background: #fff; text-align: center; transform: rotate(-2deg); box-shadow: var(--shadow); }
 .nc-pile b { font-size: 72px; line-height: 84px; }
 .nc-pile small { color: var(--ink-soft); font-size: 16px; line-height: 22px; }

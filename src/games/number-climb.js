@@ -4,6 +4,8 @@ import { roomRef, shuffle } from '../room.js';
 import { backToLobbyButton } from './common.js';
 
 const COUNTDOWN_MS = 3500;
+// At least one life: losing your last one ends the game. (Older rooms may have 0 saved from before.)
+const livesOf = s => Math.min(5, Math.max(1, s.lives ?? 3));
 const maxCards = playerCount => Math.max(2, Math.min(10, Math.floor(100 / Math.max(playerCount, 1))));
 const handOf = (round, id) => round.hands?.[id] || [];
 const cardsLeft = round => Object.values(round.hands || {}).reduce((n, hand) => n + (hand?.length || 0), 0);
@@ -30,8 +32,9 @@ function playLowest(ctx) {
       missed.sort((a, b) => a.n - b.n).forEach(m => log.push(m));
       round.mistakes = (round.mistakes || 0) + 1;
       round.lastMistake = { card, by: ctx.uid, missed };
-      if (round.lives > 0) round.lives -= 1;
-      else round.result = 'lost';
+      // Losing your last life ends the game.
+      round.lives = Math.max(0, (round.lives || 0) - 1);
+      if (round.lives === 0) round.result = 'lost';
     }
     round.log = log;
     if (!round.result && cardsLeft(round) === 0) round.result = 'won';
@@ -67,7 +70,7 @@ export default {
     const cardOptions = Array.from({ length: most - 1 }, (_, i) => [i + 2, `${i + 2} cards`]);
     return html`
       ${selectField('Cards each', Math.min(s.cards, most), cardOptions, v => set({ cards: +v }), disabled)}
-      ${selectField('Lives for the group', s.lives, [[0, '0 (one mistake ends it)'], [1, '1 life'], [2, '2 lives'], [3, '3 lives'], [4, '4 lives'], [5, '5 lives']], v => set({ lives: +v }), disabled)}`;
+      ${selectField('Lives for the group', livesOf(s), [[1, '1 life (one mistake ends it)'], [2, '2 lives'], [3, '3 lives'], [4, '4 lives'], [5, '5 lives']], v => set({ lives: +v }), disabled)}`;
   },
 
   canStart: ctx => (ctx.players.length < 2 ? 'Need 1 more to play' : null),
@@ -79,7 +82,7 @@ export default {
     const hands = Object.fromEntries(ids.map((id, i) => [id, deck.slice(i * count, (i + 1) * count).sort((a, b) => a - b)]));
     return {
       phase: 'play',
-      round: { hands, lives: s.lives ?? 3, startLives: s.lives ?? 3, cardsEach: count, mistakes: 0, startsAt: ctx.now() + COUNTDOWN_MS },
+      round: { hands, lives: livesOf(s), startLives: livesOf(s), cardsEach: count, mistakes: 0, startsAt: ctx.now() + COUNTDOWN_MS },
     };
   },
 
@@ -102,8 +105,8 @@ export default {
 };
 
 const hearts = (lives, start) => html`<p class="nc-lives center" aria-label="${lives} lives left">
-  ${start === 0 ? html`<span class="note">Sudden death: one mistake ends it</span>`
-    : html`${Array.from({ length: start }, (_, i) => html`<span class="nc-heart ${i < lives ? '' : 'nc-heart--lost'}">♥</span>`)}`}
+  ${Array.from({ length: start }, (_, i) => html`<span class="nc-heart ${i < lives ? '' : 'nc-heart--lost'}">♥</span>`)}
+  ${lives === 1 ? html`<span class="note nc-last-life">last life!</span>` : nothing}
 </p>`;
 
 function playing(ctx) {
@@ -152,7 +155,7 @@ function finished(ctx) {
     : 'Game over!';
   const note = won
     ? (mistakes === 0 ? 'Every card in order. Are you all telepathic?' : `All cards played, with ${mistakes} slip${mistakes === 1 ? '' : 's'} on the way.`)
-    : `${round.startLives === 0 ? 'Sudden death! One slip ended it' : 'You ran out of lives'} with ${cardsLeft(round)} card${cardsLeft(round) === 1 ? '' : 's'} still to play.`;
+    : `${round.startLives <= 1 ? 'One slip ended it' : 'You ran out of lives'} with ${cardsLeft(round)} card${cardsLeft(round) === 1 ? '' : 's'} still to play.`;
   return html`
     <h1 class="center scribble">${headline}</h1>
     <p class="note center">${note}</p>
