@@ -4,44 +4,16 @@
     "a": "flamboyance"
   },
   {
-    "q": "A group of crows is called a ____.",
-    "a": "murder"
-  },
-  {
-    "q": "A group of owls is called a ____.",
-    "a": "parliament"
-  },
-  {
     "q": "A group of jellyfish is called a ____.",
     "a": "smack"
-  },
-  {
-    "q": "The national animal of Scotland is the ____.",
-    "a": "unicorn"
-  },
-  {
-    "q": "Botanically speaking, bananas are classed as ____.",
-    "a": "berries"
   },
   {
     "q": "The dot over a lowercase i or j is called a ____.",
     "a": "tittle"
   },
   {
-    "q": "An octopus has ____ hearts.",
-    "a": "three"
-  },
-  {
     "q": "The plastic tip on the end of a shoelace is called an ____.",
     "a": "aglet"
-  },
-  {
-    "q": "Wombat poo is shaped like ____.",
-    "a": "cubes"
-  },
-  {
-    "q": "A baby kangaroo is called a ____.",
-    "a": "joey"
   },
   {
     "q": "The man who designed the Pringles can had some of his ashes buried in ____.",
@@ -58,10 +30,6 @@
   {
     "q": "The Eiffel Tower gets about 15 cm taller in the ____.",
     "a": "summer"
-  },
-  {
-    "q": "Sea otters hold ____ while they sleep so they don't drift apart.",
-    "a": "hands"
   },
   {
     "q": "A day on Venus is longer than a ____ on Venus.",
@@ -140,10 +108,6 @@
     "a": "chewing gum"
   },
   {
-    "q": "Peanuts aren't really nuts, they're ____.",
-    "a": "legumes"
-  },
-  {
     "q": "Koalas can sleep for up to ____ hours a day.",
     "a": "22"
   },
@@ -152,20 +116,12 @@
     "a": "Mars"
   },
   {
-    "q": "Before it turned green, the Statue of Liberty was the colour of shiny ____.",
-    "a": "copper"
-  },
-  {
     "q": "In Switzerland it's illegal to own just one ____.",
     "a": "guinea pig"
   },
   {
     "q": "Researchers found that Scots has over 400 words for ____.",
     "a": "snow"
-  },
-  {
-    "q": "For a long time, many Europeans believed tomatoes were ____.",
-    "a": "poisonous"
   },
   {
     "q": "The first animals sent into space were ____.",
@@ -188,10 +144,6 @@
     "a": "humans"
   },
   {
-    "q": "Before the 1600s, most cultivated carrots were ____.",
-    "a": "purple"
-  },
-  {
     "q": "A group of porcupines is called a ____.",
     "a": "prickle"
   },
@@ -204,28 +156,12 @@
     "a": "philtrum"
   },
   {
-    "q": "Cows have ____ stomach compartments.",
-    "a": "four"
-  },
-  {
     "q": "Honeybees communicate the location of flowers by doing a ____.",
     "a": "waggle dance"
   },
   {
-    "q": "The longest-reigning monarch in British history is Queen ____.",
-    "a": "Elizabeth II"
-  },
-  {
     "q": "Hawaii's state fish is the humuhumunukunukuāpuaʻa, a type of ____.",
     "a": "triggerfish"
-  },
-  {
-    "q": "Humans are the only animals known to ____ to show embarrassment.",
-    "a": "blush"
-  },
-  {
-    "q": "The opposite sides of a standard dice always add up to ____.",
-    "a": "seven"
   },
   {
     "q": "The smell of rain on dry ground is called ____.",
@@ -248,72 +184,16 @@
     "a": "puffling"
   },
   {
-    "q": "A baby swan is called a ____.",
-    "a": "cygnet"
-  },
-  {
     "q": "A baby hedgehog is called a ____.",
     "a": "hoglet"
-  },
-  {
-    "q": "A male honeybee is called a ____.",
-    "a": "drone"
-  },
-  {
-    "q": "The smallest bone in the human body is in the ____.",
-    "a": "ear"
-  },
-  {
-    "q": "An adult human has ____ bones.",
-    "a": "206"
   },
   {
     "q": "The only part of the human body with no blood supply is the ____.",
     "a": "cornea"
   },
   {
-    "q": "Octopus blood is ____.",
-    "a": "blue"
-  },
-  {
-    "q": "Flamingos get their pink colour from eating algae and ____.",
-    "a": "shrimp"
-  },
-  {
-    "q": "A giraffe has ____ bones in its neck, the same as a human.",
-    "a": "seven"
-  },
-  {
-    "q": "Bats are the only mammals that can truly ____.",
-    "a": "fly"
-  },
-  {
-    "q": "Along with the echidna, the ____ is the only mammal that lays eggs.",
-    "a": "platypus"
-  },
-  {
     "q": "Starfish have no ____.",
     "a": "brain"
-  },
-  {
-    "q": "The largest organ of the human body is the ____.",
-    "a": "skin"
-  },
-  {
-    "q": "Most cats have ____ toes on each front paw.",
-    "a": "five"
-  },
-  {
-    "q": "The capital of Australia is ____.",
-    "a": "Canberra"
-  },
-  {
-    "q": "The capital of Canada is ____.",
-    "a": "Ottawa"
-  },
-  {
-    "q": "The world's largest desert is ____.",
-    "a": "Antarctica"
   },
   {
     "q": "The only letter that doesn't appear in any US state's name is ____.",
@@ -332,10 +212,6 @@
     "a": "zoo"
   },
   {
-    "q": "The World Wide Web was invented by Tim ____.",
-    "a": "Berners-Lee"
-  },
-  {
     "q": "____ is the only planet in our solar system named after a Greek god rather than a Roman one.",
     "a": "Uranus"
   },
@@ -344,44 +220,12 @@
     "a": "88"
   },
   {
-    "q": "The hottest planet in our solar system is ____.",
-    "a": "Venus"
-  },
-  {
-    "q": "If you had a big enough bathtub, Saturn would ____.",
-    "a": "float"
-  },
-  {
-    "q": "Thanks to the potassium in them, bananas are very slightly ____.",
-    "a": "radioactive"
-  },
-  {
-    "q": "Botanically, bell peppers are ____.",
-    "a": "fruits"
-  },
-  {
-    "q": "In World War II, Britain spread the story that carrots helped pilots ____.",
-    "a": "see in the dark"
-  },
-  {
-    "q": "The sandwich is named after the Earl of ____.",
-    "a": "Sandwich"
-  },
-  {
     "q": "The board game Monopoly began as a game meant to show the problems with ____.",
     "a": "landlords"
   },
   {
     "q": "In Japan, lots of families eat KFC on ____.",
     "a": "Christmas"
-  },
-  {
-    "q": "There are more possible games of ____ than atoms in the observable universe.",
-    "a": "chess"
-  },
-  {
-    "q": "The & symbol is called an ____.",
-    "a": "ampersand"
   },
   {
     "q": "\"Dreamt\" is the only common English word that ends in the letters ____.",
@@ -420,14 +264,6 @@
     "a": "food colouring"
   },
   {
-    "q": "The microwave oven was invented after radar melted a ____ in an engineer's pocket.",
-    "a": "chocolate bar"
-  },
-  {
-    "q": "Penicillin was discovered when ____ grew on a dish Alexander Fleming left out.",
-    "a": "mould"
-  },
-  {
     "q": "Post-it notes came from a failed attempt to make a super-strong ____.",
     "a": "glue"
   },
@@ -438,14 +274,6 @@
   {
     "q": "The Eiffel Tower was originally only meant to be ____.",
     "a": "temporary"
-  },
-  {
-    "q": "The Leaning Tower of Pisa leans because it was built on soft ____.",
-    "a": "ground"
-  },
-  {
-    "q": "Big Ben is actually the name of the tower's ____.",
-    "a": "bell"
   },
   {
     "q": "Ancient Romans used ____ as a mouthwash.",
@@ -468,14 +296,6 @@
     "a": "trees"
   },
   {
-    "q": "Under its white fur, a polar bear's skin is ____.",
-    "a": "black"
-  },
-  {
-    "q": "Dolphins sleep with one ____ open.",
-    "a": "eye"
-  },
-  {
     "q": "Owls can't move their ____.",
     "a": "eyes"
   },
@@ -494,5 +314,281 @@
   {
     "q": "Sea otters have a pouch under their arm where they keep their favourite ____.",
     "a": "rock"
+  },
+  {
+    "q": "The shortest war in recorded history, between Britain and Zanzibar in 1896, lasted about ____ minutes.",
+    "a": "38"
+  },
+  {
+    "q": "In 1932, Australia's army fought a \"war\" against ____, and lost.",
+    "a": "emus"
+  },
+  {
+    "q": "In 1518, hundreds of people in Strasbourg couldn't stop ____ for weeks.",
+    "a": "dancing"
+  },
+  {
+    "q": "Before alarm clocks, some \"knocker-uppers\" woke people by firing dried ____ at their windows.",
+    "a": "peas"
+  },
+  {
+    "q": "In the 1600s, a single ____ bulb could sell for more than a house in the Netherlands.",
+    "a": "tulip"
+  },
+  {
+    "q": "The Victorians had a collecting craze called pteridomania, an obsession with ____.",
+    "a": "ferns"
+  },
+  {
+    "q": "The first ever speeding ticket, in England in 1896, was for going ____ mph.",
+    "a": "8"
+  },
+  {
+    "q": "In medieval Europe, ____ were sometimes put on trial in court for crimes.",
+    "a": "animals"
+  },
+  {
+    "q": "The inventor of the chocolate chip cookie reportedly sold the recipe to Nestlé for a lifetime supply of ____.",
+    "a": "chocolate"
+  },
+  {
+    "q": "Abraham Lincoln is in the National ____ Hall of Fame.",
+    "a": "Wrestling"
+  },
+  {
+    "q": "Ancient Egyptians used ____ dung as a contraceptive.",
+    "a": "crocodile"
+  },
+  {
+    "q": "The longest recorded flight of a chicken lasted ____ seconds.",
+    "a": "13"
+  },
+  {
+    "q": "A study found cows produce more milk when they listen to ____ music.",
+    "a": "slow"
+  },
+  {
+    "q": "In an experiment, pigeons learned to tell apart paintings by Picasso and ____.",
+    "a": "Monet"
+  },
+  {
+    "q": "Rats make a laughing sound when they are ____.",
+    "a": "tickled"
+  },
+  {
+    "q": "A group of pugs is called a ____.",
+    "a": "grumble"
+  },
+  {
+    "q": "A group of hippos is called a ____.",
+    "a": "bloat"
+  },
+  {
+    "q": "A group of wombats is called a ____.",
+    "a": "wisdom"
+  },
+  {
+    "q": "Turritopsis dohrnii is nicknamed the \"____ jellyfish\".",
+    "a": "immortal"
+  },
+  {
+    "q": "Tiny animals called tardigrades have survived being sent into ____.",
+    "a": "space"
+  },
+  {
+    "q": "A huge swirling flock of ____ is called a murmuration.",
+    "a": "starlings"
+  },
+  {
+    "q": "Honey found in ancient Egyptian tombs was still ____.",
+    "a": "edible"
+  },
+  {
+    "q": "The world's oldest recorded joke, from ancient Sumer, is about ____.",
+    "a": "farting"
+  },
+  {
+    "q": "New Zealand has a place with an 85-letter name, the longest in the country. It is the name of a ____.",
+    "a": "hill"
+  },
+  {
+    "q": "Iceland has no native ____.",
+    "a": "mosquitoes"
+  },
+  {
+    "q": "Agatha Christie learned about poisons while working in a hospital ____.",
+    "a": "pharmacy"
+  },
+  {
+    "q": "Tolkien wrote the first line of The Hobbit on the back of a student's ____.",
+    "a": "exam paper"
+  },
+  {
+    "q": "Dr. Seuss wrote Green Eggs and Ham to win a bet that he couldn't write a book using only ____ different words.",
+    "a": "50"
+  },
+  {
+    "q": "Google's original name was ____.",
+    "a": "BackRub"
+  },
+  {
+    "q": "Amazon was nearly called ____.com.",
+    "a": "Relentless"
+  },
+  {
+    "q": "When the man who designed the modern Frisbee died, his ashes were made into ____.",
+    "a": "Frisbees"
+  },
+  {
+    "q": "Pepsi was originally called ____.",
+    "a": "Brad's Drink"
+  },
+  {
+    "q": "The Beatles were originally called ____.",
+    "a": "The Quarrymen"
+  },
+  {
+    "q": "Hawaiian pizza was invented in ____.",
+    "a": "Canada"
+  },
+  {
+    "q": "The Caesar salad was invented in ____.",
+    "a": "Mexico"
+  },
+  {
+    "q": "The croissant was popularised in France, but it originally came from ____.",
+    "a": "Austria"
+  },
+  {
+    "q": "Saudi Arabia imports ____ from Australia.",
+    "a": "camels"
+  },
+  {
+    "q": "Russia has a bigger surface area than the dwarf planet ____.",
+    "a": "Pluto"
+  },
+  {
+    "q": "There is a village in Norway called ____, and yes, it freezes over in winter.",
+    "a": "Hell"
+  },
+  {
+    "q": "On Mars, sunsets look ____.",
+    "a": "blue"
+  },
+  {
+    "q": "The planet Neptune was found using ____ before anyone actually saw it.",
+    "a": "maths"
+  },
+  {
+    "q": "Astronauts say that space smells like seared ____.",
+    "a": "steak"
+  },
+  {
+    "q": "Astronauts can grow up to ____ cm taller while living in space.",
+    "a": "5"
+  },
+  {
+    "q": "Cats can't taste ____ things.",
+    "a": "sweet"
+  },
+  {
+    "q": "An ostrich's eye is bigger than its ____.",
+    "a": "brain"
+  },
+  {
+    "q": "The fake word \"dord\" was printed in a dictionary for years by mistake, supposedly meaning ____.",
+    "a": "density"
+  },
+  {
+    "q": "The word \"nice\" originally meant ____.",
+    "a": "foolish"
+  },
+  {
+    "q": "The word \"robot\" comes from a Czech word meaning ____.",
+    "a": "forced labour"
+  },
+  {
+    "q": "\"Quarantine\" comes from the Italian for ____ days.",
+    "a": "forty"
+  },
+  {
+    "q": "\"Avocado\" comes from an Aztec word meaning ____.",
+    "a": "testicle"
+  },
+  {
+    "q": "\"Muscle\" comes from the Latin for \"little ____\".",
+    "a": "mouse"
+  },
+  {
+    "q": "Silly Putty was invented by accident while trying to make a substitute for ____ in World War II.",
+    "a": "rubber"
+  },
+  {
+    "q": "Super Glue was discovered by accident while trying to make clear plastic gun ____.",
+    "a": "sights"
+  },
+  {
+    "q": "Kleenex tissues were first sold as a way to remove ____.",
+    "a": "makeup"
+  },
+  {
+    "q": "The chainsaw was originally invented to help with ____.",
+    "a": "childbirth"
+  },
+  {
+    "q": "The world's first vending machine, about 2,000 years ago, sold ____.",
+    "a": "holy water"
+  },
+  {
+    "q": "In ancient Greece, throwing an ____ at someone was a way of declaring your love.",
+    "a": "apple"
+  },
+  {
+    "q": "Ancient Egyptians shaved off their eyebrows to mourn the death of their ____.",
+    "a": "cats"
+  },
+  {
+    "q": "Albert Einstein was once offered the job of President of ____.",
+    "a": "Israel"
+  },
+  {
+    "q": "In World War II, the future Queen Elizabeth II trained as a ____.",
+    "a": "mechanic"
+  },
+  {
+    "q": "Before he was famous, Harrison Ford worked as a ____.",
+    "a": "carpenter"
+  },
+  {
+    "q": "The Hollywood sign originally said \"____\".",
+    "a": "Hollywoodland"
+  },
+  {
+    "q": "The Tin Man's original actor in The Wizard of Oz was made ill by the ____ in his makeup.",
+    "a": "aluminium"
+  },
+  {
+    "q": "In early drafts of Toy Story, Woody was a ____.",
+    "a": "ventriloquist's dummy"
+  },
+  {
+    "q": "Mickey Mouse was nearly called ____ Mouse.",
+    "a": "Mortimer"
+  },
+  {
+    "q": "Scooby-Doo's full first name is ____.",
+    "a": "Scoobert"
+  },
+  {
+    "q": "The game Tetris was created in ____.",
+    "a": "the Soviet Union"
+  },
+  {
+    "q": "A Nintendo Game Boy famously survived a ____ in the Gulf War and still works.",
+    "a": "bombing"
+  },
+  {
+    "q": "The first PlayStation started life as a partnership between Sony and ____.",
+    "a": "Nintendo"
   }
 ]
