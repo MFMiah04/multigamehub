@@ -1,8 +1,10 @@
-import { ref, get, set, update, remove, onValue, onDisconnect, serverTimestamp, runTransaction } from 'firebase/database';
+import { ref, get, set, update, onValue, onDisconnect, serverTimestamp, runTransaction, query, orderByValue, endAt, limitToFirst } from 'firebase/database';
 import { db, serverNow } from './firebase.js';
 
 const CODE_LETTERS = 'ABCDEFGHJKLMNPQRSTUVWXYZ'; // no I or O, they look like 1 and 0
 const HOST_GRACE_MS = 15000;
+// Rooms with no activity for this long get cleaned up (see sweepStaleRooms and database.rules.json).
+export const STALE_MS = 30 * 60 * 1000;
 
 export const roomRef = (code, path = '') => ref(db, `rooms/${code}${path ? '/' + path : ''}`);
 
@@ -24,13 +26,13 @@ export async function createRoom(uid, name, look) {
   for (let attempt = 0; attempt < 10; attempt++) {
     const code = Array.from({ length: 4 }, () => randomItem(CODE_LETTERS)).join('');
     if ((await get(roomRef(code))).exists()) continue;
-    await set(roomRef(code), {
-      hostId: uid,
-      createdAt: serverTimestamp(),
-      phase: 'lobby',
-      game: null,
-      players: { [uid]: newPlayer(name, look) },
+    const token = Array.from(crypto.getRandomValues(new Uint8Array(12)), b => b.toString(36).padStart(2, '0')).join('');
+    await update(ref(db), {
+      [`rooms/${code}`]: { hostId: uid, createdAt: serverTimestamp(), phase: 'lobby', game: null, token, players: { [uid]: newPlayer(name, look) } },
+      [`roomTokens/${token}`]: code,
+      [`roomIndex/${token}`]: serverTimestamp(),
     });
+    sweepStaleRooms();
     return code;
   }
   throw new Error('Could not find a free room code');
@@ -49,7 +51,38 @@ export async function joinRoom(code, uid, name, look) {
   }
   if (Object.keys(players).length >= 16) return 'That room is full.';
   await set(roomRef(code, `players/${uid}`), newPlayer(name, look));
+  touchRoom(room);
   return null;
+}
+
+// ----- tidying up abandoned rooms -----
+// Each room gets a random token. roomIndex/{token} holds when the room was last active, and the
+// host's browser refreshes it every few minutes while anyone's connected. When someone creates a
+// room, their browser looks for tokens that have been quiet for 30+ minutes and deletes those rooms.
+// The index only shows tokens, and the rules only reveal a token's room code once it's stale,
+// so active room codes stay private.
+
+export function touchRoom(room) {
+  if (!room?.token) return Promise.resolve();
+  return set(ref(db, `roomIndex/${room.token}`), serverTimestamp()).catch(() => {});
+}
+
+const deleteRoomUpdates = (code, token) => ({
+  ...(code ? { [`rooms/${code}`]: null } : {}),
+  ...(token ? { [`roomIndex/${token}`]: null, [`roomTokens/${token}`]: null } : {}),
+});
+
+export async function sweepStaleRooms() {
+  try {
+    const cutoff = serverNow() - STALE_MS - 60 * 1000; // a minute's margin for clock differences
+    const stale = await get(query(ref(db, 'roomIndex'), orderByValue(), endAt(cutoff), limitToFirst(10)));
+    await Promise.all(Object.keys(stale.val() || {}).map(async token => {
+      const code = (await get(ref(db, `roomTokens/${token}`))).val();
+      await update(ref(db), deleteRoomUpdates(code, token));
+    }).map(p => p.catch(() => {})));
+  } catch {
+    // Cleanup is best-effort; never let it get in the way of playing.
+  }
 }
 
 // Keeps `online` accurate, re-registering after every reconnect.
@@ -70,7 +103,7 @@ export function stopPresence(code, uid) {
 export async function leaveRoom(room, uid) {
   await stopPresence(room.code, uid);
   const others = sortedPlayers(room).filter(p => p.id !== uid);
-  if (others.length === 0) return remove(roomRef(room.code));
+  if (others.length === 0) return update(ref(db), deleteRoomUpdates(room.code, room.token));
   const updates = { [`players/${uid}`]: null };
   if (room.hostId === uid) updates.hostId = (others.find(p => p.online) || others[0]).id;
   return update(roomRef(room.code), updates);

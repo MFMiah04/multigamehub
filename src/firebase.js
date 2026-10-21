@@ -6,7 +6,7 @@ const useEmulator = import.meta.env.MODE === 'emulator';
 
 // Web config is public by design; access is controlled by database.rules.json.
 const app = initializeApp(useEmulator
-  ? { projectId: 'demo-multigamehub', apiKey: 'demo', databaseURL: 'http://127.0.0.1:9000?ns=demo-multigamehub' }
+  ? { projectId: 'demo-multigamehub', apiKey: 'demo', databaseURL: 'http://127.0.0.1:9000?ns=demo-multigamehub-default-rtdb' }
   : {
       apiKey: 'AIzaSyCx2oCqmMMQ-3kwEztOLGQawCE05Va0-14',
       authDomain: 'multigame-hub.firebaseapp.com',

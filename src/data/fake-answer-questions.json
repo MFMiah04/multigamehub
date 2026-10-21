@@ -1,60 +1,498 @@
 [
-  { "q": "A group of flamingos is called a ____.", "a": "flamboyance" },
-  { "q": "A group of crows is called a ____.", "a": "murder" },
-  { "q": "A group of owls is called a ____.", "a": "parliament" },
-  { "q": "A group of jellyfish is called a ____.", "a": "smack" },
-  { "q": "The national animal of Scotland is the ____.", "a": "unicorn" },
-  { "q": "Botanically speaking, bananas are classed as ____.", "a": "berries" },
-  { "q": "The dot over a lowercase i or j is called a ____.", "a": "tittle" },
-  { "q": "An octopus has ____ hearts.", "a": "three" },
-  { "q": "The plastic tip on the end of a shoelace is called an ____.", "a": "aglet" },
-  { "q": "Wombat poo is shaped like ____.", "a": "cubes" },
-  { "q": "A baby kangaroo is called a ____.", "a": "joey" },
-  { "q": "The man who designed the Pringles can had some of his ashes buried in ____.", "a": "a Pringles can" },
-  { "q": "Another name for the # symbol is the ____.", "a": "octothorpe" },
-  { "q": "The Greenland shark can live for more than ____ years.", "a": "250" },
-  { "q": "The Eiffel Tower gets about 15 cm taller in the ____.", "a": "summer" },
-  { "q": "Sea otters hold ____ while they sleep so they don't drift apart.", "a": "hands" },
-  { "q": "A day on Venus is longer than a ____ on Venus.", "a": "year" },
-  { "q": "Bubble wrap was originally invented to be ____.", "a": "wallpaper" },
-  { "q": "Play-Doh was first sold as a ____.", "a": "wallpaper cleaner" },
-  { "q": "The tiny extra pocket on jeans was designed to hold ____.", "a": "pocket watches" },
-  { "q": "A shrimp's heart is in its ____.", "a": "head" },
-  { "q": "In the 1830s, ketchup was sold as a ____.", "a": "medicine" },
-  { "q": "The Q in Q-tips stands for ____.", "a": "quality" },
-  { "q": "A pineapple takes about ____ to grow.", "a": "two years" },
-  { "q": "The voice actor of Mickey Mouse married the voice actor of ____.", "a": "Minnie Mouse" },
-  { "q": "A bunch of bananas is made up of smaller clusters called ____.", "a": "hands" },
-  { "q": "The first item ever sold on eBay was a broken ____.", "a": "laser pointer" },
-  { "q": "Nintendo started out in 1889 making ____.", "a": "playing cards" },
-  { "q": "The world's first webcam was pointed at a ____.", "a": "coffee pot" },
-  { "q": "Butterflies taste things with their ____.", "a": "feet" },
-  { "q": "Cleopatra lived closer in time to the ____ than to the building of the Great Pyramid.", "a": "Moon landing" },
-  { "q": "Oxford University is older than the ____ Empire.", "a": "Aztec" },
-  { "q": "Sloths can hold their breath for longer than ____.", "a": "dolphins" },
-  { "q": "Lobster was once so cheap in America that it was fed to ____.", "a": "prisoners" },
-  { "q": "The first product ever scanned with a barcode was a pack of ____.", "a": "chewing gum" },
-  { "q": "Peanuts aren't really nuts, they're ____.", "a": "legumes" },
-  { "q": "Koalas can sleep for up to ____ hours a day.", "a": "22" },
-  { "q": "The M in M&M's stands for ____.", "a": "Mars" },
-  { "q": "Before it turned green, the Statue of Liberty was the colour of shiny ____.", "a": "copper" },
-  { "q": "In Switzerland it's illegal to own just one ____.", "a": "guinea pig" },
-  { "q": "Researchers found that Scots has over 400 words for ____.", "a": "snow" },
-  { "q": "For a long time, many Europeans believed tomatoes were ____.", "a": "poisonous" },
-  { "q": "The first animals sent into space were ____.", "a": "fruit flies" },
-  { "q": "A misheard song lyric is called a ____.", "a": "mondegreen" },
-  { "q": "Apple's very first logo showed ____ sitting under a tree.", "a": "Isaac Newton" },
-  { "q": "By number made, LEGO is the world's biggest manufacturer of ____.", "a": "tyres" },
-  { "q": "Koalas have fingerprints that are almost identical to ____.", "a": "humans" },
-  { "q": "Before the 1600s, most cultivated carrots were ____.", "a": "purple" },
-  { "q": "A group of porcupines is called a ____.", "a": "prickle" },
-  { "q": "The fear of the number 13 is called ____.", "a": "triskaidekaphobia" },
-  { "q": "The little line between your nose and your upper lip is called the ____.", "a": "philtrum" },
-  { "q": "Cows have ____ stomach compartments.", "a": "four" },
-  { "q": "Honeybees communicate the location of flowers by doing a ____.", "a": "waggle dance" },
-  { "q": "The longest-reigning monarch in British history is Queen ____.", "a": "Elizabeth II" },
-  { "q": "Hawaii's state fish is the humuhumunukunukuāpuaʻa, a type of ____.", "a": "triggerfish" },
-  { "q": "Humans are the only animals known to ____ to show embarrassment.", "a": "blush" },
-  { "q": "The opposite sides of a standard dice always add up to ____.", "a": "seven" },
-  { "q": "The smell of rain on dry ground is called ____.", "a": "petrichor" }
+  {
+    "q": "A group of flamingos is called a ____.",
+    "a": "flamboyance"
+  },
+  {
+    "q": "A group of crows is called a ____.",
+    "a": "murder"
+  },
+  {
+    "q": "A group of owls is called a ____.",
+    "a": "parliament"
+  },
+  {
+    "q": "A group of jellyfish is called a ____.",
+    "a": "smack"
+  },
+  {
+    "q": "The national animal of Scotland is the ____.",
+    "a": "unicorn"
+  },
+  {
+    "q": "Botanically speaking, bananas are classed as ____.",
+    "a": "berries"
+  },
+  {
+    "q": "The dot over a lowercase i or j is called a ____.",
+    "a": "tittle"
+  },
+  {
+    "q": "An octopus has ____ hearts.",
+    "a": "three"
+  },
+  {
+    "q": "The plastic tip on the end of a shoelace is called an ____.",
+    "a": "aglet"
+  },
+  {
+    "q": "Wombat poo is shaped like ____.",
+    "a": "cubes"
+  },
+  {
+    "q": "A baby kangaroo is called a ____.",
+    "a": "joey"
+  },
+  {
+    "q": "The man who designed the Pringles can had some of his ashes buried in ____.",
+    "a": "a Pringles can"
+  },
+  {
+    "q": "Another name for the # symbol is the ____.",
+    "a": "octothorpe"
+  },
+  {
+    "q": "The Greenland shark can live for more than ____ years.",
+    "a": "250"
+  },
+  {
+    "q": "The Eiffel Tower gets about 15 cm taller in the ____.",
+    "a": "summer"
+  },
+  {
+    "q": "Sea otters hold ____ while they sleep so they don't drift apart.",
+    "a": "hands"
+  },
+  {
+    "q": "A day on Venus is longer than a ____ on Venus.",
+    "a": "year"
+  },
+  {
+    "q": "Bubble wrap was originally invented to be ____.",
+    "a": "wallpaper"
+  },
+  {
+    "q": "Play-Doh was first sold as a ____.",
+    "a": "wallpaper cleaner"
+  },
+  {
+    "q": "The tiny extra pocket on jeans was designed to hold ____.",
+    "a": "pocket watches"
+  },
+  {
+    "q": "A shrimp's heart is in its ____.",
+    "a": "head"
+  },
+  {
+    "q": "In the 1830s, ketchup was sold as a ____.",
+    "a": "medicine"
+  },
+  {
+    "q": "The Q in Q-tips stands for ____.",
+    "a": "quality"
+  },
+  {
+    "q": "A pineapple takes about ____ to grow.",
+    "a": "two years"
+  },
+  {
+    "q": "The voice actor of Mickey Mouse married the voice actor of ____.",
+    "a": "Minnie Mouse"
+  },
+  {
+    "q": "A bunch of bananas is made up of smaller clusters called ____.",
+    "a": "hands"
+  },
+  {
+    "q": "The first item ever sold on eBay was a broken ____.",
+    "a": "laser pointer"
+  },
+  {
+    "q": "Nintendo started out in 1889 making ____.",
+    "a": "playing cards"
+  },
+  {
+    "q": "The world's first webcam was pointed at a ____.",
+    "a": "coffee pot"
+  },
+  {
+    "q": "Butterflies taste things with their ____.",
+    "a": "feet"
+  },
+  {
+    "q": "Cleopatra lived closer in time to the ____ than to the building of the Great Pyramid.",
+    "a": "Moon landing"
+  },
+  {
+    "q": "Oxford University is older than the ____ Empire.",
+    "a": "Aztec"
+  },
+  {
+    "q": "Sloths can hold their breath for longer than ____.",
+    "a": "dolphins"
+  },
+  {
+    "q": "Lobster was once so cheap in America that it was fed to ____.",
+    "a": "prisoners"
+  },
+  {
+    "q": "The first product ever scanned with a barcode was a pack of ____.",
+    "a": "chewing gum"
+  },
+  {
+    "q": "Peanuts aren't really nuts, they're ____.",
+    "a": "legumes"
+  },
+  {
+    "q": "Koalas can sleep for up to ____ hours a day.",
+    "a": "22"
+  },
+  {
+    "q": "The M in M&M's stands for ____.",
+    "a": "Mars"
+  },
+  {
+    "q": "Before it turned green, the Statue of Liberty was the colour of shiny ____.",
+    "a": "copper"
+  },
+  {
+    "q": "In Switzerland it's illegal to own just one ____.",
+    "a": "guinea pig"
+  },
+  {
+    "q": "Researchers found that Scots has over 400 words for ____.",
+    "a": "snow"
+  },
+  {
+    "q": "For a long time, many Europeans believed tomatoes were ____.",
+    "a": "poisonous"
+  },
+  {
+    "q": "The first animals sent into space were ____.",
+    "a": "fruit flies"
+  },
+  {
+    "q": "A misheard song lyric is called a ____.",
+    "a": "mondegreen"
+  },
+  {
+    "q": "Apple's very first logo showed ____ sitting under a tree.",
+    "a": "Isaac Newton"
+  },
+  {
+    "q": "By number made, LEGO is the world's biggest manufacturer of ____.",
+    "a": "tyres"
+  },
+  {
+    "q": "Koalas have fingerprints that are almost identical to ____.",
+    "a": "humans"
+  },
+  {
+    "q": "Before the 1600s, most cultivated carrots were ____.",
+    "a": "purple"
+  },
+  {
+    "q": "A group of porcupines is called a ____.",
+    "a": "prickle"
+  },
+  {
+    "q": "The fear of the number 13 is called ____.",
+    "a": "triskaidekaphobia"
+  },
+  {
+    "q": "The little line between your nose and your upper lip is called the ____.",
+    "a": "philtrum"
+  },
+  {
+    "q": "Cows have ____ stomach compartments.",
+    "a": "four"
+  },
+  {
+    "q": "Honeybees communicate the location of flowers by doing a ____.",
+    "a": "waggle dance"
+  },
+  {
+    "q": "The longest-reigning monarch in British history is Queen ____.",
+    "a": "Elizabeth II"
+  },
+  {
+    "q": "Hawaii's state fish is the humuhumunukunukuāpuaʻa, a type of ____.",
+    "a": "triggerfish"
+  },
+  {
+    "q": "Humans are the only animals known to ____ to show embarrassment.",
+    "a": "blush"
+  },
+  {
+    "q": "The opposite sides of a standard dice always add up to ____.",
+    "a": "seven"
+  },
+  {
+    "q": "The smell of rain on dry ground is called ____.",
+    "a": "petrichor"
+  },
+  {
+    "q": "A group of ferrets is called a ____.",
+    "a": "business"
+  },
+  {
+    "q": "A group of rhinos is called a ____.",
+    "a": "crash"
+  },
+  {
+    "q": "A group of zebras is called a ____.",
+    "a": "dazzle"
+  },
+  {
+    "q": "A baby puffin is called a ____.",
+    "a": "puffling"
+  },
+  {
+    "q": "A baby swan is called a ____.",
+    "a": "cygnet"
+  },
+  {
+    "q": "A baby hedgehog is called a ____.",
+    "a": "hoglet"
+  },
+  {
+    "q": "A male honeybee is called a ____.",
+    "a": "drone"
+  },
+  {
+    "q": "The smallest bone in the human body is in the ____.",
+    "a": "ear"
+  },
+  {
+    "q": "An adult human has ____ bones.",
+    "a": "206"
+  },
+  {
+    "q": "The only part of the human body with no blood supply is the ____.",
+    "a": "cornea"
+  },
+  {
+    "q": "Octopus blood is ____.",
+    "a": "blue"
+  },
+  {
+    "q": "Flamingos get their pink colour from eating algae and ____.",
+    "a": "shrimp"
+  },
+  {
+    "q": "A giraffe has ____ bones in its neck, the same as a human.",
+    "a": "seven"
+  },
+  {
+    "q": "Bats are the only mammals that can truly ____.",
+    "a": "fly"
+  },
+  {
+    "q": "Along with the echidna, the ____ is the only mammal that lays eggs.",
+    "a": "platypus"
+  },
+  {
+    "q": "Starfish have no ____.",
+    "a": "brain"
+  },
+  {
+    "q": "The largest organ of the human body is the ____.",
+    "a": "skin"
+  },
+  {
+    "q": "Most cats have ____ toes on each front paw.",
+    "a": "five"
+  },
+  {
+    "q": "The capital of Australia is ____.",
+    "a": "Canberra"
+  },
+  {
+    "q": "The capital of Canada is ____.",
+    "a": "Ottawa"
+  },
+  {
+    "q": "The world's largest desert is ____.",
+    "a": "Antarctica"
+  },
+  {
+    "q": "The only letter that doesn't appear in any US state's name is ____.",
+    "a": "Q"
+  },
+  {
+    "q": "In 1893, ____ became the first country to give all women the vote.",
+    "a": "New Zealand"
+  },
+  {
+    "q": "Fanta was invented in ____ during World War II.",
+    "a": "Germany"
+  },
+  {
+    "q": "The very first video uploaded to YouTube was filmed at a ____.",
+    "a": "zoo"
+  },
+  {
+    "q": "The World Wide Web was invented by Tim ____.",
+    "a": "Berners-Lee"
+  },
+  {
+    "q": "____ is the only planet in our solar system named after a Greek god rather than a Roman one.",
+    "a": "Uranus"
+  },
+  {
+    "q": "A year on Mercury lasts about ____ Earth days.",
+    "a": "88"
+  },
+  {
+    "q": "The hottest planet in our solar system is ____.",
+    "a": "Venus"
+  },
+  {
+    "q": "If you had a big enough bathtub, Saturn would ____.",
+    "a": "float"
+  },
+  {
+    "q": "Thanks to the potassium in them, bananas are very slightly ____.",
+    "a": "radioactive"
+  },
+  {
+    "q": "Botanically, bell peppers are ____.",
+    "a": "fruits"
+  },
+  {
+    "q": "In World War II, Britain spread the story that carrots helped pilots ____.",
+    "a": "see in the dark"
+  },
+  {
+    "q": "The sandwich is named after the Earl of ____.",
+    "a": "Sandwich"
+  },
+  {
+    "q": "The board game Monopoly began as a game meant to show the problems with ____.",
+    "a": "landlords"
+  },
+  {
+    "q": "In Japan, lots of families eat KFC on ____.",
+    "a": "Christmas"
+  },
+  {
+    "q": "There are more possible games of ____ than atoms in the observable universe.",
+    "a": "chess"
+  },
+  {
+    "q": "The & symbol is called an ____.",
+    "a": "ampersand"
+  },
+  {
+    "q": "\"Dreamt\" is the only common English word that ends in the letters ____.",
+    "a": "mt"
+  },
+  {
+    "q": "The first toy ever advertised on television was ____.",
+    "a": "Mr. Potato Head"
+  },
+  {
+    "q": "LEGO's name comes from the Danish words for '____'.",
+    "a": "play well"
+  },
+  {
+    "q": "The Rubik's Cube was invented in ____.",
+    "a": "Hungary"
+  },
+  {
+    "q": "Barbie's full name is Barbara Millicent ____.",
+    "a": "Roberts"
+  },
+  {
+    "q": "Pac-Man's shape was inspired by a ____ with a slice missing.",
+    "a": "pizza"
+  },
+  {
+    "q": "Before he was a plumber, Mario was a ____.",
+    "a": "carpenter"
+  },
+  {
+    "q": "Velcro was invented after its creator noticed ____ stuck to his dog's fur.",
+    "a": "burrs"
+  },
+  {
+    "q": "Bubble gum is pink because that was the only ____ its inventor had.",
+    "a": "food colouring"
+  },
+  {
+    "q": "The microwave oven was invented after radar melted a ____ in an engineer's pocket.",
+    "a": "chocolate bar"
+  },
+  {
+    "q": "Penicillin was discovered when ____ grew on a dish Alexander Fleming left out.",
+    "a": "mould"
+  },
+  {
+    "q": "Post-it notes came from a failed attempt to make a super-strong ____.",
+    "a": "glue"
+  },
+  {
+    "q": "One of the first computer \"bugs\" ever recorded was a real ____.",
+    "a": "moth"
+  },
+  {
+    "q": "The Eiffel Tower was originally only meant to be ____.",
+    "a": "temporary"
+  },
+  {
+    "q": "The Leaning Tower of Pisa leans because it was built on soft ____.",
+    "a": "ground"
+  },
+  {
+    "q": "Big Ben is actually the name of the tower's ____.",
+    "a": "bell"
+  },
+  {
+    "q": "Ancient Romans used ____ as a mouthwash.",
+    "a": "urine"
+  },
+  {
+    "q": "Vikings made ice skates out of ____.",
+    "a": "bones"
+  },
+  {
+    "q": "Hippos produce a red, oily liquid often called \"____ sweat\".",
+    "a": "blood"
+  },
+  {
+    "q": "A crocodile can't stick out its ____.",
+    "a": "tongue"
+  },
+  {
+    "q": "Sharks have existed for longer than ____.",
+    "a": "trees"
+  },
+  {
+    "q": "Under its white fur, a polar bear's skin is ____.",
+    "a": "black"
+  },
+  {
+    "q": "Dolphins sleep with one ____ open.",
+    "a": "eye"
+  },
+  {
+    "q": "Owls can't move their ____.",
+    "a": "eyes"
+  },
+  {
+    "q": "Goats have ____-shaped pupils.",
+    "a": "rectangle"
+  },
+  {
+    "q": "Scientists have shown that honeybees can recognise human ____.",
+    "a": "faces"
+  },
+  {
+    "q": "A blue whale's tongue can weigh as much as an ____.",
+    "a": "elephant"
+  },
+  {
+    "q": "Sea otters have a pouch under their arm where they keep their favourite ____.",
+    "a": "rock"
+  }
 ]

@@ -3,7 +3,7 @@
     "rooms": {
       "$code": {
         ".read": "auth != null",
-        ".write": "auth != null && (data.child('players').child(auth.uid).exists() || (!data.exists() && newData.child('hostId').val() === auth.uid && newData.child('players').child(auth.uid).exists()))",
+        ".write": "auth != null && (data.child('players').child(auth.uid).exists() || (!data.exists() && newData.child('hostId').val() === auth.uid && newData.child('players').child(auth.uid).exists()) || (!newData.exists() && data.child('token').exists() && root.child('roomIndex').child(data.child('token').val()).val() < now - 1800000))",
         ".validate": "$code.matches(/^[A-Z]{4}$/)",
         "players": {
           "$uid": {
@@ -11,6 +11,21 @@
             "name": { ".validate": "newData.isString() && newData.val().length >= 2 && newData.val().length <= 16" }
           }
         }
+      }
+    },
+    "roomIndex": {
+      ".read": "auth != null",
+      ".indexOn": ".value",
+      "$token": {
+        ".write": "auth != null && ((root.child('roomTokens').child($token).exists() && root.child('rooms').child(root.child('roomTokens').child($token).val()).child('players').child(auth.uid).exists()) || (newData.exists() && newData.parent().parent().child('roomTokens').child($token).exists() && newData.parent().parent().child('rooms').child(newData.parent().parent().child('roomTokens').child($token).val()).child('players').child(auth.uid).exists()) || (!newData.exists() && data.val() < now - 1800000))",
+        ".validate": "newData.isNumber()"
+      }
+    },
+    "roomTokens": {
+      "$token": {
+        ".read": "auth != null && root.child('roomIndex').child($token).val() < now - 1800000",
+        ".write": "auth != null && ((data.exists() && root.child('rooms').child(data.val()).child('players').child(auth.uid).exists()) || (!data.exists() && newData.exists() && newData.parent().parent().child('rooms').child(newData.val()).child('hostId').val() === auth.uid) || (!newData.exists() && root.child('roomIndex').child($token).val() < now - 1800000))",
+        ".validate": "newData.isString() && newData.val().matches(/^[A-Z]{4}$/)"
       }
     }
   }

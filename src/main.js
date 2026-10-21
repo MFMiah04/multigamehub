@@ -1,7 +1,7 @@
 import { render } from 'lit-html';
 import { onValue, get, update } from 'firebase/database';
 import { signIn, serverNow } from './firebase.js';
-import { roomRef, createRoom, joinRoom, leaveRoom, trackPresence, stopPresence, sortedPlayers, claimHostIfNeeded } from './room.js';
+import { roomRef, createRoom, joinRoom, leaveRoom, trackPresence, stopPresence, sortedPlayers, claimHostIfNeeded, touchRoom } from './room.js';
 import { html, nothing, toast, confirmDialog, action, avatar } from './ui.js';
 import { games } from './games/index.js';
 import { backToLobby } from './games/common.js';
@@ -19,6 +19,8 @@ let leaving = false;
 let local = {};
 let localKey = '';
 let lastAutoUpdate = '';
+let lastHeartbeat = 0;
+const HEARTBEAT_MS = 5 * 60 * 1000;
 
 async function boot() {
   try {
@@ -101,6 +103,8 @@ function makeCtx() {
 // Timed or automatic phase changes. The host drives them; everyone else just watches.
 function runAutomaticUpdates(ctx) {
   claimHostIfNeeded(ctx.room, ctx.uid);
+  // Heartbeat so a room with people in it is never cleaned up as abandoned.
+  if (ctx.isHost && Date.now() - lastHeartbeat > HEARTBEAT_MS) { lastHeartbeat = Date.now(); touchRoom(ctx.room); }
   if (!ctx.game || ctx.room.phase === 'lobby' || !ctx.me.inGame) return;
   const own = ctx.game.clientTick?.(ctx, ctx.settings);
   if (own) ctx.update(own);

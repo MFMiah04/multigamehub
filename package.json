@@ -8,7 +8,9 @@
     "emulators": "firebase emulators:start --only auth,database --project demo-multigamehub",
     "build": "vite build",
     "preview": "vite preview",
-    "deploy": "vite build && firebase deploy --only hosting,database"
+    "deploy": "vite build && firebase deploy --only hosting,database",
+    "test:rules": "node scripts/test-rules.mjs",
+    "images": "node scripts/make-images.mjs"
   },
   "dependencies": {
     "firebase": "^11.10.0",
@@ -16,6 +18,7 @@
     "qrcode-generator": "^1.5.2"
   },
   "devDependencies": {
+    "@resvg/resvg-js": "^2.6.2",
     "vite": "^6.4.4"
   }
 }

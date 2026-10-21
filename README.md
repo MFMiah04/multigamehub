@@ -22,6 +22,8 @@ Vite, [lit-html](https://lit.dev/docs/libraries/standalone-templates/) for rende
 
 Each player signs in anonymously, so refreshing or losing signal drops you straight back into your room. If the host disconnects for more than 15 seconds, the next player takes over as host.
 
+Abandoned rooms clean themselves up with no server: each room has a random token in `roomIndex` with its last-active time, the host refreshes it every 5 minutes, and creating a new room deletes any room that's been quiet for 30+ minutes. The rules only reveal a room's code once it's stale.
+
 ## Running locally
 
 ```bash
@@ -31,6 +33,10 @@ npm run dev:emu     # in a second terminal, then open http://localhost:5173
 ```
 
 In emulator mode each browser tab is a separate player, so you can test a whole game in one browser. `npm run dev` runs against the real Firebase project instead.
+
+Other scripts:
+- `npm run test:rules`: checks `database.rules.json` against the emulator (who can read, join, clean up and delete rooms).
+- `npm run images`: redraws the link-preview image and app icons in `public/` from the games' sticky-note drawings.
 
 ## Deploying
 
