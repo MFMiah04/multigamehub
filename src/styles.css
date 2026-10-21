@@ -515,6 +515,7 @@ details.field summary { cursor: pointer; text-decoration: underline wavy; text-u
 .role-card__text > b { font-size: 22px; }
 .role-card__text > .hl { align-self: flex-start; }
 .role-card__text small { font-size: 15px; color: var(--ink-soft); }
+.role-card__hint { font-style: italic; text-decoration: underline wavy; text-underline-offset: 3px; }
 .role-art { flex: none; }
 
 .vote-result { margin: 14px 0; padding: 10px 12px; background: #fff; text-align: center; line-height: 1.3; }

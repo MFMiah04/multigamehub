@@ -180,19 +180,25 @@ function questTrack(ctx) {
   <p class="note center">${round.rejects ? html`Rejected teams in a row: <b>${round.rejects} of 5</b>` : 'Five quests. Three wins takes it.'}</p>`;
 }
 
+// Whether your role card is showing. Kept for the whole game (not reset each stage),
+// so it only ever changes when you tap it.
+const roleShown = { game: null, shown: false };
+
 function roleCard(ctx) {
-  const { local } = ctx;
   const role = ctx.round.roles?.[ctx.uid];
   if (!role) return nothing;
+  if (roleShown.game !== ctx.round.id) Object.assign(roleShown, { game: ctx.round.id, shown: false });
   const known = knowledge(ctx, ctx.uid);
-  return html`<button class="role-card wobble ${local.showRole ? '' : 'role-card--hidden'} ${isEvil(role) ? 'role-card--evil' : 'role-card--good'}"
-    @click=${() => { local.showRole = !local.showRole; ctx.rerender(); }}>
-    ${!local.showRole ? html`<b>Tap to see your role</b><small>Keep your screen hidden!</small>` : html`
+  const toggle = () => { roleShown.shown = !roleShown.shown; ctx.rerender(); };
+  return html`<button class="role-card wobble ${roleShown.shown ? '' : 'role-card--hidden'} ${isEvil(role) ? 'role-card--evil' : 'role-card--good'}"
+    aria-pressed=${roleShown.shown} @click=${toggle}>
+    ${!roleShown.shown ? html`<b>Tap to see your role</b><small>Keep your screen hidden!</small>` : html`
       ${roleArt(role)}
       <span class="role-card__text">
         <b>${ROLES[role].name}</b> <span class="hl ${isEvil(role) ? 'hl--pink' : ''}">${isEvil(role) ? 'Evil' : 'Good'}</span>
         <small>${ROLES[role].blurb}</small>
         ${known ? html`<small><b>${known.label}</b> ${known.players.length ? known.players.map(p => p.name).join(', ') : 'nobody'}</small>` : nothing}
+        <small class="role-card__hint">Tap to hide</small>
       </span>`}
   </button>`;
 }
