@@ -16,6 +16,7 @@
   --peach: #ffd6a5;
   --lilac: #d4c4f0;
   --blue: #a8d4f7;
+  --lime: #d9ef9e;
   --shadow: 3px 3px 0 rgba(0, 0, 0, 0.13);
   --hand: 'Kalam', 'Comic Sans MS', cursive;
   --border: 2.5px;
@@ -232,6 +233,7 @@ details.field summary { cursor: pointer; text-decoration: underline wavy; text-u
 .sticky--lilac { --note: var(--lilac); }
 .sticky--yellow { --note: var(--yellow); }
 .sticky--blue { --note: var(--blue); }
+.sticky--lime { --note: var(--lime); }
 
 .sticky--picked { outline: 3px dashed var(--ink); outline-offset: 4px; }
 .sticky--picked::after { content: '✓'; position: absolute; top: -14px; right: -6px; font-size: 30px; font-weight: 700; transform: rotate(8deg); }
@@ -453,3 +455,9 @@ details.field summary { cursor: pointer; text-decoration: underline wavy; text-u
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; }
 }
+
+/* ---------- word sync ---------- */
+
+.clue--lime { background: var(--lime); }
+.clue--lime.clue--cancelled { background: #eee; }
+.sync-history { padding-left: 28px; color: var(--ink-soft); line-height: var(--row); }

@@ -5,7 +5,8 @@ import herdMentality from './herd-mentality.js';
 import oneWord from './one-word.js';
 import fakeAnswer from './fake-answer.js';
 import spectrum from './spectrum.js';
+import wordSync from './word-sync.js';
 
 // To add a game: create a module with the same shape and list it here.
-export const gameList = [spyfall, imposter, fakinIt, herdMentality, oneWord, fakeAnswer, spectrum];
+export const gameList = [spyfall, imposter, fakinIt, herdMentality, oneWord, fakeAnswer, spectrum, wordSync];
 export const games = Object.fromEntries(gameList.map(g => [g.id, g]));
