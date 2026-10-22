@@ -66,6 +66,9 @@ await expect('react as someone else', false, () => set(ref(host.db, 'rooms/TEST/
 await expect('react with made-up junk', false, () => set(ref(host.db, `rooms/TEST/reactions/${user.uid}`), { e: '<script>', n: 'abc', at: serverTimestamp() }));
 // Drawing: room members can add strokes; nobody else can.
 await expect('draw a stroke in your room', true, () => update(ref(host.db), { 'canvases/TEST/s/st1/m': { c: '#222222', w: 0.01, u: user.uid }, 'canvases/TEST/s/st1/k/0': { p: '00aa11bb', t: Date.now() } }));
+await expect('undo your own stroke', true, () => set(ref(host.db, 'canvases/TEST/s/st1/x'), true));
+await expect('add a bucket fill', true, () => update(ref(host.db), { 'canvases/TEST/s/st4/m': { t: 'f', c: '#3b82c4', w: 0.01, u: user.uid }, 'canvases/TEST/s/st4/k/0': { p: '0a0a', t: Date.now() } }));
+await expect('use a made-up tool', false, () => set(ref(host.db, 'canvases/TEST/s/st5/m'), { t: 'zz', c: '#222222', w: 0.01, u: user.uid }));
 await expect('draw as someone else', false, () => set(ref(host.db, 'canvases/TEST/s/st2/m'), { c: '#222222', w: 0.01, u: 'someoneelse' }));
 await expect('draw a huge chunk', false, () => set(ref(host.db, 'canvases/TEST/s/st1/k/1'), { p: 'a'.repeat(5000), t: 1 }));
 await expect('draw in a room you are not in', false, () => set(ref(stranger.db, 'canvases/TEST/s/st3/k/0'), { p: '0000', t: 1 }));

@@ -11,7 +11,8 @@ export default {
   blurb: 'A shared drawing board. Everyone can doodle at once.',
   rules: [
     'Everyone draws on the same board at the same time.',
-    'Pick a colour and a brush size, or the eraser. Clear wipes the board for everyone.',
+    'Pencil, eraser, lines, boxes, circles, bucket fill and an eyedropper. Pick any colour with the rainbow swatch.',
+    'Undo and redo your own drawing with the arrows, or Ctrl+Z and Ctrl+Y (Ctrl+Shift+Z works too). Clear wipes the board for everyone.',
     'The line under the board shows how much data your drawing is using, and the delay before others see it.',
   ],
   art: html`<svg class="art" viewBox="0 0 64 56" aria-hidden="true"><g fill="none" stroke="#222" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round">

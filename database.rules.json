@@ -28,7 +28,8 @@
         ".write": "auth != null && (root.child('rooms').child($code).child('players').child(auth.uid).exists() || (!newData.exists() && (!root.child('rooms').child($code).exists() || root.child('roomIndex').child(root.child('rooms').child($code).child('token').val() + '').val() < now - 1800000)))",
         "s": {
           "$stroke": {
-            "m": { ".validate": "newData.hasChildren(['c', 'w', 'u']) && newData.child('c').isString() && newData.child('c').val().length <= 9 && newData.child('w').isNumber() && newData.child('u').val() === auth.uid" },
+            "m": { ".validate": "newData.hasChildren(['c', 'w', 'u']) && newData.child('c').isString() && newData.child('c').val().length <= 9 && newData.child('w').isNumber() && newData.child('u').val() === auth.uid && (!newData.child('t').exists() || newData.child('t').val().matches(/^[plrReEf]$/))" },
+            "x": { ".validate": "newData.isBoolean() && root.child('canvases').child($code).child('s').child($stroke).child('m').child('u').val() === auth.uid" },
             "k": { "$n": { ".validate": "newData.hasChildren(['p']) && newData.child('p').isString() && newData.child('p').val().length <= 4000" } },
             "$other": { ".validate": false }
           }
