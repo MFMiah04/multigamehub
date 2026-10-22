@@ -2,7 +2,7 @@ import { html, svg, nothing } from 'lit-html';
 import { button, action, avatar, playerTag, confirmDialog } from '../ui.js';
 import { cue } from '../sound.js';
 import { shuffle } from '../room.js';
-import { backToLobbyButton } from './common.js';
+import { backToLobbyButton, endScreen, endTitle, sideResult } from './common.js';
 
 // ----- the original game's numbers -----
 
@@ -359,7 +359,9 @@ function over(ctx) {
     assassin: goodWins ? `The Assassin struck ${target?.name || 'the wrong player'}, who wasn't Merlin!` : `The Assassin found Merlin: ${target?.name}!`,
   }[round.reason] || '';
   const everyone = Object.keys(roles).filter(id => ctx.room.players[id]).sort((a, b) => Number(isEvil(roles[a])) - Number(isEvil(roles[b])));
+  const win = sideResult(ctx, id => (roles[id] ? isEvil(roles[id]) !== goodWins : null));
   return html`
+    ${endScreen(ctx, { win, title: endTitle(win, { won: 'Victory!', lost: 'Defeat!', watching: goodWins ? 'Good wins!' : 'Evil wins!' }), note: `${goodWins ? 'Good wins!' : 'Evil wins!'} ${why}` })}
     <h1 class="center scribble">${goodWins ? 'Good wins!' : 'Evil wins!'}</h1>
     <p class="note center">${why}</p>
     <div class="role-list">

@@ -107,6 +107,47 @@ const confetti = () => html`<div class="confetti" aria-hidden="true">
     --d: ${((i * 13) % 20) / 10}s; --r: ${(i * 47) % 360}deg; --x: ${((i * 29) % 60) - 30}px"></i>`)}
 </div>`;
 
+// ----- victory and defeat -----
+
+const TROPHY = html`<svg class="end-art" viewBox="0 0 64 64" aria-hidden="true">${svg`<g fill="none" stroke="#222" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round">
+  <path d="M18 10 h28 v12 c0 10 -6 17 -14 17 s-14 -7 -14 -17 z" fill="#ffd04d" />
+  <path d="M18 14 h-6 c0 8 3 12 8 13 M46 14 h6 c0 8 -3 12 -8 13" />
+  <path d="M32 39 v8 M24 54 h16 l-2 -7 h-12 z" fill="#ffd04d" />
+  <path d="M26 17 q0 8 4 12" stroke="#fff" stroke-width="2.4" />
+  <path d="M8 6 l2 4 M56 6 l-2 4 M4 20 l4 1 M60 20 l-4 1" />
+</g>`}</svg>`;
+const RAINCLOUD = html`<svg class="end-art" viewBox="0 0 64 64" aria-hidden="true">${svg`<g fill="none" stroke="#222" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round">
+  <path d="M16 36 c-7 0 -10 -9 -4 -13 c0 -9 11 -13 17 -7 c4 -8 18 -7 19 3 c8 0 10 12 2 17 z" fill="#d6dbe6" />
+  <path class="end-rain" d="M20 44 l-3 7 M32 44 l-3 7 M44 44 l-3 7" stroke="#6fa8dc" />
+  <path d="M25 27 l3 2 M39 27 l-3 2 M27 33 q5 -3 10 0" />
+</g>`}</svg>`;
+
+// A big "you won / you lost" card over the end of a game. `win` is true, false, or null for someone
+// just watching. It plays once per ending, and "See how it went" clears it to show the details.
+export function endScreen(ctx, { win, title, note, delay = 0 }) {
+  if (ctx.local.endSeen) return nothing;
+  const key = `end:${ctx.room.code}:${ctx.round.id}:${ctx.room.phase}:${ctx.round.no || 0}`;
+  setTimeout(() => cue(key, win === false ? 'sad' : 'fanfare'), delay * 1000);
+  const mood = win === false ? 'lose' : 'win';
+  return html`<div class="end-screen end-screen--${mood}" style="--delay: ${delay}s" role="dialog" aria-label=${title}>
+    ${win !== false ? confetti() : nothing}
+    <div class="end-card wobble">
+      ${win === false ? RAINCLOUD : TROPHY}
+      <h1 class="end-card__title">${title}</h1>
+      ${note ? html`<p class="end-card__note">${note}</p>` : nothing}
+      ${ctx.me?.inGame ? html`<div class="end-card__me">${avatar(ctx.me, 56, win === false ? 'sad' : 'happy')}</div>` : nothing}
+      ${button('See how it went', () => { ctx.local.endSeen = true; ctx.rerender(); }, { kind: win === false ? 'white' : 'yellow' })}
+    </div>
+  </div>`;
+}
+
+// For games with sides: true if my side won, false if it lost, null if I'm just watching.
+export const sideResult = (ctx, onWinningSide) => (ctx.inGame.some(p => p.id === ctx.uid) ? onWinningSide(ctx.uid) : null);
+
+// The usual titles, from the point of view of whoever's looking.
+export const endTitle = (win, { won = 'You win!', lost = 'You lost!', watching } = {}) =>
+  win === true ? won : win === false ? lost : watching;
+
 const ordinal = n => ['1st', '2nd', '3rd'][n - 1] || `${n}th`;
 
 // The end of a game: a podium for the top three, awards, then everyone else.
@@ -123,11 +164,18 @@ export function finalScores(ctx, { awards = [], winner } = {}) {
   const mood = p => (winners.includes(p) ? 'happy' : board.length > 2 && now(p.id) === bottom ? 'sad' : null);
   const podium = board.slice(0, 3);
   const shown = awards.filter(Boolean);
-  cue(`final:${ctx.round.id}:${JSON.stringify(scores)}`, winners.length ? 'fanfare' : 'sad');
+  const meIn = ctx.inGame.some(p => p.id === ctx.uid);
+  const iWon = meIn ? winners.some(p => p.id === ctx.uid) : null;
+  const headline = winners.length === 1 ? `${winners[0].name} wins!` : winners.length ? "It's a tie!" : 'Nobody scored!';
 
   return html`
-    ${winners.length ? confetti() : nothing}
-    <h1 class="center scribble pop-in">${winners.length === 1 ? `${winners[0].name} wins!` : winners.length ? "It's a tie!" : 'Nobody scored!'}</h1>
+    ${endScreen(ctx, {
+      win: iWon,
+      title: endTitle(iWon, { won: winners.length > 1 ? 'You tied for first!' : 'You win!', watching: headline }),
+      note: iWon ? `${now(ctx.uid)} points. Nice one!` : headline,
+      delay: 0.3,
+    })}
+    <h1 class="center scribble pop-in">${headline}</h1>
     <div class="podium">
       ${[1, 0, 2].filter(i => podium[i]).map(i => {
         const p = podium[i];
@@ -281,21 +329,22 @@ export function voteStage(ctx, rows) {
 }
 
 // A spotlight swings down onto whoever it was: the spy, the Insider…
-export function spotlight(people, caption) {
+export function spotlight(people, caption, mood = 'shock') {
   if (!people.length) return nothing;
   return html`<div class="spotlight" role="img" aria-label=${caption}>
     <svg class="spotlight__beam" viewBox="0 0 200 160" preserveAspectRatio="none" aria-hidden="true">${svg`
       <path d="M86 0 H114 L176 160 H24 Z" fill="#fff6c2" opacity="0.9" />`}</svg>
-    <div class="spotlight__people">${people.map(p => html`<span class="spotlight__person">${avatar(p, 64, 'shock')}<b>${p.name}</b></span>`)}</div>
+    <div class="spotlight__people">${people.map(p => html`<span class="spotlight__person">${avatar(p, 64, mood)}<b>${p.name}</b></span>`)}</div>
     <p class="spotlight__caption">${caption}</p>
   </div>`;
 }
 
 // The headline, the votes and whatever comes after, revealed in order.
 // `question` is asked during the pause, e.g. "So, who was the spy?"
-export function voteResults(ctx, rows, { headline, question, badge, detail, mood, top = nothing, bottom = nothing }) {
+export function voteResults(ctx, rows, { headline, question, badge, detail, mood, top = nothing, bottom = nothing, outcome }) {
   const stage = voteStage(ctx, rows);
   return html`
+    ${stage.done && outcome ? endScreen(ctx, { ...outcome, delay: 1.4 }) : nothing}
     <h1 class="center scribble ${stage.done ? 'pop-in' : ''}">${stage.done ? headline : stage.counting ? 'The votes are in…' : question}</h1>
     ${stage.done ? top : nothing}
     ${resultsList(ctx, rows, { badge, detail, mood, stage })}

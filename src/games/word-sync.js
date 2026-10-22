@@ -1,9 +1,13 @@
 import { html, nothing, button, timer, selectField, action, progress, toast, avatar } from '../ui.js';
-import { isTimeUp, isGraceOver, normalize, secondsOptions, backToLobbyButton } from './common.js';
+import { isTimeUp, isGraceOver, normalize, secondsOptions, backToLobbyButton, endScreen, endTitle, sideResult } from './common.js';
 import { keyed } from 'lit-html/directives/keyed.js';
 import { cue } from '../sound.js';
 
 const COUNTDOWN_MS = 3000;
+// After a miss, the words stay up for a moment, then a 3-2-1 countdown starts the next round by itself.
+const READ_MS = 2500;
+const nextRoundAt = round => round.revealAt + READ_MS + COUNTDOWN_MS;
+const isOver = (round, s) => round.synced || (s.maxRounds && round.no >= s.maxRounds);
 
 const cleanWord = text => text.trim().replace(/\s+/g, ' ').slice(0, 25);
 const wordsOf = (ctx, words) => ctx.inGame.map(p => ({ player: p, word: words?.[p.id] || '' }));
@@ -58,6 +62,8 @@ export default {
 
   tick(ctx) {
     const { round } = ctx;
+    const s = ctx.settings;
+    if (ctx.room.phase === 'reveal' && round.revealAt && !isOver(round, s) && ctx.now() >= nextRoundAt(round)) return nextRound(ctx, s);
     if (ctx.room.phase !== 'write') return null;
     if (ctx.inGame.every(p => round.words?.[p.id]) || isGraceOver(ctx)) {
       return { phase: 'reveal', 'round/endsAt': null, 'round/synced': allMatch(ctx, round.words), 'round/revealAt': ctx.now() + COUNTDOWN_MS };
@@ -70,6 +76,11 @@ export default {
     return views[ctx.room.phase]?.(ctx, s) ?? nothing;
   },
 };
+
+const nextRound = (ctx, s) => ({
+  phase: 'write', [`round/history/${ctx.round.no}`]: ctx.round.words || {}, 'round/no': ctx.round.no + 1,
+  'round/words': null, 'round/synced': null, 'round/revealAt': null, 'round/endsAt': ctx.now() + s.time * 1000,
+});
 
 const lastWords = ctx => {
   const prev = ctx.round.history?.[ctx.round.no - 1];
@@ -119,14 +130,22 @@ function write(ctx) {
     ${history(ctx, round.no - 2)}`;
 }
 
+// "Next round in 3, 2, 1…" under the revealed words. Old rooms without a reveal time keep the host's button.
+function nextCountdown(ctx, next) {
+  const { round } = ctx;
+  if (!round.revealAt) return ctx.isHost ? button('Next round', action(next)) : html`<p class="note center">Waiting for the host…</p>`;
+  const left = nextRoundAt(round) - ctx.now();
+  if (left > COUNTDOWN_MS) return html`<p class="note center">Get your thinking cap on…</p>`;
+  const count = Math.max(1, Math.ceil(left / 1000));
+  cue(`ws:${round.revealAt}:next:${count}`, 'tock', { at: nextRoundAt(round) - count * 1000, now: ctx.now(), late: 900 });
+  return html`<div class="next-countdown"><span>Next round in</span>${keyed(count, html`<b class="countdown__number countdown__number--small">${count}</b>`)}</div>`;
+}
+
 function reveal(ctx, s) {
   const { round } = ctx;
   const words = wordsOf(ctx, round.words);
   const outOfRounds = !round.synced && s.maxRounds && round.no >= s.maxRounds;
-  const next = () => ctx.update({
-    phase: 'write', [`round/history/${round.no}`]: round.words || {}, 'round/no': round.no + 1,
-    'round/words': null, 'round/synced': null, 'round/revealAt': null, 'round/endsAt': ctx.now() + s.time * 1000,
-  });
+  const next = () => ctx.update(nextRound(ctx, s));
 
   // A 3-2-1 countdown with the cards face down, then they all flip over together.
   const left = round.revealAt ? round.revealAt - ctx.now() : 0;
@@ -148,7 +167,15 @@ function reveal(ctx, s) {
     ? (round.no <= 3 ? 'Are you sharing a brain?' : round.no <= 6 ? 'Great minds think alike.' : 'You got there in the end!')
     : outOfRounds ? `You couldn't sync in ${s.maxRounds} rounds. So close, maybe?` : 'Now find a word that links these.';
 
+  const finished = round.synced || outOfRounds;
+  const win = finished ? sideResult(ctx, () => !!round.synced) : null;
   return html`
+    ${finished ? endScreen(ctx, {
+      win,
+      title: endTitle(win, { won: 'Victory!', lost: 'Failure!', watching: headline }),
+      note: round.synced ? headline : `You couldn't sync in ${s.maxRounds} rounds.`,
+      delay: 1,
+    }) : nothing}
     <p class="note center">Round ${round.no}</p>
     <h1 class="center scribble pop-in">${headline}</h1>
     <p class="note center">${note}</p>
@@ -157,5 +184,5 @@ function reveal(ctx, s) {
     <div class="push"></div>
     ${round.synced || outOfRounds
       ? html`${ctx.isHost ? button('Play again', action(ctx.startGame)) : nothing}${backToLobbyButton(ctx)}`
-      : ctx.isHost ? button('Next round', action(next)) : html`<p class="note center">Waiting for the host…</p>`}`;
+      : nextCountdown(ctx, next)}`;
 }

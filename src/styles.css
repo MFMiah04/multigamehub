@@ -719,3 +719,22 @@ button.quest-card { transition: transform 0.15s; }
 .cow-move--new { justify-content: center; }
 .cow-move--new .cow-move__track { flex: none; width: 60px; border-bottom: 0; }
 .cow-move--new .cow-move__who:empty { display: none; }
+.next-countdown { display: flex; align-items: center; justify-content: center; gap: 12px; height: calc(var(--row) * 3); font-size: 22px; }
+.countdown__number--small { font-size: 56px; }
+
+/* ----- victory / defeat ----- */
+.end-screen { position: fixed; inset: 0; z-index: 30; display: grid; place-items: center; padding: 16px; background: rgba(250, 246, 236, 0.82); animation: fade 0.4s var(--delay, 0s) both; }
+.end-screen--lose { background: rgba(214, 219, 230, 0.85); }
+.end-card { position: relative; display: flex; flex-direction: column; align-items: center; gap: 6px; width: min(100%, 360px); padding: 22px 18px 18px; text-align: center; background: var(--yellow); box-shadow: 6px 6px 0 rgba(0, 0, 0, 0.18); animation: end-pop 0.6s calc(var(--delay, 0s) + 0.1s) cubic-bezier(.2, 1.5, .4, 1) both; }
+.end-screen--lose .end-card { background: #fff; transform: rotate(1.5deg); animation-name: end-drop; }
+.end-card .btn { margin-top: 8px; }
+.end-art { width: 96px; height: 96px; }
+.end-screen--win .end-art { animation: wiggle 0.5s ease-in-out infinite alternate; }
+.end-rain { stroke-dasharray: 4 6; animation: rain 0.6s linear infinite; }
+@keyframes rain { to { stroke-dashoffset: -10; } }
+.end-card__title { margin: 0; font-size: 44px; line-height: 52px; }
+.end-card__note { margin: 0; color: var(--ink-soft); line-height: 24px; }
+.end-card__me { margin-top: 4px; }
+@keyframes end-pop { from { transform: scale(0.3) rotate(-12deg); opacity: 0; } }
+@keyframes end-drop { from { transform: translateY(-60px) rotate(-6deg); opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .end-screen, .end-card, .end-art, .end-rain { animation: none; } }

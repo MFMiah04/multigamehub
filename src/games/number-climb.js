@@ -3,7 +3,7 @@ import { html, nothing, button, selectField, action, avatar } from '../ui.js';
 import { svg } from 'lit-html';
 import { keyed } from 'lit-html/directives/keyed.js';
 import { roomRef, shuffle } from '../room.js';
-import { backToLobbyButton } from './common.js';
+import { backToLobbyButton, endScreen, endTitle, sideResult } from './common.js';
 import { cue } from '../sound.js';
 
 const COUNTDOWN_MS = 3500;
@@ -168,14 +168,15 @@ function finished(ctx) {
   const { round } = ctx;
   const won = round.result === 'won';
   const mistakes = round.mistakes || 0;
-  cue(`nc:${round.startsAt}:end`, won ? 'fanfare' : 'sad');
   const headline = won
     ? (mistakes === 0 ? 'Perfect climb!' : 'You made it!')
     : 'Game over!';
   const note = won
     ? (mistakes === 0 ? 'Every card in order. Are you all telepathic?' : `All cards played, with ${mistakes} slip${mistakes === 1 ? '' : 's'} on the way.`)
     : `${round.startLives <= 1 ? 'One slip ended it' : 'You ran out of lives'} with ${cardsLeft(round)} card${cardsLeft(round) === 1 ? '' : 's'} still to play.`;
+  const win = sideResult(ctx, () => won);
   return html`
+    ${endScreen(ctx, { win, title: endTitle(win, { won: 'Victory!', lost: 'Failure!', watching: headline }), note })}
     <h1 class="center scribble">${headline}</h1>
     <p class="note center">${note}</p>
     <h3 class="section-title">How it went</h3>

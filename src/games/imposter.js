@@ -1,6 +1,6 @@
 import { html, nothing, button, timer, selectField, action, playerTag } from '../ui.js';
 import { randomItem, shuffle } from '../room.js';
-import { minutes, counts, startVoting, isTimeUp, voteRequestBar, voteRequestsPassed, voteView, votedCount, tally, mostVoted, voteResults, toResults, revealButton, backToLobbyButton } from './common.js';
+import { minutes, counts, startVoting, isTimeUp, voteRequestBar, voteRequestsPassed, voteView, votedCount, tally, mostVoted, voteResults, toResults, endTitle, sideResult, revealButton, backToLobbyButton } from './common.js';
 import words from '../data/imposter-words.json';
 
 const maxImposters = count => Math.max(1, Math.floor((count - 1) / 2));
@@ -94,8 +94,11 @@ function results(ctx) {
   const caught = imposters.filter(id => suspects.includes(id)).length;
   const headline = caught === imposters.length ? 'Imposter caught!' : caught > 0 ? 'Some imposters caught!' : 'The imposter fooled you!';
 
+  const crewWins = caught === imposters.length;
+  const win = sideResult(ctx, id => (imposters.includes(id) ? !crewWins : crewWins));
   return voteResults(ctx, rows, {
     headline,
+    outcome: { win, title: endTitle(win, { won: 'Victory!', lost: 'Defeat!', watching: headline }), note: headline },
     question: imposters.length > 1 ? 'So, who were the imposters?' : 'So, who was the imposter?',
     badge: p => (round.imposters?.[p.id] ? 'imposter' : null),
     detail: p => (round.revealed && round.imposters?.[p.id] ? html`<small>Hint: ${round.imposters[p.id]}</small>` : nothing),

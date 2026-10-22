@@ -1,6 +1,6 @@
 import { html, nothing, button, timer, selectField, action, avatar } from '../ui.js';
 import { shuffle } from '../room.js';
-import { minutes, startVoting, isTimeUp, voteView, votedCount, tally, mostVoted, voteResults, toResults, spotlight, pickUnused, backToLobbyButton } from './common.js';
+import { minutes, startVoting, isTimeUp, voteView, votedCount, tally, mostVoted, voteResults, toResults, endScreen, endTitle, sideResult, spotlight, pickUnused, backToLobbyButton } from './common.js';
 import words from '../data/one-word-words.json';
 
 const suspectsOf = ctx => ctx.inGame.filter(p => p.id !== ctx.round.master);
@@ -107,7 +107,9 @@ function results(ctx) {
   const roleOf = p => (p.id === round.master ? 'master' : p.id === round.insider ? 'insider' : null);
 
   if (round.timedOut) {
+    const lost = sideResult(ctx, () => false);
     return html`
+      ${endScreen(ctx, { win: lost, title: endTitle(lost, { lost: 'Defeat!', watching: "Time's up!" }), note: 'Nobody guessed the word, so everyone loses.' })}
       <h1 class="center scribble">Time's up!</h1>
       <p class="note center">Nobody guessed it, so everyone loses. Even the Insider!</p>
       <div class="secret wobble"><small>The word was</small><b>${word}</b><small>${insider ? `${insider.name} was the Insider.` : ''}</small></div>
@@ -119,12 +121,15 @@ function results(ctx) {
   const rows = tally(ctx, suspectsOf(ctx), ctx.inGame);
   const top = mostVoted(rows, 1);
   const caught = top.length === 1 && top[0] === round.insider;
+  const win = sideResult(ctx, id => (id === round.insider ? !caught : caught));
+  const headline = caught ? 'Insider caught!' : 'The Insider got away!';
   return voteResults(ctx, rows, {
-    headline: caught ? 'Insider caught!' : 'The Insider got away!',
+    headline,
+    outcome: { win, title: endTitle(win, { won: 'Victory!', lost: 'Defeat!', watching: headline }), note: headline },
     question: 'So, who was the Insider?',
     badge: roleOf,
     mood: p => (p.id === round.insider ? (caught ? 'shock' : 'happy') : null),
-    top: html`${spotlight(insider ? [{ id: round.insider, ...insider }] : [], 'was the Insider!')}
+    top: html`${spotlight(insider ? [{ id: round.insider, ...insider }] : [], 'was the Insider!', caught ? 'shock' : 'happy')}
       <p class="note center">The word was <span class="hl">${word}</span>.</p>`,
     bottom: html`
     <div class="push"></div>

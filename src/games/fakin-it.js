@@ -1,6 +1,6 @@
 import { html, nothing, button, timer, selectField, action, progress, toast } from '../ui.js';
 import { shuffle } from '../room.js';
-import { minutes, counts, startVoting, isTimeUp, voteView, votedCount, tally, mostVoted, voteResults, toResults, revealButton, backToLobbyButton, hostSkip } from './common.js';
+import { minutes, counts, startVoting, isTimeUp, voteView, votedCount, tally, mostVoted, voteResults, toResults, endTitle, sideResult, revealButton, backToLobbyButton, hostSkip } from './common.js';
 
 const overseerOf = (ctx, s) => (ctx.room.players[s.overseer] ? s.overseer : ctx.room.hostId);
 const maxFakers = count => Math.max(1, Math.floor(count / 2));
@@ -148,8 +148,11 @@ function results(ctx) {
   const caught = fakers.filter(id => suspects.includes(id)).length;
   const headline = caught === fakers.length ? 'Faker caught!' : caught > 0 ? 'Some fakers caught!' : 'The faker got away with it!';
 
+  const honestWins = caught === fakers.length;
+  const win = sideResult(ctx, id => (fakers.includes(id) ? !honestWins : honestWins));
   return voteResults(ctx, rows, {
     headline,
+    outcome: { win, title: endTitle(win, { won: 'Victory!', lost: 'Defeat!', watching: headline }), note: headline },
     question: fakers.length > 1 ? 'So, who were the fakers?' : 'So, who was the faker?',
     badge: p => (round.fakers?.[p.id] ? 'faker' : null),
     detail: p => html`<span class="answer">"${round.answers?.[p.id] || 'no answer'}"</span>`,

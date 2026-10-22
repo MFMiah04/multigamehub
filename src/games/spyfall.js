@@ -1,6 +1,6 @@
 import { html, nothing, button, timer, selectField, action } from '../ui.js';
 import { randomItem, shuffle } from '../room.js';
-import { minutes, counts, startVoting, isTimeUp, voteRequestBar, voteRequestsPassed, voteView, votedCount, tally, mostVoted, voteResults, toResults, spotlight, revealButton, backToLobbyButton } from './common.js';
+import { minutes, counts, startVoting, isTimeUp, voteRequestBar, voteRequestsPassed, voteView, votedCount, tally, mostVoted, voteResults, toResults, endScreen, endTitle, sideResult, spotlight, revealButton, backToLobbyButton } from './common.js';
 import locations from '../data/spyfall-locations.json';
 
 const enabledLocations = settings => locations.filter((_, i) => !settings.off?.[i]);
@@ -117,13 +117,16 @@ function results(ctx) {
     ? (spies.length > 1 ? 'Both spies caught!' : 'Spy caught!')
     : caught > 0 ? 'One spy caught, one got away!' : (spies.length > 1 ? 'The spies got away!' : 'The spy got away!');
 
+  const goodWins = caught === spies.length;
+  const win = sideResult(ctx, id => (spies.includes(id) ? !goodWins : goodWins));
   return voteResults(ctx, rows, {
     headline,
+    outcome: { win, title: endTitle(win, { won: 'Victory!', lost: 'Defeat!', watching: headline }), note: headline },
     question: spies.length > 1 ? 'So, who were the spies?' : 'So, who was the spy?',
     badge: p => (round.roles?.[p.id] === 'spy' ? 'spy' : null),
     detail: p => (round.revealed && round.roles?.[p.id] !== 'spy' ? html`<small>${round.roles?.[p.id]}</small>` : nothing),
     mood: p => (round.roles?.[p.id] === 'spy' ? (suspects.includes(p.id) ? 'shock' : 'happy') : null),
-    top: html`${spotlight(ctx.inGame.filter(p => spies.includes(p.id)), spies.length > 1 ? 'were the spies!' : 'was the spy!')}
+    top: html`${spotlight(ctx.inGame.filter(p => spies.includes(p.id)), spies.length > 1 ? 'were the spies!' : 'was the spy!', goodWins ? 'shock' : 'happy')}
       ${round.revealed ? html`<div class="secret wobble pop-in"><small>The location was</small><b>${round.location}</b></div>` : nothing}
       ${revealButton(ctx, round.revealed, 'Reveal the location', 'revealed')}`,
     bottom: html`

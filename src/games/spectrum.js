@@ -1,7 +1,7 @@
 import { svg } from 'lit-html';
 import { html, nothing, button, timer, selectField, action, progress, toast, avatar } from '../ui.js';
 import { shuffle } from '../room.js';
-import { isTimeUp, pickUnused, turnOf, roundsField, secondsOptions, leaderboard, nextOrFinalButton, finalScores, backToLobbyButton, bumpStat, award, plural } from './common.js';
+import { isTimeUp, pickUnused, turnOf, roundsField, secondsOptions, leaderboard, nextOrFinalButton, finalScores, backToLobbyButton, bumpStat, award, plural, endScreen, endTitle, sideResult } from './common.js';
 import spectrums from '../data/spectrums.json';
 import { cue } from '../sound.js';
 
@@ -185,7 +185,9 @@ function teamFinal(ctx) {
   const score = teamScore(ctx);
   const ratio = score / (ctx.round.total * 4);
   const verdict = ratio >= 0.75 ? 'Total mind-readers!' : ratio >= 0.5 ? 'On the same wavelength!' : ratio >= 0.25 ? 'Getting there…' : 'Are you sure you know each other?';
+  const win = sideResult(ctx, () => ratio >= 0.5);
   return html`
+    ${endScreen(ctx, { win, title: endTitle(win, { won: 'Victory!', lost: 'Failure!', watching: `Team score: ${score}` }), note: `${score} out of ${ctx.round.total * 4}. ${verdict}` })}
     <h1 class="center scribble">Team score: ${score}</h1>
     <p class="note center">Out of a possible ${ctx.round.total * 4}. ${verdict}</p>
     <div class="push"></div>

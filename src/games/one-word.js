@@ -1,6 +1,6 @@
 import { html, nothing, button, timer, selectField, action, progress, toast, avatar } from '../ui.js';
 import { shuffle } from '../room.js';
-import { isTimeUp, isGraceOver, normalize, pickUnused, turnOf, roundsField, secondsOptions, backToLobbyButton } from './common.js';
+import { isTimeUp, isGraceOver, normalize, pickUnused, turnOf, roundsField, secondsOptions, backToLobbyButton, endScreen, endTitle, sideResult } from './common.js';
 import words from '../data/one-word-words.json';
 import { cue } from '../sound.js';
 
@@ -230,7 +230,9 @@ function final(ctx) {
   const score = correctCount(round);
   const ratio = score / round.total;
   const verdict = ratio === 1 ? 'Perfect! Are you all reading each other\'s minds?' : ratio >= 0.75 ? 'Amazing teamwork!' : ratio >= 0.5 ? 'Not bad at all!' : ratio > 0 ? 'Room for improvement…' : 'Well, at least you had fun?';
+  const win = sideResult(ctx, () => ratio >= 0.5);
   return html`
+    ${endScreen(ctx, { win, title: endTitle(win, { won: 'Victory!', lost: 'Failure!', watching: `${score} out of ${round.total}` }), note: `${score} out of ${round.total} words. ${verdict}` })}
     <h1 class="center scribble">${score} out of ${round.total}</h1>
     <p class="note center">${verdict}</p>
     <div class="push"></div>
