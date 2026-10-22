@@ -818,3 +818,16 @@ button.quest-card { transition: transform 0.15s; }
 .end-banner__text b { font-size: 30px; line-height: 36px; }
 .end-banner__text small { font-size: 15px; color: var(--ink-soft); }
 @media (prefers-reduced-motion: reduce) { .end-banner, .end-banner .end-art { animation: none; } }
+
+/* ----- drawing board ----- */
+sketch-board { display: block; max-width: 640px; margin: 0 auto; }
+.board__frame { background: #fff; box-shadow: var(--shadow); padding: 0; overflow: hidden; }
+.board__canvas { display: block; width: 100%; touch-action: none; cursor: crosshair; -webkit-user-select: none; user-select: none; }
+.board__tools { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 10px 18px; margin: 14px 0 0; }
+.board__colors, .board__sizes { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 6px; }
+.board__color { width: 30px; height: 30px; border-radius: 50%; border: 2px solid var(--ink); background: var(--c); padding: 0; transition: transform 0.12s; }
+.board__size { display: grid; place-items: center; width: 34px; height: 34px; border-radius: 50%; border: 2px solid var(--ink); background: #fff; padding: 0; }
+.board__size i { display: block; width: var(--d); height: var(--d); border-radius: 50%; background: var(--ink); }
+.board__eraser { height: 34px; padding: 0 10px; border: 2px solid var(--ink); border-radius: 17px; background: #fff; font: inherit; font-size: 15px; }
+.board__color.is-on, .board__size.is-on, .board__eraser.is-on { transform: scale(1.18); box-shadow: 0 0 0 3px var(--paper), 0 0 0 5px var(--ink); }
+.board__stats { margin-top: 6px; font-size: 14px; }

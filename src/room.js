@@ -68,7 +68,7 @@ export function touchRoom(room) {
 }
 
 const deleteRoomUpdates = (code, token) => ({
-  ...(code ? { [`rooms/${code}`]: null } : {}),
+  ...(code ? { [`rooms/${code}`]: null, [`canvases/${code}`]: null } : {}),
   ...(token ? { [`roomIndex/${token}`]: null, [`roomTokens/${token}`]: null } : {}),
 });
 

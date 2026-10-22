@@ -30,6 +30,7 @@ const old = Date.now() - 45 * 60 * 1000;
 await admin('rooms/STAL', 'PUT', { hostId: 'x', phase: 'lobby', token: 'staletoken', players: { x: { name: 'Old' } } });
 await admin('roomTokens/staletoken', 'PUT', 'STAL');
 await admin('roomIndex/staletoken', 'PUT', old);
+await admin('canvases/STAL', 'PUT', { s: { a1: { m: { c: '#222222', w: 0.01, u: 'x' }, k: [{ p: '0000', t: 1 }] } } });
 await admin('rooms/FRSH', 'PUT', { hostId: 'y', phase: 'lobby', token: 'freshtoken', players: { y: { name: 'New' } } });
 await admin('roomTokens/freshtoken', 'PUT', 'FRSH');
 await admin('roomIndex/freshtoken', 'PUT', Date.now());
@@ -43,7 +44,7 @@ await expect('look up the ACTIVE room code', false, () => get(ref(stranger.db, '
 await expect('list every token-to-code mapping', false, () => get(ref(stranger.db, 'roomTokens')));
 await expect('backdate an ACTIVE room to get it deleted', false, () => set(ref(stranger.db, 'roomIndex/freshtoken'), old));
 await expect('delete the ACTIVE room', false, () => update(ref(stranger.db), { 'rooms/FRSH': null, 'roomIndex/freshtoken': null, 'roomTokens/freshtoken': null }));
-await expect('delete the STALE room', true, () => update(ref(stranger.db), { 'rooms/STAL': null, 'roomIndex/staletoken': null, 'roomTokens/staletoken': null }));
+await expect('delete the STALE room (and its drawing)', true, () => update(ref(stranger.db), { 'rooms/STAL': null, 'canvases/STAL': null, 'roomIndex/staletoken': null, 'roomTokens/staletoken': null }));
 
 // The normal host flow still works.
 const host = client('host');
@@ -63,9 +64,15 @@ await new Promise(r => setTimeout(r, 800));
 await expect('send another after a pause', true, () => set(ref(host.db, `rooms/TEST/reactions/${user.uid}`), reaction('fire')));
 await expect('react as someone else', false, () => set(ref(host.db, 'rooms/TEST/reactions/someoneelse'), reaction('clap')));
 await expect('react with made-up junk', false, () => set(ref(host.db, `rooms/TEST/reactions/${user.uid}`), { e: '<script>', n: 'abc', at: serverTimestamp() }));
+// Drawing: room members can add strokes; nobody else can.
+await expect('draw a stroke in your room', true, () => update(ref(host.db), { 'canvases/TEST/s/st1/m': { c: '#222222', w: 0.01, u: user.uid }, 'canvases/TEST/s/st1/k/0': { p: '00aa11bb', t: Date.now() } }));
+await expect('draw as someone else', false, () => set(ref(host.db, 'canvases/TEST/s/st2/m'), { c: '#222222', w: 0.01, u: 'someoneelse' }));
+await expect('draw a huge chunk', false, () => set(ref(host.db, 'canvases/TEST/s/st1/k/1'), { p: 'a'.repeat(5000), t: 1 }));
+await expect('draw in a room you are not in', false, () => set(ref(stranger.db, 'canvases/TEST/s/st3/k/0'), { p: '0000', t: 1 }));
+await expect('wipe another room drawing', false, () => set(ref(stranger.db, 'canvases/TEST'), null));
 await expect('react from outside the room', false, () => set(ref(stranger.db, `rooms/TEST/reactions/${stranger.auth.currentUser.uid}`), reaction('cry')));
 await expect('stranger heartbeat on that room', false, () => set(ref(stranger.db, 'roomIndex/testtoken'), Date.now()));
-await expect('last player leaves (delete everything)', true, () => update(ref(host.db), { 'rooms/TEST': null, 'roomIndex/testtoken': null, 'roomTokens/testtoken': null }));
+await expect('last player leaves (delete everything)', true, () => update(ref(host.db), { 'rooms/TEST': null, 'canvases/TEST': null, 'roomIndex/testtoken': null, 'roomTokens/testtoken': null }));
 
 const left = { stale: await admin('rooms/STAL', 'GET'), fresh: !!(await admin('rooms/FRSH', 'GET')), test: await admin('rooms/TEST', 'GET') };
 console.log('after:', left, failures ? `${failures} FAILED` : 'all passed');
