@@ -1,9 +1,11 @@
 import { html, button, action, toast, confirmDialog, avatar } from '../ui.js';
 import { PARTS, randomLook } from '../avatar.js';
 import { gameList } from '../games/index.js';
+import { randomPlaceholderName } from '../data/placeholder-names.js';
 
 const NAME_KEY = 'mgh:name';
 const LOOK_KEY = 'mgh:look';
+const PLACEHOLDER_NAME = randomPlaceholderName();
 
 function savedLook() {
   try {
@@ -70,7 +72,7 @@ export function homeView({ onHost, onJoin, rerender }) {
       <p class="note center">Party games to play together, on phones or computers. Get everyone in the same room (or on a call) and play.</p>
 
       <label class="line-field"><span>Your name:</span>
-        <input id="name" maxlength="16" autocomplete="nickname" .value=${s.name} placeholder="Mo"
+        <input id="name" maxlength="16" autocomplete="nickname" .value=${s.name} placeholder=${PLACEHOLDER_NAME}
           @keydown=${enter(s.joining ? join : host)}></label>
 
       ${creator(rerender)}
