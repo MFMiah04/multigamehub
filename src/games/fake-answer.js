@@ -5,6 +5,10 @@ import questions from '../data/fake-answer-questions.json';
 
 const TRUTH_POINTS = 1000;
 const FOOL_POINTS = 500;
+const REVEAL_GAP_MS = 2400;
+
+// Every answer is shown in the same Title Case, so the real one can't stand out by its capitals.
+const titleCase = text => String(text).toLowerCase().replace(/(^|[\s(/-])(\p{L})/gu, (_, gap, letter) => gap + letter.toUpperCase());
 
 const isTruth = (ctx, text) => normalize(text) === normalize(questions[ctx.round.q].a);
 const cleanLie = text => text.trim().replace(/\s+/g, ' ').replace(/[.!?]+$/, '').slice(0, 40);
@@ -38,7 +42,7 @@ function scoreRound(ctx) {
     if (pick.truth) delta[p.id] = (delta[p.id] || 0) + TRUTH_POINTS;
     else Object.keys(pick.authors || {}).filter(id => id !== p.id).forEach(id => { delta[id] = (delta[id] || 0) + FOOL_POINTS; });
   });
-  const updates = { phase: 'reveal', 'round/endsAt': null, 'round/delta': delta };
+  const updates = { phase: 'reveal', 'round/endsAt': null, 'round/delta': delta, 'round/revealAt': ctx.now() + 600 };
   Object.entries(delta).forEach(([id, pts]) => { updates[`round/scores/${id}`] = (round.scores?.[id] || 0) + pts; });
   return updates;
 }
@@ -118,7 +122,7 @@ function write(ctx) {
   return html`${header(ctx)}${timer(round.endsAt, 10)}
     <div class="question wobble"><small>Fill in the blank with a believable lie</small>${questionText(ctx)}</div>
     ${mine
-      ? html`<p class="answer-locked wobble">"${mine}"</p>
+      ? html`<p class="answer-locked wobble">"${titleCase(mine)}"</p>
         ${button('Change my lie', action(() => ctx.update({ [`round/lies/${ctx.uid}`]: null })), { kind: 'white' })}`
       : html`<label class="field"><span>Your fake answer</span>
           <input id="lie" class="wobble" maxlength="40" autocomplete="off" placeholder="Make it sound real"
@@ -138,13 +142,14 @@ function pick(ctx) {
       ${(round.options || []).map((o, i) => {
         const own = o.authors?.[ctx.uid];
         return html`<button class="option wobble ${mine === i ? 'option--picked' : ''}" ?disabled=${own} @click=${action(() => choose(i))}>
-          ${o.text}${own ? html`<small>your lie</small>` : nothing}
+          ${titleCase(o.text)}${own ? html`<small>your lie</small>` : nothing}
         </button>`;
       })}
     </div>
     ${progress(picked, ctx.inGame.length, 'have picked')}`;
 }
 
+// Lies are uncovered one at a time, least popular first, and the truth comes last.
 function reveal(ctx, s) {
   const { round } = ctx;
   const truth = questions[round.q].a;
@@ -153,35 +158,44 @@ function reveal(ctx, s) {
     const all = list.map(p => p.name);
     return all.length > 1 ? `${all.slice(0, -1).join(', ')} and ${all.at(-1)}` : all[0] || '';
   };
-  const order = (round.options || []).map((o, i) => ({ ...o, i })).sort((a, b) => (a.truth ? 1 : 0) - (b.truth ? 1 : 0));
+  const order = (round.options || []).map((o, i) => ({ ...o, i, fooled: pickersOf(i) }))
+    .sort((a, b) => (a.truth ? 1 : 0) - (b.truth ? 1 : 0) || a.fooled.length - b.fooled.length);
+  const shown = round.revealAt ? Math.max(0, Math.floor((ctx.now() - round.revealAt) / REVEAL_GAP_MS) + 1) : Infinity;
+  const truthShown = shown >= order.length;
+  const done = shown > order.length;
 
   const next = () => {
     const q = pickUnused(questions, round.used);
     return ctx.update({
       phase: 'write', 'round/no': round.no + 1, 'round/q': q, [`round/used/${q}`]: true,
-      'round/lies': null, 'round/options': null, 'round/picks': null, 'round/delta': null,
+      'round/lies': null, 'round/options': null, 'round/picks': null, 'round/delta': null, 'round/revealAt': null,
       'round/endsAt': ctx.now() + s.writeTime * 1000,
     });
   };
 
   return html`${header(ctx)}
-    <div class="question wobble"><small>The truth</small>${questionText(ctx, truth)}</div>
+    <div class="question wobble ${truthShown ? 'question--solved' : ''}">
+      <small>${truthShown ? 'The truth' : 'Who fell for what?'}</small>${questionText(ctx, truthShown ? titleCase(truth) : '')}
+    </div>
     <div class="results">
-      ${order.map(o => {
-        const fooled = pickersOf(o.i);
+      ${order.slice(0, shown).map(o => {
         const authors = ctx.inGame.filter(p => o.authors?.[p.id]);
-        return html`<div class="result wobble ${o.truth ? 'result--truth' : ''}">
+        const { fooled } = o;
+        return html`<div class="result result--reveal wobble ${o.truth ? 'result--truth' : ''}">
           <div class="result__body">
-            <span><b>${o.text}</b> ${o.truth ? html`<span class="hl">the truth</span>` : nothing}</span>
+            <span><b>${titleCase(o.text)}</b> ${o.truth ? html`<span class="hl">the truth</span>` : nothing}</span>
             <small>${o.truth ? (fooled.length ? `Found by ${names(fooled)}` : 'Nobody found it!') : `${names(authors)}'s lie${fooled.length ? ` fooled ${names(fooled)}` : ' fooled nobody'}`}</small>
           </div>
           ${fooled.length ? html`<span class="pickers">${fooled.map(p => avatar(p, 24))}</span>` : nothing}
         </div>`;
       })}
     </div>
-    <h2 class="section-title">Scores</h2>
-    ${leaderboard(ctx, round.scores, round.delta)}
-    <div class="push"></div>
-    ${nextOrFinalButton(ctx, round, next)}`;
+    ${done
+      ? html`<div class="fade-in">
+          <h2 class="section-title">Scores</h2>
+          ${leaderboard(ctx, round.scores, round.delta)}
+        </div>
+        <div class="push"></div>
+        ${nextOrFinalButton(ctx, round, next)}`
+      : nothing}`;
 }
-
