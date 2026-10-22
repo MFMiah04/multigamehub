@@ -775,3 +775,38 @@ button.quest-card { transition: transform 0.15s; }
 @media (prefers-reduced-motion: reduce) { .nc-stat, .nc-step { animation: none; } }
 .nc-climb { max-width: 420px; margin-left: auto; margin-right: auto; }
 .nc-stats { max-width: 460px; margin-left: auto; margin-right: auto; }
+
+/* ----- end-of-game recaps ----- */
+.ow-rounds, .wl-rounds { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 18px 12px; margin: 14px 0 28px; }
+.ow-round, .wl-round { position: relative; display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 8px 6px; text-align: center; background: #fff; box-shadow: var(--shadow); line-height: 1.2; animation: step-in 0.4s calc(0.5s + var(--i) * 0.1s) cubic-bezier(.2, 1.5, .4, 1) both; }
+.ow-round:nth-child(odd), .wl-round:nth-child(odd) { transform: rotate(-1.5deg); }
+.ow-round:nth-child(even), .wl-round:nth-child(even) { transform: rotate(1.2deg); }
+.ow-round b { font-size: 21px; }
+.ow-round small, .wl-round small { font-size: 13px; color: var(--ink-soft); }
+.ow-round__who { display: flex; align-items: center; gap: 3px; }
+.ow-round--yes { background: var(--mint); }
+.ow-round--no { background: #f1eee8; }
+.ow-round__mark { position: absolute; top: -12px; right: -6px; font-size: 26px; font-weight: 700; line-height: 1; }
+.ow-round--yes .ow-round__mark { color: #1f8a4c; }
+.ow-round--no .ow-round__mark { color: #d23c5f; }
+.mini-dial { width: 100%; max-width: 120px; height: auto; margin: 4px 0; }
+.wl-round b { font-size: 16px; }
+.wl-round__pts { font-weight: 700; font-size: 18px; }
+.wl-round__pts--4 { color: #d23c5f; }
+.wl-round__pts--0 { color: var(--ink-soft); }
+.sync-chain { display: flex; flex-direction: column; align-items: center; gap: 2px; margin: 14px 0; }
+.sync-chain__row { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 6px; padding: 6px 10px; background: #fff; box-shadow: var(--shadow); line-height: 1.2; animation: step-in 0.35s calc(var(--i) * 0.08s) cubic-bezier(.2, 1.5, .4, 1) both; }
+.sync-chain__row small { width: 100%; text-align: center; font-size: 12px; color: var(--ink-soft); }
+.sync-chain__row--synced { background: var(--lime); transform: scale(1.06) rotate(-1deg); }
+.sync-chain__arrow { font-size: 18px; line-height: 20px; color: var(--ink-soft); }
+.sync-chip { display: inline-flex; align-items: center; gap: 4px; padding: 0 8px; border: 1.5px solid var(--ink); border-radius: 12px; background: #fff; font-size: 15px; line-height: 24px; }
+.quest-recap { display: flex; flex-direction: column; gap: 12px; margin: 14px 0 28px; }
+.quest-recap__row { display: flex; align-items: center; gap: 12px; padding: 6px 12px; background: #fff; box-shadow: var(--shadow); animation: step-in 0.4s calc(0.4s + var(--i) * 0.12s) cubic-bezier(.2, 1.5, .4, 1) both; }
+.quest-recap__row--fail { background: #ffe1e8; }
+.quest-recap__row--success { background: #e3f8ea; }
+.quest-recap__row .quest { flex: none; }
+.quest-recap__team { display: flex; flex: 1; flex-wrap: wrap; gap: 2px; }
+.quest-recap__member--evil { border-radius: 50%; box-shadow: 0 0 0 2px #d23c5f; }
+.quest-recap__row small { color: var(--ink-soft); white-space: nowrap; }
+@media (prefers-reduced-motion: reduce) { .ow-round, .wl-round, .sync-chain__row, .quest-recap__row { animation: none; } }
+.spotlight__caption { padding: 0 10px; border-radius: 10px; background: #fff6c2; }

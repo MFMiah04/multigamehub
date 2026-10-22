@@ -150,10 +150,11 @@ export default {
       if (team.length && team.every(id => round.plays?.[id])) {
         const cards = shuffle(team.map(id => round.plays[id]));
         const fails = cards.filter(c => c === 'F').length;
-  if (round.revealAt && shown > 0) cue(`av:${round.revealAt}:${shown}`, cards[shown - 1] === 'F' ? 'buzz' : 'pop', { at: round.revealAt + (shown - 1) * CARD_GAP_MS, now: ctx.now() });
-  if (round.revealAt && done) cue(`av:${round.revealAt}:done`, round.questFailed ? 'sad' : 'ding');
         const failed = fails >= (needsTwoFails(round.playerCount, round.quest) ? 2 : 1);
-        return { phase: 'reveal', 'round/cards': cards, 'round/questFailed': failed, 'round/revealAt': ctx.now() + 1200, 'round/plays': null };
+        return {
+          phase: 'reveal', 'round/cards': cards, 'round/questFailed': failed, 'round/revealAt': ctx.now() + 1200, 'round/plays': null,
+          [`round/questLog/${round.quest}`]: { team: Object.fromEntries(team.map(id => [id, true])), fails },
+        };
       }
     }
     return null;
@@ -299,6 +300,8 @@ function reveal(ctx) {
   const shown = Math.max(0, Math.min(cards.length, Math.floor(elapsed / CARD_GAP_MS) + 1));
   const done = elapsed > cards.length * CARD_GAP_MS + 600;
   const fails = cards.filter(c => c === 'F').length;
+  if (round.revealAt && shown > 0) cue(`av:${round.revealAt}:${shown}`, cards[shown - 1] === 'F' ? 'buzz' : 'pop', { at: round.revealAt + (shown - 1) * CARD_GAP_MS, now: ctx.now() });
+  if (round.revealAt && done) cue(`av:${round.revealAt}:done`, round.questFailed ? 'sad' : 'ding');
 
   const carryOn = () => {
     const quests = { ...(round.quests || {}), [round.quest]: round.questFailed ? 'fail' : 'success' };
@@ -348,6 +351,26 @@ function assassin(ctx) {
       : html`<div class="waiting-card wobble">${avatar(assassinPlayer, 28)}<b>${assassinPlayer.name} is the Assassin</b><small>Evil can talk it over. One guess at Merlin decides the game.</small></div>`}`;
 }
 
+// Each quest that went out: who was on it, and how many Fail cards were slipped in.
+function questRecap(ctx) {
+  const { round } = ctx;
+  const rows = Object.entries(round.questLog || {}).sort((a, b) => a[0] - b[0]);
+  if (!rows.length) return nothing;
+  const roles = round.roles || {};
+  return html`<h3 class="section-title">The quests</h3>
+    <div class="quest-recap">
+      ${rows.map(([q, log], i) => {
+        const result = round.quests?.[q];
+        const team = Object.keys(log.team || {}).filter(id => ctx.room.players[id]);
+        return html`<div class="quest-recap__row wobble quest-recap__row--${result || 'none'}" style="--i: ${i}">
+          <span class="quest wobble ${result ? `quest--${result}` : ''}">${result === 'success' ? '✓' : result === 'fail' ? '✗' : q}</span>
+          <span class="quest-recap__team">${team.map(id => html`<span class="quest-recap__member ${isEvil(roles[id]) ? 'quest-recap__member--evil' : ''}" title=${ctx.room.players[id].name}>${avatar(ctx.room.players[id], 28)}</span>`)}</span>
+          <small>${log.fails ? `${log.fails} Fail card${log.fails === 1 ? '' : 's'}` : 'All Success'}</small>
+        </div>`;
+      })}
+    </div>`;
+}
+
 function over(ctx) {
   const { round } = ctx;
   const roles = round.roles || {};
@@ -364,6 +387,8 @@ function over(ctx) {
     ${endScreen(ctx, { win, title: endTitle(win, { won: 'Victory!', lost: 'Defeat!', watching: goodWins ? 'Good wins!' : 'Evil wins!' }), note: `${goodWins ? 'Good wins!' : 'Evil wins!'} ${why}` })}
     <h1 class="center scribble">${goodWins ? 'Good wins!' : 'Evil wins!'}</h1>
     <p class="note center">${why}</p>
+    ${questRecap(ctx)}
+    <h3 class="section-title">Who was who</h3>
     <div class="role-list">
       ${everyone.map(id => html`<div class="result wobble ${isEvil(roles[id]) ? 'result--marked' : 'result--truth'}">
         ${roleArt(roles[id], 40)}

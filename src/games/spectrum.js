@@ -19,6 +19,11 @@ function scoreRound(ctx) {
   guessers.forEach(p => { delta[p.id] = pointsFor(round.guesses[p.id], round.target); });
   if (guessers.length) delta[round.psychic] = Math.round(guessers.reduce((sum, p) => sum + delta[p.id], 0) / guessers.length);
   const updates = { phase: 'reveal', 'round/endsAt': null, 'round/delta': delta };
+  // Kept for the end-of-game recap.
+  updates[`round/history/${round.no}`] = {
+    card: round.card, target: round.target, clue: round.clue || '', psychic: round.psychic,
+    guesses: Object.fromEntries(guessers.map(p => [p.id, round.guesses[p.id]])),
+  };
   guessers.forEach(p => bumpStat(updates, round, p.id, delta[p.id] === 4 ? 'bullseyes' : delta[p.id] === 0 ? 'misses' : 'near'));
   if (guessers.length && delta[round.psychic]) bumpStat(updates, round, round.psychic, 'psychic', delta[round.psychic]);
   Object.entries(delta).forEach(([id, pts]) => { if (pts) updates[`round/scores/${id}`] = (round.scores?.[id] || 0) + pts; });
@@ -181,6 +186,36 @@ const header = ctx => html`<p class="note center">Round ${ctx.round.no} of ${ctx
 const isTeam = ctx => ctx.inGame.length === 2;
 const teamScore = ctx => Math.max(0, ...ctx.inGame.map(p => ctx.round.scores?.[p.id] || 0));
 
+// A small dial for each round: the bullseye, where the guess landed, and the points.
+function miniDial(target, guess) {
+  const zones = BANDS.slice().reverse().map(([w, pts]) => [clamp(target - w), clamp(target + w), pts]).filter(([a, b]) => b - a > 0.5);
+  const [gx, gy] = guess === undefined ? [] : point(guess, R - 6);
+  return html`<svg class="mini-dial" viewBox="0 0 ${W} ${H}" aria-hidden="true">${svg`
+    <path d=${wedge(0, 100)} fill="#fff" stroke="#222" stroke-width="7" stroke-linejoin="round" />
+    ${zones.map(([a, b, pts]) => svg`<path d=${wedge(a, b)} fill=${BAND_FILL[pts]} />`)}
+    ${guess === undefined ? nothing : svg`<path d="M${CX} ${CY} L${gx} ${gy}" stroke="#d23c5f" stroke-width="9" stroke-linecap="round" />`}
+    <path d="M${CX - R - 6} ${CY} H${CX + R + 6}" stroke="#222" stroke-width="7" stroke-linecap="round" />
+    <circle cx=${CX} cy=${CY} r="14" fill="#ffe066" stroke="#222" stroke-width="6" />`}</svg>`;
+}
+
+function roundDials(ctx) {
+  const rows = Object.entries(ctx.round.history || {}).sort((a, b) => a[0] - b[0]);
+  if (!rows.length) return nothing;
+  return html`<div class="wl-rounds">
+    ${rows.map(([no, r], i) => {
+      const guess = Object.values(r.guesses || {})[0];
+      const pts = guess === undefined ? 0 : pointsFor(guess, r.target);
+      const [left, right] = spectrums[r.card] || ['', ''];
+      return html`<div class="wl-round wobble" style="--i: ${i}">
+        <small>${left} ↔ ${right}</small>
+        ${miniDial(r.target, guess)}
+        <b>"${r.clue}"</b>
+        <span class="wl-round__pts wl-round__pts--${pts}">${pts === 4 ? 'Bullseye! ' : ''}+${pts}</span>
+      </div>`;
+    })}
+  </div>`;
+}
+
 function teamFinal(ctx) {
   const score = teamScore(ctx);
   const ratio = score / (ctx.round.total * 4);
@@ -188,8 +223,9 @@ function teamFinal(ctx) {
   const win = sideResult(ctx, () => ratio >= 0.5);
   return html`
     ${endScreen(ctx, { win, title: endTitle(win, { won: 'Victory!', lost: 'Failure!', watching: `Team score: ${score}` }), note: `${score} out of ${ctx.round.total * 4}. ${verdict}` })}
-    <h1 class="center scribble">Team score: ${score}</h1>
+    <h1 class="center scribble pop-in">Team score: ${score}</h1>
     <p class="note center">Out of a possible ${ctx.round.total * 4}. ${verdict}</p>
+    ${roundDials(ctx)}
     <div class="push"></div>
     ${ctx.isHost ? button('Play again', action(ctx.startGame)) : nothing}
     ${backToLobbyButton(ctx)}`;

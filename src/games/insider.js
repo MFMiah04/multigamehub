@@ -110,9 +110,10 @@ function results(ctx) {
     const lost = sideResult(ctx, () => false);
     return html`
       ${endScreen(ctx, { win: lost, title: endTitle(lost, { lost: 'Defeat!', watching: "Time's up!" }), note: 'Nobody guessed the word, so everyone loses.' })}
-      <h1 class="center scribble">Time's up!</h1>
+      <h1 class="center scribble pop-in">Time's up!</h1>
       <p class="note center">Nobody guessed it, so everyone loses. Even the Insider!</p>
-      <div class="secret wobble"><small>The word was</small><b>${word}</b><small>${insider ? `${insider.name} was the Insider.` : ''}</small></div>
+      ${spotlight(insider ? [{ id: round.insider, ...insider }] : [], 'was the Insider!', 'sad')}
+      <div class="secret wobble pop-in"><small>The word was</small><b>${word}</b></div>
       <div class="push"></div>
       ${ctx.isHost ? button('Play again', action(ctx.startGame)) : nothing}
       ${backToLobbyButton(ctx)}`;

@@ -1,6 +1,6 @@
 import { html, nothing, button, timer, selectField, action, playerTag } from '../ui.js';
 import { randomItem, shuffle } from '../room.js';
-import { minutes, counts, startVoting, isTimeUp, voteRequestBar, voteRequestsPassed, voteView, votedCount, tally, mostVoted, voteResults, toResults, endTitle, sideResult, revealButton, backToLobbyButton } from './common.js';
+import { minutes, counts, startVoting, isTimeUp, voteRequestBar, voteRequestsPassed, voteView, votedCount, tally, mostVoted, voteResults, toResults, endTitle, sideResult, spotlight, revealButton, backToLobbyButton } from './common.js';
 import words from '../data/imposter-words.json';
 
 const maxImposters = count => Math.max(1, Math.floor((count - 1) / 2));
@@ -103,7 +103,8 @@ function results(ctx) {
     badge: p => (round.imposters?.[p.id] ? 'imposter' : null),
     detail: p => (round.revealed && round.imposters?.[p.id] ? html`<small>Hint: ${round.imposters[p.id]}</small>` : nothing),
     mood: p => (round.imposters?.[p.id] ? (suspects.includes(p.id) ? 'shock' : 'happy') : null),
-    top: html`${round.revealed ? html`<div class="secret wobble pop-in"><small>The word was</small><b>${round.word}</b></div>` : nothing}
+    top: html`${spotlight(ctx.inGame.filter(p => imposters.includes(p.id)), imposters.length > 1 ? 'were the imposters!' : 'was the imposter!', crewWins ? 'shock' : 'happy')}
+      ${round.revealed ? html`<div class="secret wobble pop-in"><small>The word was</small><b>${round.word}</b></div>` : nothing}
       ${revealButton(ctx, round.revealed, 'Reveal the word', 'revealed')}`,
     bottom: html`
     <div class="push"></div>

@@ -96,11 +96,22 @@ const wordCards = (list, face = 'up') => html`<div class="clue-grid">
     </div>`)}
 </div>`;
 
-function history(ctx, upTo) {
+// Every round so far as a row of little word chips, arrows between them, ending on the match if you synced.
+function history(ctx, upTo, final) {
   const rows = Object.entries(ctx.round.history || {}).filter(([no]) => +no <= upTo).sort((a, b) => a[0] - b[0]);
+  if (final) rows.push([String(ctx.round.no), ctx.round.words || {}]);
   if (!rows.length) return nothing;
-  return html`<h3 class="section-title">The story so far</h3>
-    <ol class="sync-history">${rows.map(([, words]) => html`<li>${wordsOf(ctx, words).map(w => w.word || '…').join(' · ')}</li>`)}</ol>`;
+  return html`<h3 class="section-title">${final ? 'How you got there' : 'The story so far'}</h3>
+    <div class="sync-chain">
+      ${rows.map(([no, words], i) => {
+        const synced = final && ctx.round.synced && i === rows.length - 1;
+        return html`${i ? html`<span class="sync-chain__arrow" aria-hidden="true">↓</span>` : nothing}
+          <div class="sync-chain__row ${synced ? 'sync-chain__row--synced' : ''}" style="--i: ${i}">
+            <small>${synced ? 'Synced!' : `Round ${no}`}</small>
+            ${wordsOf(ctx, words).map(({ player, word }) => html`<span class="sync-chip">${avatar(player, 16)} ${word || '…'}</span>`)}
+          </div>`;
+      })}
+    </div>`;
 }
 
 function write(ctx) {
@@ -180,7 +191,7 @@ function reveal(ctx, s) {
     <h1 class="center scribble pop-in">${headline}</h1>
     <p class="note center">${note}</p>
     ${wordCards(words, round.revealAt && ctx.now() - round.revealAt < 4000 ? 'flip' : 'up')}
-    ${history(ctx, round.no - 1)}
+    ${history(ctx, round.no - 1, finished)}
     <div class="push"></div>
     ${round.synced || outOfRounds
       ? html`${ctx.isHost ? button('Play again', action(ctx.startGame)) : nothing}${backToLobbyButton(ctx)}`

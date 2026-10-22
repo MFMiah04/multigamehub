@@ -1,6 +1,6 @@
 import { html, nothing, button, timer, selectField, action, progress, toast } from '../ui.js';
 import { shuffle } from '../room.js';
-import { minutes, counts, startVoting, isTimeUp, voteView, votedCount, tally, mostVoted, voteResults, toResults, endTitle, sideResult, revealButton, backToLobbyButton, hostSkip } from './common.js';
+import { minutes, counts, startVoting, isTimeUp, voteView, votedCount, tally, mostVoted, voteResults, toResults, endTitle, sideResult, spotlight, revealButton, backToLobbyButton, hostSkip } from './common.js';
 
 const overseerOf = (ctx, s) => (ctx.room.players[s.overseer] ? s.overseer : ctx.room.hostId);
 const maxFakers = count => Math.max(1, Math.floor(count / 2));
@@ -157,7 +157,8 @@ function results(ctx) {
     badge: p => (round.fakers?.[p.id] ? 'faker' : null),
     detail: p => html`<span class="answer">"${round.answers?.[p.id] || 'no answer'}"</span>`,
     mood: p => (round.fakers?.[p.id] ? (suspects.includes(p.id) ? 'shock' : 'happy') : null),
-    top: html`${round.revealed ? html`
+    top: html`${spotlight(players.filter(p => fakers.includes(p.id)), fakers.length > 1 ? 'were faking it!' : 'was faking it!', honestWins ? 'shock' : 'happy')}
+      ${round.revealed ? html`
         <div class="question wobble pop-in"><small>Real question</small>${round.questions?.real}</div>
         <div class="question wobble question--fake pop-in"><small>Faker's question</small>${round.questions?.fake}</div>` : nothing}
       ${revealButton(ctx, round.revealed, 'Reveal the questions', 'revealed')}`,

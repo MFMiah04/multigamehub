@@ -205,12 +205,15 @@ function reveal(ctx, s) {
   const next = () => {
     const nextWord = pickUnused(words, round.used);
     return ctx.update({
+      ...record,
       phase: 'clues', 'round/no': round.no + 1, 'round/guesser': turnOf(ctx, round.order, round.no + 1),
       'round/word': nextWord, [`round/used/${nextWord}`]: true, 'round/clues': null, 'round/cancelled': null,
       'round/guess': null, 'round/correct': null, 'round/flipAt': null, 'round/endsAt': ctx.now() + s.clueTime * 1000,
     });
   };
   const countIt = () => ctx.update({ 'round/correct': true, [`round/results/${round.no}`]: true });
+  // Each round is written into the history as it ends, for the final screen.
+  const record = { [`round/history/${round.no}`]: { word: round.word, guesser: round.guesser, guess: round.guess || '', correct: !!round.correct } };
   const headline = round.correct ? 'Got it!' : round.guess ? 'Not quite!' : 'Passed!';
   cue(`ow:${round.word}:${round.no}:${round.correct ? 'yes' : 'no'}`, round.correct ? 'ding' : round.guess ? 'buzz' : 'sad');
   return html`${header(ctx)}
@@ -221,8 +224,25 @@ function reveal(ctx, s) {
     ${clueChips(ctx, { showCancelled: true })}
     <div class="push"></div>
     ${ctx.isHost
-      ? (round.no < round.total ? button('Next round', action(next)) : button('See the final score', action(() => ctx.update({ phase: 'final' }))))
+      ? (round.no < round.total ? button('Next round', action(next)) : button('See the final score', action(() => ctx.update({ ...record, phase: 'final' }))))
       : html`<p class="note center">Waiting for the host…</p>`}`;
+}
+
+// Every round as a card: the word, a tick or a cross, and who was guessing.
+function roundCards(ctx) {
+  const rows = Object.entries(ctx.round.history || {}).sort((a, b) => a[0] - b[0]);
+  if (!rows.length) return nothing;
+  return html`<div class="ow-rounds">
+    ${rows.map(([no, r], i) => {
+      const guesser = ctx.room.players[r.guesser];
+      return html`<div class="ow-round wobble ${r.correct ? 'ow-round--yes' : 'ow-round--no'}" style="--i: ${i}">
+        <span class="ow-round__mark">${r.correct ? '✓' : '✗'}</span>
+        <small>Round ${no}</small>
+        <b>${words[r.word]}</b>
+        <small class="ow-round__who">${guesser ? avatar(guesser, 18) : nothing} ${r.correct ? `${guesser?.name || 'Someone'} got it` : r.guess ? `guessed "${r.guess}"` : 'passed'}</small>
+      </div>`;
+    })}
+  </div>`;
 }
 
 function final(ctx) {
@@ -233,8 +253,9 @@ function final(ctx) {
   const win = sideResult(ctx, () => ratio >= 0.5);
   return html`
     ${endScreen(ctx, { win, title: endTitle(win, { won: 'Victory!', lost: 'Failure!', watching: `${score} out of ${round.total}` }), note: `${score} out of ${round.total} words. ${verdict}` })}
-    <h1 class="center scribble">${score} out of ${round.total}</h1>
+    <h1 class="center scribble pop-in">${score} out of ${round.total}</h1>
     <p class="note center">${verdict}</p>
+    ${roundCards(ctx)}
     <div class="push"></div>
     ${ctx.isHost ? button('Play again', action(ctx.startGame)) : nothing}
     ${backToLobbyButton(ctx)}`;
