@@ -1,7 +1,7 @@
 // Checks database.rules.json against the local emulator (run "npm run emulators" first, then "npm run test:rules").
 import { initializeApp } from 'firebase/app';
 import { getAuth, connectAuthEmulator, signInAnonymously } from 'firebase/auth';
-import { getDatabase, connectDatabaseEmulator, ref, get, set, update, query, orderByValue, endAt, limitToFirst } from 'firebase/database';
+import { getDatabase, connectDatabaseEmulator, ref, get, set, update, query, orderByValue, endAt, limitToFirst, serverTimestamp } from 'firebase/database';
 
 const ADMIN = 'http://127.0.0.1:9000';
 const NS = 'demo-multigamehub-default-rtdb';
@@ -54,6 +54,16 @@ await expect('create a room with token and index', true, () => update(ref(host.d
   'roomIndex/testtoken': Date.now(),
 }));
 await expect('host heartbeat', true, () => set(ref(host.db, 'roomIndex/testtoken'), Date.now()));
+
+// Reactions: one slot per player, no faster than one every 0.7 seconds.
+const reaction = e => ({ e, n: Math.random().toString(36).slice(2, 10), at: serverTimestamp() });
+await expect('send a reaction', true, () => set(ref(host.db, `rooms/TEST/reactions/${user.uid}`), reaction('laugh')));
+await expect('send another straight away (too fast)', false, () => set(ref(host.db, `rooms/TEST/reactions/${user.uid}`), reaction('fire')));
+await new Promise(r => setTimeout(r, 800));
+await expect('send another after a pause', true, () => set(ref(host.db, `rooms/TEST/reactions/${user.uid}`), reaction('fire')));
+await expect('react as someone else', false, () => set(ref(host.db, 'rooms/TEST/reactions/someoneelse'), reaction('clap')));
+await expect('react with made-up junk', false, () => set(ref(host.db, `rooms/TEST/reactions/${user.uid}`), { e: '<script>', n: 'abc', at: serverTimestamp() }));
+await expect('react from outside the room', false, () => set(ref(stranger.db, `rooms/TEST/reactions/${stranger.auth.currentUser.uid}`), reaction('cry')));
 await expect('stranger heartbeat on that room', false, () => set(ref(stranger.db, 'roomIndex/testtoken'), Date.now()));
 await expect('last player leaves (delete everything)', true, () => update(ref(host.db), { 'rooms/TEST': null, 'roomIndex/testtoken': null, 'roomTokens/testtoken': null }));
 

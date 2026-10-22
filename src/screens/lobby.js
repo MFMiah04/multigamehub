@@ -1,5 +1,6 @@
 import qrcode from 'qrcode-generator';
 import { unsafeHTML } from 'lit-html/directives/unsafe-html.js';
+import { repeat } from 'lit-html/directives/repeat.js';
 import { html, nothing, button, action, avatar, toast, confirmDialog } from '../ui.js';
 import { kickPlayer } from '../room.js';
 import { gameList } from '../games/index.js';
@@ -31,6 +32,16 @@ function qrSvg(text) {
   qr.addData(text);
   qr.make();
   return qr.createSvgTag({ cellSize: 4, margin: 2, scalable: true });
+}
+
+// Games you can play with this many people come first; the rest are greyed out at the end.
+function byPlayable(count) {
+  const rated = gameList.map(game => {
+    const [min, max] = (game.players.match(/\d+/g) || []).map(Number);
+    const problem = count < min ? `needs ${min - count} more` : max && count > max ? `${max} players max` : null;
+    return { game, problem };
+  });
+  return [...rated.filter(r => !r.problem), ...rated.filter(r => r.problem)];
 }
 
 export function lobbyView(ctx) {
@@ -65,7 +76,7 @@ export function lobbyView(ctx) {
 
     <h2 class="section-title">Players <small>(${ctx.players.length})</small></h2>
     <div class="lineup">
-      ${ctx.players.map(p => html`<div class="lineup__player ${p.online === false ? 'lineup__player--away' : ''}">
+      ${repeat(ctx.players, p => p.id, p => html`<div class="lineup__player ${p.online === false ? 'lineup__player--away' : ''}">
         ${avatar(p, 56)}
         <span>${p.name}${p.id === ctx.uid ? ' (you)' : ''}</span>
         ${p.id === room.hostId ? html`<small class="hl">host</small>` : nothing}
@@ -76,9 +87,9 @@ export function lobbyView(ctx) {
 
     <h2 class="section-title">${isHost ? 'Pick a game' : 'The game'}</h2>
     <div class="notes">
-      ${gameList.map(g => html`<div class="sticky sticky--${g.color} wobble ${room.game === g.id ? 'sticky--picked' : ''} ${!isHost && room.game !== g.id ? 'sticky--faded' : ''}">
+      ${byPlayable(ctx.players.length).map(({ game: g, problem }) => html`<div class="sticky sticky--${g.color} wobble ${room.game === g.id ? 'sticky--picked' : ''} ${!isHost && room.game !== g.id ? 'sticky--faded' : ''} ${problem ? 'sticky--unplayable' : ''}">
         <button class="sticky__pick" ?disabled=${!isHost} @click=${action(() => pickGame(g))}>
-          <b>${g.name}</b>${g.art}<small>${g.players} players</small>
+          <b>${g.name}</b>${g.art}<small>${problem || `${g.players} players`}</small>
         </button>
         <button class="sticky__rules" @click=${() => showRules(g)}>how to play</button>
       </div>`)}

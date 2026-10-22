@@ -104,13 +104,13 @@ export async function leaveRoom(room, uid) {
   await stopPresence(room.code, uid);
   const others = sortedPlayers(room).filter(p => p.id !== uid);
   if (others.length === 0) return update(ref(db), deleteRoomUpdates(room.code, room.token));
-  const updates = { [`players/${uid}`]: null };
+  const updates = { [`players/${uid}`]: null, [`reactions/${uid}`]: null };
   if (room.hostId === uid) updates.hostId = (others.find(p => p.online) || others[0]).id;
   return update(roomRef(room.code), updates);
 }
 
 export function kickPlayer(room, uid) {
-  return update(roomRef(room.code), { [`players/${uid}`]: null, [`kicked/${uid}`]: true });
+  return update(roomRef(room.code), { [`players/${uid}`]: null, [`reactions/${uid}`]: null, [`kicked/${uid}`]: true });
 }
 
 export function sortedPlayers(room) {

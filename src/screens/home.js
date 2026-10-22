@@ -1,4 +1,4 @@
-import { html, button, action, toast, confirmDialog, avatar } from '../ui.js';
+import { html, nothing, button, action, toast, confirmDialog, avatar } from '../ui.js';
 import { PARTS, randomLook } from '../avatar.js';
 import { gameList } from '../games/index.js';
 import { randomPlaceholderName } from '../data/placeholder-names.js';
@@ -54,7 +54,7 @@ function creator(rerender) {
   </section>`;
 }
 
-export function homeView({ onHost, onJoin, rerender }) {
+export function homeView({ onHost, onJoin, rerender, rejoin, onRejoin, onForget }) {
   const s = homeState;
   const host = async () => { const name = readName(); if (name) await onHost(name, s.look); };
   const join = async () => {
@@ -70,6 +70,12 @@ export function homeView({ onHost, onJoin, rerender }) {
     <main class="page home">
       <h1 class="title">MultigameHub</h1>
       <p class="note center">Party games to play together, on phones or computers. Get everyone in the same room (or on a call) and play.</p>
+
+      ${rejoin ? html`<div class="rejoin wobble">
+        <span>You're still in room <b>${rejoin.code}</b>${rejoin.where ? html` <small>(${rejoin.where})</small>` : nothing}</span>
+        ${button('Jump back in', action(onRejoin), { kind: 'mint', small: true })}
+        <button class="kick rejoin__close" aria-label="Hide this" @click=${onForget}>×</button>
+      </div>` : nothing}
 
       <label class="line-field"><span>Your name:</span>
         <input id="name" maxlength="16" autocomplete="nickname" .value=${s.name} placeholder=${PLACEHOLDER_NAME}

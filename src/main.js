@@ -1,5 +1,6 @@
 import { render } from 'lit-html';
 import { soundControl } from './sound.js';
+import { reactionBar, reactionLayer } from './reactions.js';
 import { onValue, get, update } from 'firebase/database';
 import { signIn, serverNow } from './firebase.js';
 import { roomRef, createRoom, joinRoom, leaveRoom, trackPresence, stopPresence, sortedPlayers, claimHostIfNeeded, touchRoom } from './room.js';
@@ -11,7 +12,9 @@ import { lobbyView, copyCode, copyInviteLink } from './screens/lobby.js';
 import './styles.css';
 
 const app = document.getElementById('app');
-const state = { uid: null, code: null, room: null, loading: true };
+const state = { uid: null, code: null, room: null, loading: true, rejoin: null };
+// The room you were last in, so closing the tab doesn't strand you.
+const LAST_ROOM_KEY = 'mgh:lastRoom';
 let stopRoom = null;
 let stopPresenceTracking = null;
 let leaving = false;
@@ -42,10 +45,32 @@ async function boot() {
     homeState.code = code;
   }
   rerender();
+  if (!code) checkLastRoom();
+}
+
+// If you closed the tab while in a room and you're still in it, offer a way back.
+async function checkLastRoom() {
+  let code = null;
+  try { code = localStorage.getItem(LAST_ROOM_KEY); } catch { /* no storage */ }
+  if (!code || !/^[A-Z]{4}$/.test(code)) return;
+  try {
+    const [me, game, phase] = await Promise.all(['players/' + state.uid, 'game', 'phase'].map(path => get(roomRef(code, path))));
+    if (!me.exists()) return forgetLastRoom();
+    if (state.room) return;
+    state.rejoin = { code, where: phase.val() === 'lobby' ? 'in the lobby' : games[game.val()]?.name ? `playing ${games[game.val()].name}` : null };
+    rerender();
+  } catch { /* the room may have been cleaned up */ }
+}
+
+function forgetLastRoom() {
+  state.rejoin = null;
+  try { localStorage.removeItem(LAST_ROOM_KEY); } catch { /* no storage */ }
 }
 
 function enterRoom(code) {
   state.code = code;
+  state.rejoin = null;
+  try { localStorage.setItem(LAST_ROOM_KEY, code); } catch { /* no storage */ }
   history.replaceState(null, '', `/?room=${code}`);
   stopPresenceTracking = trackPresence(code, state.uid);
   stopRoom = onValue(roomRef(code), snap => {
@@ -60,6 +85,7 @@ function enterRoom(code) {
 }
 
 function exitRoom(message) {
+  forgetLastRoom();
   stopRoom?.();
   stopPresenceTracking?.();
   if (state.code) stopPresence(state.code, state.uid);
@@ -124,6 +150,9 @@ function rerender() {
   if (!state.room) {
     render(homeView({
       rerender,
+      rejoin: state.rejoin,
+      onRejoin: () => enterRoom(state.rejoin.code),
+      onForget: () => { forgetLastRoom(); rerender(); },
       onHost: async (name, look) => enterRoom(await createRoom(state.uid, name, look)),
       onJoin: async (code, name, look) => {
         const problem = await joinRoom(code, state.uid, name, look);
@@ -150,7 +179,9 @@ function roomView(ctx) {
     <main class="page room ${game && !inLobby ? `room--${game.color}` : ''}">
       ${roomHeader(ctx, inLobby)}
       ${body}
-    </main>`;
+    </main>
+    ${reactionLayer(ctx)}
+    ${reactionBar(ctx)}`;
 }
 
 function roomHeader(ctx, inLobby) {

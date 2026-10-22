@@ -10,6 +10,15 @@
             ".write": "auth != null && auth.uid === $uid && root.child('rooms').child($code).child('hostId').exists() && !root.child('rooms').child($code).child('kicked').child($uid).exists()",
             "name": { ".validate": "newData.isString() && newData.val().length >= 2 && newData.val().length <= 16" }
           }
+        },
+        "reactions": {
+          "$uid": {
+            ".validate": "$uid === auth.uid && newData.hasChildren(['e', 'n', 'at']) && newData.child('e').isString() && newData.child('e').val().matches(/^[a-z]{2,8}$/) && newData.child('n').isString() && newData.child('n').val().matches(/^[a-z0-9]{1,10}$/) && newData.child('at').val() === now && (!data.exists() || now - data.child('at').val() >= 700)",
+            "e": { ".validate": true },
+            "n": { ".validate": true },
+            "at": { ".validate": true },
+            "$other": { ".validate": false }
+          }
         }
       }
     },
