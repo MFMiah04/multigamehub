@@ -7,9 +7,6 @@ const SKIN = '#ffd6a5';
 const BLUE = '#9ad0f5';
 // A teardrop with its point at the top, turned to fly off the face.
 const TEAR = 'M0 -7 C3.5 -1.5, 4.5 2.5, 3.2 4.8 C1.8 7.2, -1.8 7.2, -3.2 4.8 C-4.5 2.5, -3.5 -1.5, 0 -7 Z';
-// A hand with fingers up and thumb out to the left. The clap uses it twice, the back one mirrored.
-const HAND = 'M6.5 18 L6.5 -11 C6.5 -18, -6.5 -18, -6.5 -11 L-6.5 -1.5 C-9 -5.5, -14 -4, -12.8 0.5 C-11.8 4, -9 7, -6.5 10 L-6.5 18 Z';
-const FINGERS = 'M-3 -15.8 L-3 -7 M0 -16.4 L0 -7 M3 -15.8 L3 -7';
 const dot = (x, y, r = 2.4) => svg`<circle cx=${x} cy=${y} r=${r} fill="#222" stroke="none" />`;
 
 const ART = {
@@ -28,15 +25,11 @@ const ART = {
     ${dot(17, 19.5, 1.8)}${dot(31, 19.5, 1.8)}
     <ellipse cx="24" cy="33" rx="4.5" ry="6.5" fill="#fff" />`,
 
-  // Two hands side on, one behind the other, with little clap lines by the fingertips.
-  clap: svg`
-    <g transform="translate(30.5 23) rotate(50) scale(-0.9 0.9)">
-      <path d=${HAND} fill="#f2b886" /><path d=${FINGERS} stroke-width="1.5" />
-    </g>
-    <g transform="translate(20.5 29) rotate(16) scale(0.9)">
-      <path d=${HAND} fill=${SKIN} /><path d=${FINGERS} stroke-width="1.5" />
-    </g>
-    <path d="M8 7 l3.5 3.5 M4 14 l4.5 1 M14.5 2.5 l1 4.5" />`,
+  thumbs: svg`
+    <path d="M13 41 L13 23 C15 18, 17 12, 18.5 7.5 C20 3.5, 26.5 4.5, 25.5 9.5 L24 21 H34 C38.5 21, 39.5 26, 36 27.5 C39.5 28.5, 39.5 33.5, 36 34 C39 35.5, 38.5 41, 34 41 Z" fill=${SKIN} />
+    <path d="M25 27.5 H36 M25 34 H36" stroke-width="1.8" />
+    <rect x="5" y="19.5" width="9" height="23.5" rx="2.5" fill=${BLUE} />
+    <path d="M33 4 l1.5 4 M41 8.5 l-4 2 M39.5 2.5 l-2 3.5" />`,
 
   fire: svg`
     <path d="M24 44.5 C12.5 44.5, 7.5 35, 10.5 26.5 C12.5 21, 17 18.5, 16 11 C22.5 14, 25.5 19.5, 24.5 25.5 C27.5 23.5, 28.5 19.5, 28 14.5 C35.5 20, 40.5 28, 38.5 35.5 C37 41, 31.5 44.5, 24 44.5 Z" fill="#ff9a5c" />

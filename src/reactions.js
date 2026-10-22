@@ -9,7 +9,7 @@ import { reactionArt, REACTION_NAMES } from './reaction-art.js';
 // Each player has a single slot in the room (reactions/{uid}) that's overwritten every time,
 // so the data never grows, and the database rules only allow one write every 0.7 seconds.
 
-const LABELS = { laugh: 'laughing', shock: 'shocked', clap: 'clapping', fire: 'fire', curious: 'curious', cry: 'crying', poop: 'poop', angry: 'angry' };
+const LABELS = { laugh: 'laughing', shock: 'shocked', thumbs: 'thumbs up', fire: 'fire', curious: 'curious', cry: 'crying', poop: 'poop', angry: 'angry' };
 const COOLDOWN_MS = 1000;
 const FLOAT_MS = 2800;
 
