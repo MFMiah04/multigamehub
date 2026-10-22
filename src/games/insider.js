@@ -1,6 +1,6 @@
 import { html, nothing, button, timer, selectField, action, avatar } from '../ui.js';
 import { shuffle } from '../room.js';
-import { minutes, startVoting, isTimeUp, voteView, votedCount, tally, mostVoted, voteResults, toResults, pickUnused, backToLobbyButton } from './common.js';
+import { minutes, startVoting, isTimeUp, voteView, votedCount, tally, mostVoted, voteResults, toResults, spotlight, pickUnused, backToLobbyButton } from './common.js';
 import words from '../data/one-word-words.json';
 
 const suspectsOf = ctx => ctx.inGame.filter(p => p.id !== ctx.round.master);
@@ -124,7 +124,8 @@ function results(ctx) {
     question: 'So, who was the Insider?',
     badge: roleOf,
     mood: p => (p.id === round.insider ? (caught ? 'shock' : 'happy') : null),
-    top: html`<p class="note center">${insider ? `${insider.name} was the Insider` : 'The Insider left'}. The word was <span class="hl">${word}</span>.</p>`,
+    top: html`${spotlight(insider ? [{ id: round.insider, ...insider }] : [], 'was the Insider!')}
+      <p class="note center">The word was <span class="hl">${word}</span>.</p>`,
     bottom: html`
     <div class="push"></div>
     ${ctx.isHost ? button('Play again', action(ctx.startGame)) : nothing}

@@ -280,6 +280,17 @@ export function voteStage(ctx, rows) {
   return stage;
 }
 
+// A spotlight swings down onto whoever it was: the spy, the Insider…
+export function spotlight(people, caption) {
+  if (!people.length) return nothing;
+  return html`<div class="spotlight" role="img" aria-label=${caption}>
+    <svg class="spotlight__beam" viewBox="0 0 200 160" preserveAspectRatio="none" aria-hidden="true">${svg`
+      <path d="M86 0 H114 L176 160 H24 Z" fill="#fff6c2" opacity="0.9" />`}</svg>
+    <div class="spotlight__people">${people.map(p => html`<span class="spotlight__person">${avatar(p, 64, 'shock')}<b>${p.name}</b></span>`)}</div>
+    <p class="spotlight__caption">${caption}</p>
+  </div>`;
+}
+
 // The headline, the votes and whatever comes after, revealed in order.
 // `question` is asked during the pause, e.g. "So, who was the spy?"
 export function voteResults(ctx, rows, { headline, question, badge, detail, mood, top = nothing, bottom = nothing }) {

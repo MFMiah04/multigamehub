@@ -1,5 +1,9 @@
 import { html, nothing, button, timer, selectField, action, progress, toast, avatar } from '../ui.js';
 import { isTimeUp, isGraceOver, normalize, secondsOptions, backToLobbyButton } from './common.js';
+import { keyed } from 'lit-html/directives/keyed.js';
+import { cue } from '../sound.js';
+
+const COUNTDOWN_MS = 3000;
 
 const cleanWord = text => text.trim().replace(/\s+/g, ' ').slice(0, 25);
 const wordsOf = (ctx, words) => ctx.inGame.map(p => ({ player: p, word: words?.[p.id] || '' }));
@@ -56,7 +60,7 @@ export default {
     const { round } = ctx;
     if (ctx.room.phase !== 'write') return null;
     if (ctx.inGame.every(p => round.words?.[p.id]) || isGraceOver(ctx)) {
-      return { phase: 'reveal', 'round/endsAt': null, 'round/synced': allMatch(ctx, round.words) };
+      return { phase: 'reveal', 'round/endsAt': null, 'round/synced': allMatch(ctx, round.words), 'round/revealAt': ctx.now() + COUNTDOWN_MS };
     }
     return null;
   },
@@ -72,10 +76,13 @@ const lastWords = ctx => {
   return prev ? wordsOf(ctx, prev).filter(w => w.word) : [];
 };
 
-const wordCards = list => html`<div class="clue-grid">
-  ${list.map(({ player, word }) => html`<div class="clue clue--lime wobble ${word ? "" : "clue--cancelled"}">
-    <b>${word || '…'}</b><small>${avatar(player, 18)} ${player.name}</small>
-  </div>`)}
+// `face` is 'up', 'down' (a card back) or 'flip' (turning over now, one after another).
+const wordCards = (list, face = 'up') => html`<div class="clue-grid">
+  ${list.map(({ player, word }, i) => face === 'down'
+    ? html`<div class="clue clue--back wobble"><b>?</b><small>${avatar(player, 18)} ${player.name}</small></div>`
+    : html`<div class="clue clue--lime wobble ${word ? '' : 'clue--cancelled'} ${face === 'flip' ? 'clue--flip' : ''}" style="--i: ${i}">
+      <b>${word || '…'}</b><small>${avatar(player, 18)} ${player.name}</small>
+    </div>`)}
 </div>`;
 
 function history(ctx, upTo) {
@@ -118,8 +125,21 @@ function reveal(ctx, s) {
   const outOfRounds = !round.synced && s.maxRounds && round.no >= s.maxRounds;
   const next = () => ctx.update({
     phase: 'write', [`round/history/${round.no}`]: round.words || {}, 'round/no': round.no + 1,
-    'round/words': null, 'round/synced': null, 'round/endsAt': ctx.now() + s.time * 1000,
+    'round/words': null, 'round/synced': null, 'round/revealAt': null, 'round/endsAt': ctx.now() + s.time * 1000,
   });
+
+  // A 3-2-1 countdown with the cards face down, then they all flip over together.
+  const left = round.revealAt ? round.revealAt - ctx.now() : 0;
+  if (left > 0) {
+    const count = Math.min(3, Math.ceil(left / 1000));
+    cue(`ws:${round.revealAt}:${count}`, 'tock', { at: round.revealAt - count * 1000, now: ctx.now(), late: 900 });
+    return html`
+      <p class="note center">Round ${round.no}</p>
+      <h1 class="center scribble">Words in…</h1>
+      <div class="countdown">${keyed(count, html`<b class="countdown__number">${count}</b>`)}</div>
+      ${wordCards(words, 'down')}`;
+  }
+  if (round.revealAt) cue(`ws:${round.revealAt}:flip`, round.synced ? 'ding' : 'whoosh', { at: round.revealAt, now: ctx.now() });
 
   const headline = round.synced
     ? (round.no === 1 ? 'Synced on the first try?!' : `Synced in ${round.no} rounds!`)
@@ -130,9 +150,9 @@ function reveal(ctx, s) {
 
   return html`
     <p class="note center">Round ${round.no}</p>
-    <h1 class="center scribble">${headline}</h1>
+    <h1 class="center scribble pop-in">${headline}</h1>
     <p class="note center">${note}</p>
-    ${wordCards(words)}
+    ${wordCards(words, round.revealAt && ctx.now() - round.revealAt < 4000 ? 'flip' : 'up')}
     ${history(ctx, round.no - 1)}
     <div class="push"></div>
     ${round.synced || outOfRounds

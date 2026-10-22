@@ -206,6 +206,7 @@ function reveal(ctx, s) {
             <span><b>${titleCase(o.text)}</b> ${o.truth ? html`<span class="hl">the truth</span>` : nothing}</span>
             <small>${o.truth ? (fooled.length ? `Found by ${names(fooled)}` : 'Nobody found it!') : `${names(authors)}'s lie${fooled.length ? ` fooled ${names(fooled)}` : ' fooled nobody'}`}</small>
           </div>
+          ${fooled.length ? html`<span class="points-pop">+${o.truth ? TRUTH_POINTS : FOOL_POINTS * fooled.length}${o.truth && fooled.length > 1 ? html`<small>each</small>` : nothing}</span>` : nothing}
           ${fooled.length ? html`<span class="pickers">${fooled.map(p => avatar(p, 24, o.truth ? 'happy' : 'shock'))}</span>` : nothing}
         </div>`;
       })}

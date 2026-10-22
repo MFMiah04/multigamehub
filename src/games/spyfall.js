@@ -1,6 +1,6 @@
 import { html, nothing, button, timer, selectField, action } from '../ui.js';
 import { randomItem, shuffle } from '../room.js';
-import { minutes, counts, startVoting, isTimeUp, voteRequestBar, voteRequestsPassed, voteView, votedCount, tally, mostVoted, voteResults, toResults, revealButton, backToLobbyButton } from './common.js';
+import { minutes, counts, startVoting, isTimeUp, voteRequestBar, voteRequestsPassed, voteView, votedCount, tally, mostVoted, voteResults, toResults, spotlight, revealButton, backToLobbyButton } from './common.js';
 import locations from '../data/spyfall-locations.json';
 
 const enabledLocations = settings => locations.filter((_, i) => !settings.off?.[i]);
@@ -123,7 +123,8 @@ function results(ctx) {
     badge: p => (round.roles?.[p.id] === 'spy' ? 'spy' : null),
     detail: p => (round.revealed && round.roles?.[p.id] !== 'spy' ? html`<small>${round.roles?.[p.id]}</small>` : nothing),
     mood: p => (round.roles?.[p.id] === 'spy' ? (suspects.includes(p.id) ? 'shock' : 'happy') : null),
-    top: html`${round.revealed ? html`<div class="secret wobble pop-in"><small>The location was</small><b>${round.location}</b></div>` : nothing}
+    top: html`${spotlight(ctx.inGame.filter(p => spies.includes(p.id)), spies.length > 1 ? 'were the spies!' : 'was the spy!')}
+      ${round.revealed ? html`<div class="secret wobble pop-in"><small>The location was</small><b>${round.location}</b></div>` : nothing}
       ${revealButton(ctx, round.revealed, 'Reveal the location', 'revealed')}`,
     bottom: html`
     <div class="push"></div>

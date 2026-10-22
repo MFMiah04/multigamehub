@@ -112,6 +112,28 @@ const SOUNDS = {
   // A little fanfare for the winner.
   fanfare: () => [[523, 0], [659, 0.12], [784, 0.24], [1047, 0.38]].forEach(([f, at], i) =>
     tone(f, { at, length: i === 3 ? 0.8 : 0.16, type: 'triangle', volume: 0.22 })),
+  // Moo! For the pink cow.
+  moo: () => {
+    const t = audio.currentTime;
+    const osc = audio.createOscillator();
+    const filter = audio.createBiquadFilter();
+    const gain = audio.createGain();
+    osc.type = 'sawtooth';
+    osc.frequency.setValueAtTime(150, t);
+    osc.frequency.linearRampToValueAtTime(185, t + 0.25);
+    osc.frequency.linearRampToValueAtTime(120, t + 0.9);
+    filter.type = 'lowpass';
+    filter.frequency.setValueAtTime(500, t);
+    filter.frequency.linearRampToValueAtTime(900, t + 0.3);
+    filter.frequency.linearRampToValueAtTime(350, t + 0.9);
+    gain.gain.setValueAtTime(0.0001, t);
+    gain.gain.exponentialRampToValueAtTime(0.25, t + 0.12);
+    gain.gain.setValueAtTime(0.25, t + 0.6);
+    gain.gain.exponentialRampToValueAtTime(0.0001, t + 1);
+    osc.connect(filter).connect(gain).connect(master);
+    osc.start(t);
+    osc.stop(t + 1.05);
+  },
   // A whoosh, for a wheel spinning or a card flipping.
   whoosh: () => noise({ length: 0.35, volume: 0.18, freq: 400, q: 0.8, sweepTo: 3000 }),
 };

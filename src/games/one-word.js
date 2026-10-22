@@ -2,6 +2,9 @@ import { html, nothing, button, timer, selectField, action, progress, toast, ava
 import { shuffle } from '../room.js';
 import { isTimeUp, isGraceOver, normalize, pickUnused, turnOf, roundsField, secondsOptions, backToLobbyButton } from './common.js';
 import words from '../data/one-word-words.json';
+import { cue } from '../sound.js';
+
+const CLUE_GAP_MS = 700;
 
 const giversOf = ctx => ctx.inGame.filter(p => p.id !== ctx.round.guesser);
 const cleanClue = text => text.trim().split(/\s+/)[0]?.slice(0, 20) || '';
@@ -80,7 +83,7 @@ export default {
     }
     if (phase === 'clues') {
       const givers = giversOf(ctx);
-      if (givers.every(p => round.clues?.[p.id]) || isGraceOver(ctx)) return { phase: 'check', 'round/endsAt': null, 'round/cancelled': autoCancel(ctx) };
+      if (givers.every(p => round.clues?.[p.id]) || isGraceOver(ctx)) return { phase: 'check', 'round/endsAt': null, 'round/cancelled': autoCancel(ctx), 'round/flipAt': ctx.now() + 400 };
     }
     if (phase === 'guess' && isTimeUp(ctx)) {
       return { phase: 'reveal', 'round/guess': '', 'round/correct': false, [`round/results/${round.no}`]: false, 'round/endsAt': null };
@@ -124,14 +127,34 @@ function clues(ctx) {
     ${status}`;
 }
 
-const clueChips = (ctx, { showCancelled, toggle }) => html`<div class="clue-grid">
-  ${giversOf(ctx).filter(p => ctx.round.clues?.[p.id]).filter(p => showCancelled || !ctx.round.cancelled?.[p.id]).map(p => {
-    const cancelled = ctx.round.cancelled?.[p.id];
-    return html`<button class="clue wobble ${cancelled ? 'clue--cancelled' : ''}" ?disabled=${!toggle} @click=${() => toggle?.(p.id, !cancelled)}>
-      <b>${ctx.round.clues[p.id]}</b><small>${avatar(p, 18)} ${p.name}</small>
-    </button>`;
-  })}
-</div>`;
+// A wobbly red scribble drawn over a cancelled clue.
+const SCRIBBLE = html`<svg class="scribble-out" viewBox="0 0 100 40" preserveAspectRatio="none" aria-hidden="true">
+  <path d="M6 22 C14 8, 20 34, 30 18 S44 6, 50 24 S66 34, 72 14 S88 10, 94 22" pathLength="1" />
+</svg>`;
+
+// The clues as cards. With `flipFrom` (a time) they start face down and turn over one at a time,
+// then any cancelled ones get scribbled out.
+function clueChips(ctx, { showCancelled, toggle, flipFrom }) {
+  const list = giversOf(ctx).filter(p => ctx.round.clues?.[p.id]).filter(p => showCancelled || !ctx.round.cancelled?.[p.id]);
+  const now = ctx.now();
+  const flipAt = i => (flipFrom || 0) + i * CLUE_GAP_MS;
+  const scribbleAt = flipFrom ? flipAt(list.length) + 300 : 0;
+  const shown = flipFrom ? list.filter((_, i) => now >= flipAt(i)).length : list.length;
+  if (flipFrom && shown > 0) cue(`ow:${flipFrom}:${shown}`, 'pop', { at: flipAt(shown - 1), now });
+  if (flipFrom && now >= scribbleAt && list.some(p => ctx.round.cancelled?.[p.id])) cue(`ow:${flipFrom}:scribble`, 'scribble', { at: scribbleAt, now });
+  return html`<div class="clue-grid">
+    ${list.map((p, i) => {
+      if (flipFrom && now < flipAt(i)) return html`<div class="clue clue--back wobble"><b>?</b><small>${avatar(p, 18)} ${p.name}</small></div>`;
+      const cancelled = ctx.round.cancelled?.[p.id];
+      const scribbled = cancelled && now >= scribbleAt;
+      return html`<button class="clue wobble ${scribbled ? 'clue--cancelled clue--scribbled' : ''} ${flipFrom && now - flipAt(i) < 1500 ? 'clue--flip' : ''}" style="--i: 0"
+        ?disabled=${!toggle} @click=${() => toggle?.(p.id, !cancelled)}>
+        <b>${ctx.round.clues[p.id]}</b><small>${avatar(p, 18)} ${p.name}</small>
+        ${scribbled ? SCRIBBLE : nothing}
+      </button>`;
+    })}
+  </div>`;
+}
 
 function check(ctx, s) {
   if (ctx.uid === ctx.round.guesser) {
@@ -139,11 +162,11 @@ function check(ctx, s) {
       <div class="waiting-card wobble"><b>Clues are in!</b><small>The others are checking for matching clues…</small></div>`;
   }
   const toggle = (id, cancel) => ctx.update({ [`round/cancelled/${id}`]: cancel || null });
-  const show = () => ctx.update({ phase: 'guess', 'round/endsAt': ctx.now() + s.guessTime * 1000 });
+  const show = () => ctx.update({ phase: 'guess', 'round/endsAt': ctx.now() + s.guessTime * 1000, 'round/flipAt': ctx.now() + 300 });
   return html`${header(ctx)}
     <h2 class="center">Check the clues</h2>
     <p class="note center">The word is <span class="hl">${words[ctx.round.word]}</span>. Matching clues were crossed out. Tap a clue to cross it out or bring it back.</p>
-    ${clueChips(ctx, { showCancelled: true, toggle })}
+    ${clueChips(ctx, { showCancelled: true, toggle, flipFrom: ctx.round.flipAt })}
     <div class="push"></div>
     ${button(`Show ${guesserName(ctx)} the clues`, action(show))}`;
 }
@@ -168,7 +191,7 @@ function guess(ctx) {
   };
   return html`${header(ctx)}${timer(round.endsAt, 10)}
     <h2 class="center">Your clues</h2>
-    ${left ? clueChips(ctx, { showCancelled: false }) : html`<p class="note center">Ouch, every clue got cancelled! Take a wild guess.</p>`}
+    ${left ? clueChips(ctx, { showCancelled: false, flipFrom: round.flipAt }) : html`<p class="note center">Ouch, every clue got cancelled! Take a wild guess.</p>`}
     <label class="field"><span>What's the word?</span>
       <input id="guess" class="wobble" maxlength="30" autocomplete="off" placeholder="Your guess"
         @keydown=${e => e.key === 'Enter' && action(submit)()}></label>
@@ -184,13 +207,14 @@ function reveal(ctx, s) {
     return ctx.update({
       phase: 'clues', 'round/no': round.no + 1, 'round/guesser': turnOf(ctx, round.order, round.no + 1),
       'round/word': nextWord, [`round/used/${nextWord}`]: true, 'round/clues': null, 'round/cancelled': null,
-      'round/guess': null, 'round/correct': null, 'round/endsAt': ctx.now() + s.clueTime * 1000,
+      'round/guess': null, 'round/correct': null, 'round/flipAt': null, 'round/endsAt': ctx.now() + s.clueTime * 1000,
     });
   };
   const countIt = () => ctx.update({ 'round/correct': true, [`round/results/${round.no}`]: true });
   const headline = round.correct ? 'Got it!' : round.guess ? 'Not quite!' : 'Passed!';
+  cue(`ow:${round.word}:${round.no}:${round.correct ? 'yes' : 'no'}`, round.correct ? 'ding' : round.guess ? 'buzz' : 'sad');
   return html`${header(ctx)}
-    <h1 class="center scribble">${headline}</h1>
+    <h1 class="center scribble pop-in">${headline}</h1>
     <div class="secret wobble"><small>The word was</small><b>${word}</b>${round.guess ? html`<small>${guesserName(ctx)} guessed "${round.guess}"</small>` : nothing}</div>
     ${!round.correct && round.guess && ctx.uid !== round.guesser
       ? html`<button class="link" @click=${action(countIt)}>Close enough? Count it</button>` : nothing}

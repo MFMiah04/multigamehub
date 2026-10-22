@@ -1,5 +1,7 @@
 import { runTransaction } from 'firebase/database';
 import { html, nothing, button, selectField, action, avatar } from '../ui.js';
+import { svg } from 'lit-html';
+import { keyed } from 'lit-html/directives/keyed.js';
 import { roomRef, shuffle } from '../room.js';
 import { backToLobbyButton } from './common.js';
 import { cue } from '../sound.js';
@@ -105,8 +107,17 @@ export default {
   },
 };
 
+// Doodled hearts. A lost heart is cracked down the middle, and the one just lost breaks apart.
+const HEART_LEFT = 'M12 21 C5 15, 2 11.5, 2 8 C2 5, 4.5 3, 7 3 C9 3, 11 4.5, 12 6 L10.5 10 L13 13 L11 16.5 Z';
+const HEART_RIGHT = 'M12 6 C13 4.5, 15 3, 17 3 C19.5 3, 22 5, 22 8 C22 11.5, 19 15, 12 21 L11 16.5 L13 13 L10.5 10 Z';
+const HEART = 'M12 21 C5 15, 2 11.5, 2 8 C2 5, 4.5 3, 7 3 C9 3, 11 4.5, 12 6 C13 4.5, 15 3, 17 3 C19.5 3, 22 5, 22 8 C22 11.5, 19 15, 12 21 Z';
+const heart = cls => html`<svg class="nc-heart ${cls}" viewBox="0 0 24 24" width="30" height="30" aria-hidden="true">${svg`
+  <g stroke="#222" stroke-width="1.6" stroke-linejoin="round">
+    ${cls ? svg`<path class="nc-heart__left" d=${HEART_LEFT} /><path class="nc-heart__right" d=${HEART_RIGHT} />` : svg`<path d=${HEART} />`}
+  </g>`}</svg>`;
+
 const hearts = (lives, start) => html`<p class="nc-lives center" aria-label="${lives} lives left">
-  ${Array.from({ length: start }, (_, i) => html`<span class="nc-heart ${i < lives ? '' : 'nc-heart--lost'}">♥</span>`)}
+  ${Array.from({ length: start }, (_, i) => heart(i < lives ? '' : i === lives ? 'nc-heart--lost nc-heart--breaking' : 'nc-heart--lost'))}
   ${lives === 1 ? html`<span class="note nc-last-life">last life!</span>` : nothing}
 </p>`;
 
@@ -126,14 +137,16 @@ function playing(ctx) {
   if (plays.length) cue(`nc:${round.startsAt}:play:${plays.length}`, showMistake ? 'buzz' : 'pop');
 
   return html`
-    ${hearts(round.lives, round.startLives)}
-    <div class="nc-pile wobble ${counting ? 'nc-pile--count' : ''}">
-      ${counting
-        ? html`<small>Get ready…</small><b>${count}</b>`
-        : top
-          ? html`<small>Last card</small><b>${top.n}</b><small>${topPlayer ? `played by ${topPlayer.name}` : ''}</small>`
-          : html`<small>Go!</small><b>?</b><small>Who has the lowest card?</small>`}
-    </div>
+    ${keyed(round.mistakes || 0, html`<div class="${round.mistakes ? 'nc-shake' : ''}">
+      ${hearts(round.lives, round.startLives)}
+      <div class="nc-pile wobble ${counting ? 'nc-pile--count' : ''} ${showMistake ? 'nc-pile--oops' : ''}">
+        ${counting
+          ? keyed(`count${count}`, html`<small>Get ready…</small><b>${count}</b>`)
+          : top
+            ? keyed(`card${plays.length}`, html`<small>Last card</small><b class="nc-slam">${top.n}</b><small>${topPlayer ? `played by ${topPlayer.name}` : ''}</small>`)
+            : html`<small>Go!</small><b>?</b><small>Who has the lowest card?</small>`}
+      </div>
+    </div>`)}
     ${showMistake ? html`<p class="nc-oops center">Oops! ${mistake.missed.map(m => `${ctx.room.players[m.by]?.name || 'Someone'} had ${m.n}`).join(', ')}.</p>` : nothing}
 
     <div class="nc-others">

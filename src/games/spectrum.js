@@ -48,12 +48,32 @@ function valueAt(event) {
   return Math.round(clamp(100 * (1 - angle / Math.PI)));
 }
 
-// The dial: labels at each end, scoring zones around the target, a needle per guess, and an optional slider.
-function scale(ctx, { target, markers = [], slider, onPick, covered }) {
-  const [left, right] = spectrums[ctx.round.card];
-  // Zones near an edge are cut off at the end of the wheel.
-  const zones = target === undefined ? [] : BANDS.slice().reverse()
+// Scoring zones around a target (cut off at the ends of the wheel), with their points written on.
+function zonesSvg(target) {
+  const zones = BANDS.slice().reverse()
     .map(([w, pts]) => [clamp(target - w), clamp(target + w), pts]).filter(([a, b]) => b - a > 0.5);
+  return svg`
+    ${zones.map(([a, b, pts]) => svg`<path d=${wedge(a, b)} fill=${BAND_FILL[pts]} stroke=${pts === 4 ? '#222' : 'none'} stroke-width="2" />`)}
+    ${[[0, 4], [-7, 3], [7, 3], [-13.5, 2], [13.5, 2]]
+      .filter(([offset]) => target + offset >= 1.5 && target + offset <= 98.5)
+      .map(([offset, pts]) => {
+        const [x, y] = point(target + offset, R * 0.86);
+        return svg`<text x=${x} y=${y + 5} text-anchor="middle" font-size="13" font-weight="700" fill="#222">${pts}</text>`;
+      })}`;
+}
+
+// At the start of each round the wheel spins while the lid closes over it. Then the psychic's lid
+// lifts to show where the target landed; everyone else keeps looking at the closed lid.
+const SPIN_MS = 2400;
+const OPEN_MS = 900;
+
+// The dial: labels at each end, scoring zones around the target, a needle per guess, and an optional slider.
+// `spinT` is how long ago the round's spin started.
+function scale(ctx, { target, markers = [], slider, onPick, covered, spinT }) {
+  const [left, right] = spectrums[ctx.round.card];
+  const spinning = spinT !== undefined && spinT < SPIN_MS;
+  const opening = !spinning && !covered && target !== undefined && spinT !== undefined && spinT < SPIN_MS + OPEN_MS;
+  const lid = cls => svg`<g clip-path="url(#wheel-clip)"><path class="wheel__lid ${cls}" d=${wedge(0, 100)} fill="url(#wheel-cover)" stroke="#222" stroke-width="3.5" /></g>`;
   const drag = onPick && {
     down: e => { e.currentTarget.setPointerCapture(e.pointerId); onPick(valueAt(e)); },
     move: e => { if (e.buttons || e.pointerType === 'touch') onPick(valueAt(e)); },
@@ -65,27 +85,26 @@ function scale(ctx, { target, markers = [], slider, onPick, covered }) {
         @pointerdown=${drag?.down ?? nothing} @pointermove=${drag?.move ?? nothing}>
         ${svg`
           <path d=${wedge(0, 100)} fill="#fff" stroke="#222" stroke-width="3.5" stroke-linejoin="round" />
-          ${zones.map(([a, b, pts]) => svg`<path d=${wedge(a, b)} fill=${BAND_FILL[pts]} stroke=${pts === 4 ? '#222' : 'none'} stroke-width="2" />`)}
-          ${target === undefined ? nothing : [[0, 4], [-7, 3], [7, 3], [-13.5, 2], [13.5, 2]]
-            .filter(([offset]) => target + offset >= 1.5 && target + offset <= 98.5)
-            .map(([offset, pts]) => {
-              const [x, y] = point(target + offset, R * 0.86);
-              return svg`<text x=${x} y=${y + 5} text-anchor="middle" font-size="13" font-weight="700" fill="#222">${pts}</text>`;
-            })}
+          ${spinning
+            ? svg`<g clip-path="url(#wheel-clip)"><g class="wheel__spin">${zonesSvg(50)}</g></g>`
+            : target === undefined ? nothing : zonesSvg(target)}
           ${Array.from({ length: 11 }, (_, i) => {
             const [x1, y1] = point(i * 10, R);
             const [x2, y2] = point(i * 10, R - (i % 5 === 0 ? 12 : 7));
             return svg`<path d="M${x1} ${y1} L${x2} ${y2}" stroke="#222" stroke-width="2" stroke-linecap="round" />`;
           })}
-          ${covered ? svg`<path d=${wedge(0, 100)} fill="url(#wheel-cover)" stroke="#222" stroke-width="3.5" />
-            <text x=${CX} y=${CY - 52} text-anchor="middle" font-size="44" font-weight="700" fill="#5a5650">?</text>` : nothing}
+          ${spinning ? lid('wheel__lid--closing')
+            : covered ? svg`<path d=${wedge(0, 100)} fill="url(#wheel-cover)" stroke="#222" stroke-width="3.5" />
+              <text x=${CX} y=${CY - 52} text-anchor="middle" font-size="44" font-weight="700" fill="#5a5650">?</text>`
+            : opening ? lid('wheel__lid--opening') : nothing}
           ${markers.map(({ value, mine }) => {
             const [x, y] = point(value, R - 6);
             return svg`<path d="M${CX} ${CY} L${x} ${y}" stroke=${mine ? '#d23c5f' : '#222'} stroke-width=${mine ? 5 : 2.5} stroke-linecap="round" />`;
           })}
           <path d="M${CX - R - 6} ${CY} H${CX + R + 6}" stroke="#222" stroke-width="3.5" stroke-linecap="round" />
           <circle cx=${CX} cy=${CY} r="9" fill="#ffe066" stroke="#222" stroke-width="3" />
-          <defs><pattern id="wheel-cover" width="12" height="12" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+          <defs><clipPath id="wheel-clip"><path d=${wedge(0, 100)} /></clipPath>
+            <pattern id="wheel-cover" width="12" height="12" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
             <rect width="12" height="12" fill="#fff" /><rect width="6" height="12" fill="#a8d4f7" /></pattern></defs>
         `}
       </svg>
@@ -135,7 +154,7 @@ export default {
     const card = pickUnused(spectrums);
     return {
       phase: 'clue',
-      round: { no: 1, total: s.rounds, order, psychic: order[0], card, used: { [card]: true }, target: newTarget(), scores: {}, endsAt: ctx.now() + s.clueTime * 1000 },
+      round: { no: 1, total: s.rounds, order, psychic: order[0], card, used: { [card]: true }, target: newTarget(), scores: {}, spinAt: ctx.now(), endsAt: ctx.now() + s.clueTime * 1000 },
     };
   },
 
@@ -186,10 +205,15 @@ const psychicName = ctx => ctx.room.players[ctx.round.psychic]?.name || 'The psy
 
 function clue(ctx, s) {
   const { round } = ctx;
+  const spinT = round.spinAt ? ctx.now() - round.spinAt : undefined;
+  if (round.spinAt) {
+    cue(`wl:${round.spinAt}:spin`, 'whoosh', { at: round.spinAt, now: ctx.now() });
+    if (spinT >= SPIN_MS) cue(`wl:${round.spinAt}:closed`, ctx.uid === round.psychic ? 'pop' : 'tock', { at: round.spinAt + SPIN_MS, now: ctx.now() });
+  }
   if (ctx.uid !== round.psychic) {
     return html`${header(ctx)}${timer(round.endsAt, 10)}
-      <h2 class="center">${psychicName(ctx)} is thinking of a clue…</h2>
-      ${scale(ctx, { covered: true })}`;
+      <h2 class="center">${spinT < SPIN_MS ? 'Spinning the wheel…' : `${psychicName(ctx)} is thinking of a clue…`}</h2>
+      ${scale(ctx, { covered: true, spinT })}`;
   }
   const submit = async () => {
     const text = document.getElementById('clue').value.trim().slice(0, 40);
@@ -199,7 +223,7 @@ function clue(ctx, s) {
   return html`${header(ctx)}${timer(round.endsAt, 10)}
     <h2 class="center">You're the psychic!</h2>
     <p class="note center">Write a clue that points to the bullseye.</p>
-    ${scale(ctx, { target: round.target })}
+    ${scale(ctx, { target: round.target, spinT })}
     <label class="field"><span>Your clue</span>
       <input id="clue" class="wobble" maxlength="40" autocomplete="off" placeholder="Something that fits the spot"
         @keydown=${e => e.key === 'Enter' && action(submit)()}></label>
@@ -242,7 +266,7 @@ function reveal(ctx, s) {
     return ctx.update({
       phase: 'clue', 'round/no': round.no + 1, 'round/psychic': turnOf(ctx, round.order, round.no + 1),
       'round/card': card, [`round/used/${card}`]: true, 'round/target': newTarget(),
-      'round/clue': null, 'round/guesses': null, 'round/delta': null, 'round/endsAt': ctx.now() + s.clueTime * 1000,
+      'round/clue': null, 'round/guesses': null, 'round/delta': null, 'round/endsAt': ctx.now() + s.clueTime * 1000, 'round/spinAt': ctx.now(),
     });
   };
   return html`${header(ctx)}
