@@ -2,6 +2,7 @@ import { runTransaction } from 'firebase/database';
 import { html, nothing, button, selectField, action, avatar } from '../ui.js';
 import { roomRef, shuffle } from '../room.js';
 import { backToLobbyButton } from './common.js';
+import { cue } from '../sound.js';
 
 const COUNTDOWN_MS = 3500;
 // At least one life: losing your last one ends the game. (Older rooms may have 0 saved from before.)
@@ -119,12 +120,16 @@ function playing(ctx) {
   const mine = handOf(round, ctx.uid);
   const mistake = round.lastMistake;
   const showMistake = mistake && plays.at(-1)?.n === mistake.card;
+  const count = Math.min(3, Math.max(1, Math.ceil((countdown - 500) / 1000)));
+  if (counting) cue(`nc:${round.startsAt}:count:${count}`, 'tock');
+  else cue(`nc:${round.startsAt}:go`, 'pop');
+  if (plays.length) cue(`nc:${round.startsAt}:play:${plays.length}`, showMistake ? 'buzz' : 'pop');
 
   return html`
     ${hearts(round.lives, round.startLives)}
     <div class="nc-pile wobble ${counting ? 'nc-pile--count' : ''}">
       ${counting
-        ? html`<small>Get ready…</small><b>${Math.min(3, Math.max(1, Math.ceil((countdown - 500) / 1000)))}</b>`
+        ? html`<small>Get ready…</small><b>${count}</b>`
         : top
           ? html`<small>Last card</small><b>${top.n}</b><small>${topPlayer ? `played by ${topPlayer.name}` : ''}</small>`
           : html`<small>Go!</small><b>?</b><small>Who has the lowest card?</small>`}
@@ -150,6 +155,7 @@ function finished(ctx) {
   const { round } = ctx;
   const won = round.result === 'won';
   const mistakes = round.mistakes || 0;
+  cue(`nc:${round.startsAt}:end`, won ? 'fanfare' : 'sad');
   const headline = won
     ? (mistakes === 0 ? 'Perfect climb!' : 'You made it!')
     : 'Game over!';

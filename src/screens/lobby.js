@@ -4,6 +4,7 @@ import { html, nothing, button, action, avatar, toast, confirmDialog } from '../
 import { kickPlayer } from '../room.js';
 import { gameList } from '../games/index.js';
 import { showRules } from './home.js';
+import { cue } from '../sound.js';
 
 export const inviteLink = code => `${location.origin}/?room=${code}`;
 
@@ -47,6 +48,8 @@ export function lobbyView(ctx) {
   const setSetting = changes => ctx.update(Object.fromEntries(Object.entries(changes).map(([k, v]) => [`settings/${game.id}/${k}`, v])));
   const kick = async p => { if (await confirmDialog(`Remove ${p.name} from the room?`, 'Remove')) await kickPlayer(room, p.id); };
 
+  // A little two-note pop when someone new walks in.
+  ctx.players.forEach(p => cue(`join:${ctx.room.code}:${p.id}`, 'join', { at: p.joinedAt, now: ctx.now(), late: 4000 }));
   return html`
     <section class="invite wobble ${local.qr ? 'invite--qr' : ''}">
       <small>Room code (tap to copy)</small>

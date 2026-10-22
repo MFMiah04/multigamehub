@@ -254,7 +254,7 @@ details.field summary { cursor: pointer; text-decoration: underline wavy; text-u
 .room-header { display: flex; align-items: center; justify-content: space-between; gap: 8px; height: var(--row); }
 .room-header__code { background: none; border: 0; padding: 0; font-size: 18px; line-height: var(--row); color: var(--ink-soft); text-align: left; }
 .room-header__code b { color: var(--ink); letter-spacing: 2px; }
-.room-header__actions { display: flex; gap: 12px; }
+.room-header__actions { display: flex; align-items: center; gap: 12px; }
 
 .invite { display: flex; flex-direction: column; align-items: center; height: calc(var(--row) * 6); margin-top: var(--row); padding: 4px 12px; background: #fff; text-align: center; transform: rotate(-0.6deg); box-shadow: var(--shadow); }
 .invite--qr { height: calc(var(--row) * 13); }
@@ -594,3 +594,11 @@ button.quest-card { transition: transform 0.15s; }
   .pop-in, .stamp, .avatar--mood, .crown, .result--moved, .delta-pop, .podium__spot, .award { animation: none; }
   .confetti { display: none; }
 }
+
+/* ----- sound settings ----- */
+.sound { position: relative; display: inline-flex; }
+.sound__button { display: inline-flex; align-items: center; padding: 0; text-decoration: none; }
+.sound__button svg { display: block; }
+.sound__panel { position: absolute; top: calc(100% + 6px); right: -8px; z-index: 20; display: flex; flex-direction: column; align-items: stretch; gap: 6px; width: 180px; padding: 10px 12px; background: #fff; box-shadow: var(--shadow); line-height: 1.2; animation: pop 0.18s; }
+.sound__panel .link { text-align: left; }
+.sound__slider { width: 100%; accent-color: #222; }

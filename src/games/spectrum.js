@@ -3,6 +3,7 @@ import { html, nothing, button, timer, selectField, action, progress, toast, ava
 import { shuffle } from '../room.js';
 import { isTimeUp, pickUnused, turnOf, roundsField, secondsOptions, leaderboard, nextOrFinalButton, finalScores, backToLobbyButton, bumpStat, award, plural } from './common.js';
 import spectrums from '../data/spectrums.json';
+import { cue } from '../sound.js';
 
 // Scoring bands, measured from the target on a 0–100 scale. Zones past either end are simply cut off.
 const BANDS = [[4, 4], [10, 3], [17, 2]];
@@ -235,6 +236,7 @@ function reveal(ctx, s) {
   const { round } = ctx;
   const guessers = guessersOf(ctx).filter(p => round.guesses?.[p.id] !== undefined);
   const best = Math.max(0, ...guessers.map(p => round.delta?.[p.id] || 0));
+  cue(`wl:${round.id}:${round.no}`, best === 4 ? 'ding' : best >= 2 ? 'pop' : 'buzz');
   const next = () => {
     const card = pickUnused(spectrums, round.used);
     return ctx.update({

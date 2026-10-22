@@ -1,5 +1,6 @@
 import { svg } from 'lit-html';
 import { html, nothing, button, avatar, timer, progress, action, confirmDialog } from '../ui.js';
+import { cue } from '../sound.js';
 
 export const minutes = (from, to) =>
   Array.from({ length: to - from + 1 }, (_, i) => [(from + i) * 60, `${from + i} min`]);
@@ -64,6 +65,7 @@ export function leaderboard(ctx, scores = {}, delta = {}, { badge } = {}) {
   const board = ranked(ctx.inGame, now);
   const oldOrder = ranked(ctx.inGame, before).map(p => p.id);
   const top = Math.max(0, ...board.map(p => now(p.id)));
+  if (Object.values(delta).some(Boolean)) cue(`score:${ctx.room.code}:${JSON.stringify(scores)}`, 'score');
   return html`<div class="results">
     ${board.map((p, i) => {
       const moved = oldOrder.indexOf(p.id) - i;
@@ -121,6 +123,7 @@ export function finalScores(ctx, { awards = [], winner } = {}) {
   const mood = p => (winners.includes(p) ? 'happy' : board.length > 2 && now(p.id) === bottom ? 'sad' : null);
   const podium = board.slice(0, 3);
   const shown = awards.filter(Boolean);
+  cue(`final:${ctx.round.id}:${JSON.stringify(scores)}`, winners.length ? 'fanfare' : 'sad');
 
   return html`
     ${winners.length ? confetti() : nothing}
@@ -264,11 +267,17 @@ export function voteStage(ctx, rows) {
   const elapsed = ctx.now() - start;
   const voted = rows.filter(r => r.voters.length).length;
   const shownVoted = elapsed < 0 ? 0 : Math.min(voted, Math.floor(elapsed / VOTE_GAP_MS));
-  return {
+  const stage = {
     shown: elapsed < 0 ? 0 : rows.length - voted + shownVoted,
     counting: shownVoted < voted,
     done: elapsed >= voted * VOTE_GAP_MS + SUSPENSE_MS,
   };
+  // A pop for each row, a drumroll during the pause, then a ding for the answer.
+  const now = ctx.now();
+  if (stage.shown > 0) cue(`votes:${start}:${shownVoted}`, 'pop', { at: start + shownVoted * VOTE_GAP_MS, now });
+  if (!stage.counting && !stage.done && elapsed >= 0) cue(`votes:${start}:roll`, 'drumroll', { at: start + voted * VOTE_GAP_MS, now, args: [SUSPENSE_MS / 1000] });
+  if (stage.done) cue(`votes:${start}:done`, 'ding', { at: start + voted * VOTE_GAP_MS + SUSPENSE_MS, now });
+  return stage;
 }
 
 // The headline, the votes and whatever comes after, revealed in order.

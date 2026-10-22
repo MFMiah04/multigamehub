@@ -1,6 +1,7 @@
 import { html, render, nothing } from 'lit-html';
 import { serverNow } from './firebase.js';
 import { avatar } from './avatar.js';
+import { play, cue } from './sound.js';
 
 export { html, nothing, avatar };
 
@@ -22,7 +23,11 @@ export function formatTime(ms) {
 
 export function timer(endsAt, warnAt = 30) {
   if (!endsAt) return nothing;
-  const left = endsAt - serverNow();
+  const now = serverNow();
+  const left = endsAt - now;
+  // Tick for the last five seconds.
+  const secs = Math.ceil(left / 1000);
+  if (secs > 0 && secs <= 5) cue(`tick:${endsAt}:${secs}`, secs <= 2 ? 'tock' : 'tick', { at: endsAt - secs * 1000, now, late: 900 });
   return html`<div class="timer ${left <= warnAt * 1000 ? 'timer--warn' : ''}">${formatTime(left)}</div>`;
 }
 
@@ -73,6 +78,7 @@ export function action(fn) {
   return async e => {
     const target = e?.currentTarget;
     if (busy.has(fn)) return;
+    play('tap');
     busy.add(fn);
     if (target) target.disabled = true;
     try {

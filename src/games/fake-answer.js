@@ -2,6 +2,7 @@ import { html, nothing, button, timer, selectField, action, progress, toast, ava
 import { shuffle } from '../room.js';
 import { isTimeUp, isGraceOver, normalize, pickUnused, roundsField, secondsOptions, leaderboard, nextOrFinalButton, finalScores, bumpStat, award, plural } from './common.js';
 import questions from '../data/fake-answer-questions.json';
+import { cue } from '../sound.js';
 
 const TRUTH_POINTS = 1000;
 const FOOL_POINTS = 500;
@@ -179,6 +180,9 @@ function reveal(ctx, s) {
   const shown = round.revealAt ? Math.max(0, Math.floor((ctx.now() - round.revealAt) / REVEAL_GAP_MS) + 1) : Infinity;
   const truthShown = shown >= order.length;
   const done = shown > order.length;
+  if (round.revealAt && shown > 0 && shown <= order.length) {
+    cue(`fa:${round.revealAt}:${shown}`, truthShown ? 'ding' : 'pop', { at: round.revealAt + (shown - 1) * REVEAL_GAP_MS, now: ctx.now() });
+  }
 
   const next = () => {
     const q = pickUnused(questions, round.used);

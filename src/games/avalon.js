@@ -1,5 +1,6 @@
 import { html, svg, nothing } from 'lit-html';
 import { button, action, avatar, playerTag, confirmDialog } from '../ui.js';
+import { cue } from '../sound.js';
 import { shuffle } from '../room.js';
 import { backToLobbyButton } from './common.js';
 
@@ -149,6 +150,8 @@ export default {
       if (team.length && team.every(id => round.plays?.[id])) {
         const cards = shuffle(team.map(id => round.plays[id]));
         const fails = cards.filter(c => c === 'F').length;
+  if (round.revealAt && shown > 0) cue(`av:${round.revealAt}:${shown}`, cards[shown - 1] === 'F' ? 'buzz' : 'pop', { at: round.revealAt + (shown - 1) * CARD_GAP_MS, now: ctx.now() });
+  if (round.revealAt && done) cue(`av:${round.revealAt}:done`, round.questFailed ? 'sad' : 'ding');
         const failed = fails >= (needsTwoFails(round.playerCount, round.quest) ? 2 : 1);
         return { phase: 'reveal', 'round/cards': cards, 'round/questFailed': failed, 'round/revealAt': ctx.now() + 1200, 'round/plays': null };
       }

@@ -1,4 +1,5 @@
 import { render } from 'lit-html';
+import { soundControl } from './sound.js';
 import { onValue, get, update } from 'firebase/database';
 import { signIn, serverNow } from './firebase.js';
 import { roomRef, createRoom, joinRoom, leaveRoom, trackPresence, stopPresence, sortedPlayers, claimHostIfNeeded, touchRoom } from './room.js';
@@ -164,6 +165,7 @@ function roomHeader(ctx, inLobby) {
   return html`<header class="room-header">
     <button class="room-header__code" @click=${ctx.copyCode} title="Copy room code">${inLobby ? 'Lobby' : ctx.game.name} · <b>${ctx.room.code}</b></button>
     <span class="room-header__actions">
+      ${soundControl(ctx.rerender)}
       ${!inLobby && ctx.isHost ? html`<button class="link" @click=${action(endGame)}>End game</button>` : nothing}
       <button class="link" @click=${action(leave)}>Leave</button>
     </span>
