@@ -738,3 +738,11 @@ button.quest-card { transition: transform 0.15s; }
 @keyframes end-pop { from { transform: scale(0.3) rotate(-12deg); opacity: 0; } }
 @keyframes end-drop { from { transform: translateY(-60px) rotate(-6deg); opacity: 0; } }
 @media (prefers-reduced-motion: reduce) { .end-screen, .end-card, .end-art, .end-rain { animation: none; } }
+
+/* ----- changing your look in the lobby ----- */
+.lineup__me { position: relative; padding: 0; background: none; border: 0; cursor: pointer; transition: transform 0.15s; }
+@media (hover: hover) { .lineup__me:hover { transform: rotate(-4deg) scale(1.08); } }
+.lineup__edit { position: absolute; top: -4px; right: -10px; display: grid; place-items: center; width: 24px; height: 24px; border-radius: 50%; border: 2px solid var(--ink); background: var(--yellow); font-size: 14px; line-height: 1; }
+.look-editor { display: flex; flex-direction: column; align-items: center; margin-bottom: var(--row); padding: 0 12px 14px; background: #fff; box-shadow: var(--shadow); animation: pop 0.25s; }
+.look-editor .note { margin: 0; }
+.look-editor .btn { width: auto; padding: 0 28px; }

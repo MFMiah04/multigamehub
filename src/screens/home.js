@@ -39,17 +39,19 @@ const arrow = (dir, part, label, onClick) => html`<button class="arrow wobble" a
   <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d=${dir < 0 ? 'M15 5 L8 12 L15 19' : 'M9 5 L16 12 L9 19'} fill="none" stroke="#222" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" /></svg>
 </button>`;
 
-function creator(rerender) {
-  const cycle = (part, dir) => {
-    const look = homeState.look;
-    look[part] = (look[part] + dir + PARTS[part]) % PARTS[part];
-    localStorage.setItem(LOOK_KEY, JSON.stringify(look));
-    rerender();
-  };
+// Remembers your character on this device, for the home page and next time.
+export function saveLook(look) {
+  homeState.look = look;
+  try { localStorage.setItem(LOOK_KEY, JSON.stringify(look)); } catch { /* not saved */ }
+}
+
+// The arrows-either-side character creator, used on the home page and in the lobby.
+export function creator(look, onChange) {
+  const cycle = (part, dir) => onChange({ ...look, [part]: (look[part] + dir + PARTS[part]) % PARTS[part] });
   const parts = [['e', 'eyes'], ['m', 'mouth'], ['b', 'colour']];
   return html`<section class="creator" aria-label="Your character">
     <div class="creator__arrows">${parts.map(([p, label]) => arrow(-1, p, label, cycle))}</div>
-    <div class="creator__figure">${avatar({ look: homeState.look }, 74)}</div>
+    <div class="creator__figure">${avatar({ look }, 74)}</div>
     <div class="creator__arrows">${parts.map(([p, label]) => arrow(1, p, label, cycle))}</div>
   </section>`;
 }
@@ -81,7 +83,7 @@ export function homeView({ onHost, onJoin, rerender, rejoin, onRejoin, onForget 
         <input id="name" maxlength="16" autocomplete="nickname" .value=${s.name} placeholder=${PLACEHOLDER_NAME}
           @keydown=${enter(s.joining ? join : host)}></label>
 
-      ${creator(rerender)}
+      ${creator(s.look, look => { saveLook(look); rerender(); })}
 
       ${s.joining
         ? html`<label class="line-field"><span>Room code:</span>

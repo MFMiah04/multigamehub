@@ -4,7 +4,7 @@ import { repeat } from 'lit-html/directives/repeat.js';
 import { html, nothing, button, action, avatar, toast, confirmDialog } from '../ui.js';
 import { kickPlayer } from '../room.js';
 import { gameList } from '../games/index.js';
-import { showRules } from './home.js';
+import { showRules, creator, saveLook, homeState } from './home.js';
 import { cue } from '../sound.js';
 
 export const inviteLink = code => `${location.origin}/?room=${code}`;
@@ -44,6 +44,22 @@ function byPlayable(count) {
   return [...rated.filter(r => !r.problem), ...rated.filter(r => r.problem)];
 }
 
+// Whether the "change your look" panel is open. Kept outside ctx.local so picking a game doesn't close it.
+let editingLook = false;
+
+function lookEditor(ctx) {
+  const look = ctx.me.look || homeState.look;
+  const change = next => {
+    saveLook(next);
+    ctx.update({ [`players/${ctx.uid}/look`]: next }).catch(() => toast("Couldn't save your look. Try again?"));
+  };
+  return html`<section class="look-editor wobble" aria-label="Change your look">
+    <p class="note center">Change your look. Everyone sees it straight away.</p>
+    ${creator(look, change)}
+    ${button('Done', () => { editingLook = false; ctx.rerender(); }, { kind: 'white', small: true })}
+  </section>`;
+}
+
 export function lobbyView(ctx) {
   const { room, local, isHost } = ctx;
   const game = ctx.game;
@@ -77,13 +93,17 @@ export function lobbyView(ctx) {
     <h2 class="section-title">Players <small>(${ctx.players.length})</small></h2>
     <div class="lineup">
       ${repeat(ctx.players, p => p.id, p => html`<div class="lineup__player ${p.online === false ? 'lineup__player--away' : ''}">
-        ${avatar(p, 56)}
+        ${p.id === ctx.uid
+          ? html`<button class="lineup__me" aria-label="Change your look" title="Change your look" aria-expanded=${editingLook ? 'true' : 'false'}
+              @click=${() => { editingLook = !editingLook; ctx.rerender(); }}>${avatar(p, 56)}<span class="lineup__edit" aria-hidden="true">✎</span></button>`
+          : avatar(p, 56)}
         <span>${p.name}${p.id === ctx.uid ? ' (you)' : ''}</span>
         ${p.id === room.hostId ? html`<small class="hl">host</small>` : nothing}
         ${p.online === false ? html`<small>away</small>` : nothing}
         ${isHost && p.id !== ctx.uid ? html`<button class="kick" aria-label="Remove ${p.name}" @click=${action(() => kick(p))}>×</button>` : nothing}
       </div>`)}
     </div>
+    ${editingLook ? lookEditor(ctx) : nothing}
 
     <h2 class="section-title">${isHost ? 'Pick a game' : 'The game'}</h2>
     <div class="notes">
