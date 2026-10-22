@@ -546,3 +546,51 @@ button.quest-card { transition: transform 0.15s; }
 .toggle { display: flex; align-items: center; gap: 8px; font-size: 17px; line-height: var(--row); }
 .toggle input { width: 20px; height: 20px; accent-color: var(--ink); }
 .role-list { display: flex; flex-direction: column; margin: 14px 0; }
+
+/* ----- reveals, scores and the final podium ----- */
+.pop-in { animation: pop 0.45s cubic-bezier(.2, 1.6, .4, 1); }
+.result--hidden { visibility: hidden; }
+.stamp { display: inline-block; animation: stamp 0.5s cubic-bezier(.2, 1.6, .4, 1); }
+@keyframes stamp { from { transform: scale(2.6) rotate(-14deg); opacity: 0; } }
+.avatar--mood { animation: pop 0.4s cubic-bezier(.2, 1.6, .4, 1); }
+
+.avatar-spot { position: relative; display: inline-flex; flex: none; }
+.crown { position: absolute; top: -11px; left: 50%; width: 26px; height: 17px; transform: translateX(-50%) rotate(-8deg); z-index: 1; animation: crown 0.5s 1.2s cubic-bezier(.2, 1.6, .4, 1) both; }
+@keyframes crown { from { transform: translate(-50%, -14px) rotate(-30deg); opacity: 0; } }
+
+.result--moved { position: relative; z-index: 1; animation: climb 0.9s 0.5s cubic-bezier(.5, 0, .2, 1) both; }
+@keyframes climb { from { transform: translateY(var(--from)); } }
+.result__votes { position: relative; }
+.delta-pop { position: absolute; right: -4px; top: -4px; font-size: 17px; color: #1f8a4c; white-space: nowrap; pointer-events: none; animation: delta 1.6s 0.3s ease-out both; }
+@keyframes delta { 0% { transform: translateY(6px); opacity: 0; } 20% { opacity: 1; } 70% { opacity: 1; } 100% { transform: translateY(-26px); opacity: 0; } }
+
+.podium { display: flex; justify-content: center; align-items: flex-end; gap: 10px; margin: 14px 0 28px; }
+.podium__spot { display: flex; flex-direction: column; align-items: center; width: 31%; max-width: 150px; text-align: center; animation: rise 0.6s var(--delay) cubic-bezier(.2, 1.4, .4, 1) both; }
+.podium__spot b { font-size: 17px; line-height: 22px; margin: 4px 0; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.podium__block { width: 100%; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; padding-top: 8px; background: #fff; box-shadow: var(--shadow); }
+.podium__block span { font-size: 26px; font-weight: 700; line-height: 30px; }
+.podium__block small { font-size: 14px; color: var(--ink-soft); }
+.podium__spot--1 .podium__block { height: 112px; background: var(--yellow); }
+.podium__spot--2 .podium__block { height: 84px; background: var(--cyan); }
+.podium__spot--3 .podium__block { height: 56px; background: var(--peach); }
+.podium__spot--1 .crown { width: 34px; height: 22px; top: -16px; }
+@keyframes rise { from { transform: translateY(40px); opacity: 0; } }
+
+.awards { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 14px 12px; margin-bottom: 28px; }
+.award { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 10px 8px; text-align: center; background: var(--note); box-shadow: var(--shadow); line-height: 1.2; animation: rise 0.5s var(--delay) cubic-bezier(.2, 1.4, .4, 1) both; }
+.award:nth-child(odd) { transform: rotate(-1.5deg); }
+.award:nth-child(even) { transform: rotate(1.2deg); }
+.award b { font-size: 19px; }
+.award__who { display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 4px; font-size: 16px; }
+.award small { font-size: 14px; color: var(--ink-soft); }
+.final-rest { margin-bottom: 14px; }
+
+.confetti { position: fixed; inset: 0; pointer-events: none; overflow: hidden; z-index: 5; }
+.confetti i { position: absolute; top: -24px; width: 10px; height: 16px; border: 1.5px solid #222; border-radius: 2px; animation: confetti 3.2s var(--d) ease-in both; }
+.confetti i:nth-child(3n) { width: 14px; height: 6px; border-radius: 6px; }
+@keyframes confetti { from { transform: translate(0, 0) rotate(0); opacity: 1; } 85% { opacity: 1; } to { transform: translate(var(--x), 105vh) rotate(calc(var(--r) + 540deg)); opacity: 0; } }
+
+@media (prefers-reduced-motion: reduce) {
+  .pop-in, .stamp, .avatar--mood, .crown, .result--moved, .delta-pop, .podium__spot, .award { animation: none; }
+  .confetti { display: none; }
+}

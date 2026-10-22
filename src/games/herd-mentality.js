@@ -1,5 +1,5 @@
 import { html, nothing, button, timer, selectField, action, progress, toast, avatar } from '../ui.js';
-import { isTimeUp, backToLobbyButton, normalize, pickUnused, GRACE_MS } from './common.js';
+import { isTimeUp, backToLobbyButton, normalize, pickUnused, GRACE_MS, leaderboard, finalScores, bumpStat, award, plural } from './common.js';
 import questions from '../data/herd-questions.json';
 
 const pickQuestion = used => pickUnused(questions, used);
@@ -130,12 +130,20 @@ function reveal(ctx) {
   const newGroup = () => moveTo(Math.max(...groups.map(g => g.key)) + 1);
 
   const score = () => {
-    const updates = { phase: 'results' };
+    const delta = {};
+    const updates = { phase: 'results', 'round/delta': delta };
     const herdGroup = groups.find(g => g.key === herd);
     herdGroup?.members.forEach(p => {
-      if (p.id !== ctx.round.cow) updates[`round/scores/${p.id}`] = (ctx.round.scores?.[p.id] || 0) + 1;
+      bumpStat(updates, ctx.round, p.id, 'herd');
+      if (p.id === ctx.round.cow) return;
+      delta[p.id] = 1;
+      updates[`round/scores/${p.id}`] = (ctx.round.scores?.[p.id] || 0) + 1;
     });
-    if (cow) updates['round/cow'] = cow;
+    groups.filter(g => g.members.length === 1).forEach(g => bumpStat(updates, ctx.round, g.members[0].id, 'alone'));
+    if (cow) {
+      updates['round/cow'] = cow;
+      if (cow !== ctx.round.cow) bumpStat(updates, ctx.round, cow, 'cows');
+    }
     updates['round/last'] = herdGroup ? {
       herd: herdGroup.members.map(p => p.id),
       answer: ctx.round.answers?.[herdGroup.members[0].id] || '',
@@ -171,33 +179,31 @@ function results(ctx, s) {
   const { round } = ctx;
   const winner = winnerOf(ctx, s);
   const herdNames = (round.last?.herd || []).map(id => ctx.room.players[id]?.name).filter(Boolean);
-  const board = [...ctx.inGame].sort((a, b) => (round.scores?.[b.id] || 0) - (round.scores?.[a.id] || 0));
+  if (winner) {
+    return finalScores(ctx, {
+      winner,
+      awards: [
+        award(ctx, 'herd', 'True sheep', n => `In the herd ${plural(n, 'time')}`),
+        award(ctx, 'alone', 'Lone wolf', n => `The only one with their answer ${plural(n, 'time')}`),
+        award(ctx, 'cows', 'Pink cow magnet', n => `Got stuck with the pink cow ${plural(n, 'time')}`),
+      ],
+    });
+  }
 
   const next = () => {
     const q = pickQuestion(round.used);
     return ctx.update({
       phase: 'question', 'round/no': round.no + 1, 'round/question': q, [`round/used/${q}`]: true,
-      'round/answers': null, 'round/group': null, 'round/last': null, 'round/endsAt': ctx.now() + s.time * 1000,
+      'round/answers': null, 'round/group': null, 'round/last': null, 'round/delta': null, 'round/endsAt': ctx.now() + s.time * 1000,
     });
   };
 
   return html`
-    ${winner
-      ? html`<h1 class="center scribble">${winner.name} wins!</h1>`
-      : html`<h2 class="center">${herdNames.length ? html`The herd said <span class="hl">"${round.last.answer}"</span>` : 'No herd this time!'}</h2>
-        ${herdNames.length ? html`<p class="note center">+1 for ${herdNames.join(', ')}${round.last.cowMissedOut ? ' (the pink cow holder misses out)' : ''}</p>` : nothing}`}
-    <div class="results">
-      ${board.map((p, i) => html`<div class="result wobble ${p.id === round.cow ? 'result--cow' : ''}">
-        <span class="rank">${i + 1}</span>${avatar(p, 30)}
-        <div class="result__body"><span><b>${p.name}${p.id === ctx.uid ? ' (you)' : ''}</b>
-          ${p.id === round.cow ? html`<span class="hl hl--pink">pink cow</span>` : nothing}</span></div>
-        <span class="result__votes">${round.scores?.[p.id] || 0}<small>pts</small></span>
-      </div>`)}
-    </div>
+    <h2 class="center">${herdNames.length ? html`The herd said <span class="hl">"${round.last.answer}"</span>` : 'No herd this time!'}</h2>
+    ${herdNames.length ? html`<p class="note center">+1 for ${herdNames.join(', ')}${round.last.cowMissedOut ? ' (the pink cow holder misses out)' : ''}</p>` : nothing}
+    ${leaderboard(ctx, round.scores, round.delta, { badge: p => (p.id === round.cow ? 'pink cow' : null) })}
     ${s.target ? html`<p class="note center">First to ${s.target} points without the pink cow wins.</p>` : nothing}
     <div class="push"></div>
-    ${ctx.isHost
-      ? (winner ? button('Play again', action(ctx.startGame)) : button('Next question', action(next)))
-      : html`<p class="note center">Waiting for the host…</p>`}
-    ${winner || ctx.isHost ? backToLobbyButton(ctx) : nothing}`;
+    ${ctx.isHost ? button('Next question', action(next)) : html`<p class="note center">Waiting for the host…</p>`}
+    ${ctx.isHost ? backToLobbyButton(ctx) : nothing}`;
 }

@@ -1,6 +1,6 @@
 import { html, nothing, button, timer, selectField, action, progress, toast } from '../ui.js';
 import { shuffle } from '../room.js';
-import { minutes, counts, startVoting, isTimeUp, voteView, votedCount, tally, mostVoted, resultsList, revealButton, backToLobbyButton, hostSkip } from './common.js';
+import { minutes, counts, startVoting, isTimeUp, voteView, votedCount, tally, mostVoted, voteResults, toResults, revealButton, backToLobbyButton, hostSkip } from './common.js';
 
 const overseerOf = (ctx, s) => (ctx.room.players[s.overseer] ? s.overseer : ctx.room.hostId);
 const maxFakers = count => Math.max(1, Math.floor(count / 2));
@@ -59,7 +59,7 @@ export default {
       const answered = players.filter(p => ctx.round.answers?.[p.id]).length;
       if (isTimeUp(ctx) || answered === players.length) return startVoting(ctx, s.voteTime);
     }
-    if (phase === 'voting' && (isTimeUp(ctx) || votedCount(ctx, players) === players.length)) return { phase: 'results', 'round/endsAt': null };
+    if (phase === 'voting' && (isTimeUp(ctx) || votedCount(ctx, players) === players.length)) return toResults(ctx);
     return null;
   },
 
@@ -144,20 +144,23 @@ function results(ctx) {
   const players = answerers(ctx);
   const rows = tally(ctx, players, players);
   const fakers = players.filter(p => round.fakers?.[p.id]).map(p => p.id);
-  const caught = fakers.filter(id => mostVoted(rows, round.count).includes(id)).length;
+  const suspects = mostVoted(rows, round.count);
+  const caught = fakers.filter(id => suspects.includes(id)).length;
   const headline = caught === fakers.length ? 'Faker caught!' : caught > 0 ? 'Some fakers caught!' : 'The faker got away with it!';
 
-  return html`
-    <h1 class="center scribble">${headline}</h1>
-    ${round.revealed ? html`
-      <div class="question wobble"><small>Real question</small>${round.questions?.real}</div>
-      <div class="question wobble question--fake"><small>Faker's question</small>${round.questions?.fake}</div>` : nothing}
-    ${revealButton(ctx, round.revealed, 'Reveal the questions', 'revealed')}
-    ${resultsList(ctx, rows, {
-      badge: p => (round.fakers?.[p.id] ? 'faker' : null),
-      detail: p => html`<span class="answer">"${round.answers?.[p.id] || 'no answer'}"</span>`,
-    })}
+  return voteResults(ctx, rows, {
+    headline,
+    question: fakers.length > 1 ? 'So, who were the fakers?' : 'So, who was the faker?',
+    badge: p => (round.fakers?.[p.id] ? 'faker' : null),
+    detail: p => html`<span class="answer">"${round.answers?.[p.id] || 'no answer'}"</span>`,
+    mood: p => (round.fakers?.[p.id] ? (suspects.includes(p.id) ? 'shock' : 'happy') : null),
+    top: html`${round.revealed ? html`
+        <div class="question wobble pop-in"><small>Real question</small>${round.questions?.real}</div>
+        <div class="question wobble question--fake pop-in"><small>Faker's question</small>${round.questions?.fake}</div>` : nothing}
+      ${revealButton(ctx, round.revealed, 'Reveal the questions', 'revealed')}`,
+    bottom: html`
     <div class="push"></div>
     ${ctx.isHost ? button('Play again', action(ctx.startGame), { kind: 'yellow' }) : nothing}
-    ${backToLobbyButton(ctx)}`;
+    ${backToLobbyButton(ctx)}`,
+  });
 }

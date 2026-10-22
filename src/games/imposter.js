@@ -1,6 +1,6 @@
 import { html, nothing, button, timer, selectField, action, playerTag } from '../ui.js';
 import { randomItem, shuffle } from '../room.js';
-import { minutes, counts, startVoting, isTimeUp, voteRequestBar, voteRequestsPassed, voteView, votedCount, tally, mostVoted, resultsList, revealButton, backToLobbyButton } from './common.js';
+import { minutes, counts, startVoting, isTimeUp, voteRequestBar, voteRequestsPassed, voteView, votedCount, tally, mostVoted, voteResults, toResults, revealButton, backToLobbyButton } from './common.js';
 import words from '../data/imposter-words.json';
 
 const maxImposters = count => Math.max(1, Math.floor((count - 1) / 2));
@@ -49,7 +49,7 @@ export default {
   tick(ctx, s) {
     const { phase } = ctx.room;
     if (phase === 'playing' && (isTimeUp(ctx) || voteRequestsPassed(ctx))) return startVoting(ctx, s.voteTime);
-    if (phase === 'voting' && (isTimeUp(ctx) || votedCount(ctx, ctx.inGame) === ctx.inGame.length)) return { phase: 'results', 'round/endsAt': null };
+    if (phase === 'voting' && (isTimeUp(ctx) || votedCount(ctx, ctx.inGame) === ctx.inGame.length)) return toResults(ctx);
     return null;
   },
 
@@ -94,15 +94,17 @@ function results(ctx) {
   const caught = imposters.filter(id => suspects.includes(id)).length;
   const headline = caught === imposters.length ? 'Imposter caught!' : caught > 0 ? 'Some imposters caught!' : 'The imposter fooled you!';
 
-  return html`
-    <h1 class="center scribble">${headline}</h1>
-    ${round.revealed ? html`<div class="secret wobble"><small>The word was</small><b>${round.word}</b></div>` : nothing}
-    ${revealButton(ctx, round.revealed, 'Reveal the word', 'revealed')}
-    ${resultsList(ctx, rows, {
-      badge: p => (round.imposters?.[p.id] ? 'imposter' : null),
-      detail: p => (round.revealed && round.imposters?.[p.id] ? html`<small>Hint: ${round.imposters[p.id]}</small>` : nothing),
-    })}
+  return voteResults(ctx, rows, {
+    headline,
+    question: imposters.length > 1 ? 'So, who were the imposters?' : 'So, who was the imposter?',
+    badge: p => (round.imposters?.[p.id] ? 'imposter' : null),
+    detail: p => (round.revealed && round.imposters?.[p.id] ? html`<small>Hint: ${round.imposters[p.id]}</small>` : nothing),
+    mood: p => (round.imposters?.[p.id] ? (suspects.includes(p.id) ? 'shock' : 'happy') : null),
+    top: html`${round.revealed ? html`<div class="secret wobble pop-in"><small>The word was</small><b>${round.word}</b></div>` : nothing}
+      ${revealButton(ctx, round.revealed, 'Reveal the word', 'revealed')}`,
+    bottom: html`
     <div class="push"></div>
     ${ctx.isHost ? button('Play again', action(ctx.startGame), { kind: 'yellow' }) : nothing}
-    ${backToLobbyButton(ctx)}`;
+    ${backToLobbyButton(ctx)}`,
+  });
 }

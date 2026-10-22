@@ -48,10 +48,17 @@ const HEAD = 'M8.5 20.5 C8 0, 40 -0.5, 39.5 20 C39.5 40.5, 9 41, 8.5 20.5 Z';
 // Older players only had a colour index, so fall back to that.
 const lookOf = player => player?.look || { e: 0, m: 0, b: player?.color ?? 0 };
 
-export function avatar(player, size = 40) {
-  const look = lookOf(player);
+// A mood swaps in a reaction face for a moment: a big grin, a gasp or a frown.
+const MOODS = {
+  happy: { m: 1 },
+  shock: { e: 5, m: 3 },
+  sad: { m: 6 },
+};
+
+export function avatar(player, size = 40, mood = null) {
+  const look = { ...lookOf(player), ...MOODS[mood] };
   const [color, pattern] = BODIES[look.b % BODIES.length];
-  return html`<svg class="avatar ${player?.online === false ? 'avatar--away' : ''}" width=${size} height=${Math.round(size * 52 / 48)} viewBox="0 0 48 52" aria-hidden="true">
+  return html`<svg class="avatar ${player?.online === false ? 'avatar--away' : ''} ${mood ? 'avatar--mood' : ''}" width=${size} height=${Math.round(size * 52 / 48)} viewBox="0 0 48 52" aria-hidden="true">
     ${svg`<g fill="none" stroke="#222" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round">
       <path d=${BODY} fill=${color} />
       ${pattern ? svg`<path d=${BODY} fill="url(#pat-${pattern})" stroke="none" />` : ''}

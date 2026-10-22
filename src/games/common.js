@@ -1,3 +1,4 @@
+import { svg } from 'lit-html';
 import { html, nothing, button, avatar, timer, progress, action, confirmDialog } from '../ui.js';
 
 export const minutes = (from, to) =>
@@ -11,6 +12,9 @@ export function backToLobby(ctx) {
   ctx.players.forEach(p => { updates[`players/${p.id}/inGame`] = null; });
   return ctx.update(updates);
 }
+
+// Moving to the results starts the reveal clock, so every screen uncovers the votes in step.
+export const toResults = ctx => ({ phase: 'results', 'round/endsAt': null, 'round/revealAt': ctx.now() + 400 });
 
 export function startVoting(ctx, seconds) {
   return { phase: 'voting', 'round/endsAt': ctx.now() + seconds * 1000, 'round/votes': null, 'round/voteRequests': null };
@@ -44,16 +48,111 @@ export function turnOf(ctx, order, no) {
   return present.length ? present[(no - 1) % present.length] : null;
 }
 
-export function leaderboard(ctx, scores = {}, delta = {}) {
-  const board = [...ctx.inGame].sort((a, b) => (scores[b.id] || 0) - (scores[a.id] || 0));
+// ----- scores -----
+
+const ROW_PITCH = 84; // a results row (70px) plus the gap below it
+const CROWN = html`<svg class="crown" viewBox="0 0 24 16" aria-hidden="true">${svg`
+  <path d="M2.5 14 L3.5 4 L8.5 9 L12 2 L15.5 9 L20.5 4 L21.5 14 Z" fill="#ffd04d" stroke="#222" stroke-width="1.8" stroke-linejoin="round" />`}</svg>`;
+
+const ranked = (players, points) => [...players].sort((a, b) => points(b.id) - points(a.id));
+
+// The scoreboard. Rows slide from where they were before this round to where they are now,
+// anyone who scored grins and gets a "+points" pop, and whoever's top wears the crown.
+export function leaderboard(ctx, scores = {}, delta = {}, { badge } = {}) {
+  const now = id => scores[id] || 0;
+  const before = id => now(id) - (delta[id] || 0);
+  const board = ranked(ctx.inGame, now);
+  const oldOrder = ranked(ctx.inGame, before).map(p => p.id);
+  const top = Math.max(0, ...board.map(p => now(p.id)));
   return html`<div class="results">
-    ${board.map((p, i) => html`<div class="result wobble">
-      <span class="rank">${i + 1}</span>${avatar(p, 40)}
-      <div class="result__body"><span><b>${p.name}${p.id === ctx.uid ? ' (you)' : ''}</b></span>
-        ${delta[p.id] ? html`<small>+${delta[p.id]} this round</small>` : nothing}</div>
-      <span class="result__votes">${scores[p.id] || 0}<small>pts</small></span>
-    </div>`)}
+    ${board.map((p, i) => {
+      const moved = oldOrder.indexOf(p.id) - i;
+      const label = badge?.(p);
+      return html`<div class="result wobble ${moved ? 'result--moved' : ''} ${label ? 'result--marked' : ''}" style="--from: ${moved * ROW_PITCH}px">
+        <span class="rank">${i + 1}</span>
+        <span class="avatar-spot">${top > 0 && now(p.id) === top ? CROWN : nothing}${avatar(p, 40, delta[p.id] > 0 ? 'happy' : null)}</span>
+        <div class="result__body"><span><b>${p.name}${p.id === ctx.uid ? ' (you)' : ''}</b> ${label ? html`<span class="hl hl--pink">${label}</span>` : nothing}</span>
+          ${delta[p.id] ? html`<small>+${delta[p.id]} this round</small>` : nothing}</div>
+        <span class="result__votes">${now(p.id)}<small>pts</small>
+          ${delta[p.id] ? html`<span class="delta-pop">+${delta[p.id]}</span>` : nothing}</span>
+      </div>`;
+    })}
   </div>`;
+}
+
+// Adds to a running total for the end-of-game awards, e.g. how many people someone's lies fooled.
+export function bumpStat(updates, round, id, key, by = 1) {
+  const path = `round/stats/${id}/${key}`;
+  updates[path] = (updates[path] ?? round.stats?.[id]?.[key] ?? 0) + by;
+}
+
+// An award for whoever has the highest total for `key` (ties share it). Nothing if nobody has any.
+export function award(ctx, key, title, note) {
+  const stats = ctx.round.stats || {};
+  const value = p => stats[p.id]?.[key] || 0;
+  const best = Math.max(0, ...ctx.inGame.map(value));
+  if (!best) return null;
+  return { title, players: ctx.inGame.filter(p => value(p) === best), note: note(best) };
+}
+
+const plural = (n, word) => `${n} ${word}${n === 1 ? '' : 's'}`;
+export { plural };
+
+// Doodled confetti that falls once over the final screen.
+const CONFETTI_COLORS = ['#a0e7e5', '#ffaebc', '#ffe066', '#b4f8c8', '#c3b1e1', '#ffc48c', '#9ad0f5'];
+const confetti = () => html`<div class="confetti" aria-hidden="true">
+  ${Array.from({ length: 36 }, (_, i) => html`<i style="left: ${(i * 37) % 100}%; background: ${CONFETTI_COLORS[i % CONFETTI_COLORS.length]};
+    --d: ${((i * 13) % 20) / 10}s; --r: ${(i * 47) % 360}deg; --x: ${((i * 29) % 60) - 30}px"></i>`)}
+</div>`;
+
+const ordinal = n => ['1st', '2nd', '3rd'][n - 1] || `${n}th`;
+
+// The end of a game: a podium for the top three, awards, then everyone else.
+// `winner` overrides who won, for games where the most points doesn't always win.
+export function finalScores(ctx, { awards = [], winner } = {}) {
+  const scores = ctx.round.scores || {};
+  const now = id => scores[id] || 0;
+  let board = ranked(ctx.inGame, now);
+  if (winner) board = [winner, ...board.filter(p => p.id !== winner.id)];
+  const top = winner ? now(winner.id) : Math.max(0, ...board.map(p => now(p.id)));
+  const winners = winner ? [winner] : board.filter(p => now(p.id) === top && top > 0);
+  const bottom = Math.min(...board.map(p => now(p.id)));
+  const place = p => (winner && p.id === winner.id ? 1 : 1 + board.filter(o => now(o.id) > now(p.id) && o.id !== winner?.id).length + (winner && p.id !== winner.id ? 1 : 0));
+  const mood = p => (winners.includes(p) ? 'happy' : board.length > 2 && now(p.id) === bottom ? 'sad' : null);
+  const podium = board.slice(0, 3);
+  const shown = awards.filter(Boolean);
+
+  return html`
+    ${winners.length ? confetti() : nothing}
+    <h1 class="center scribble pop-in">${winners.length === 1 ? `${winners[0].name} wins!` : winners.length ? "It's a tie!" : 'Nobody scored!'}</h1>
+    <div class="podium">
+      ${[1, 0, 2].filter(i => podium[i]).map(i => {
+        const p = podium[i];
+        return html`<div class="podium__spot podium__spot--${place(p)}" style="--delay: ${[0.9, 0.4, 0.15][i]}s">
+          <span class="avatar-spot">${winners.includes(p) ? CROWN : nothing}${avatar(p, i === 0 ? 60 : 46, mood(p))}</span>
+          <b>${p.name}${p.id === ctx.uid ? ' (you)' : ''}</b>
+          <div class="podium__block wobble"><span>${ordinal(place(p))}</span><small>${now(p.id)} pts</small></div>
+        </div>`;
+      })}
+    </div>
+    ${shown.length ? html`<h2 class="section-title">Awards</h2>
+      <div class="awards">
+        ${shown.map((a, i) => html`<div class="award sticky--${['pink', 'cyan', 'mint', 'lilac', 'peach'][i % 5]}" style="--delay: ${1.4 + i * 0.35}s">
+          <b>${a.title}</b>
+          <span class="award__who">${a.players.map(p => avatar(p, 24, 'happy'))} ${a.players.map(p => p.name).join(' & ')}</span>
+          <small>${a.note}</small>
+        </div>`)}
+      </div>` : nothing}
+    ${board.length > 3 ? html`<div class="results final-rest">
+      ${board.slice(3).map(p => html`<div class="result wobble">
+        <span class="rank">${place(p)}</span>${avatar(p, 34, mood(p))}
+        <div class="result__body"><span><b>${p.name}${p.id === ctx.uid ? ' (you)' : ''}</b></span></div>
+        <span class="result__votes">${now(p.id)}<small>pts</small></span>
+      </div>`)}
+    </div>` : nothing}
+    <div class="push"></div>
+    ${ctx.isHost ? button('Play again', action(ctx.startGame)) : nothing}
+    ${backToLobbyButton(ctx)}`;
 }
 
 export const roundsField = (value, set, disabled) =>
@@ -63,18 +162,6 @@ export const roundsField = (value, set, disabled) =>
     </select></label>`;
 
 export const secondsOptions = list => list.map(v => [v, v >= 60 && v % 60 === 0 ? `${v / 60} min` : `${v} seconds`]);
-
-export function finalScores(ctx) {
-  const scores = ctx.round.scores || {};
-  const top = Math.max(0, ...ctx.inGame.map(p => scores[p.id] || 0));
-  const winners = ctx.inGame.filter(p => (scores[p.id] || 0) === top && top > 0);
-  return html`
-    <h1 class="center scribble">${winners.length === 1 ? `${winners[0].name} wins!` : winners.length ? "It's a tie!" : 'Nobody scored!'}</h1>
-    ${leaderboard(ctx, scores)}
-    <div class="push"></div>
-    ${ctx.isHost ? button('Play again', action(ctx.startGame)) : nothing}
-    ${backToLobbyButton(ctx)}`;
-}
 
 export function nextOrFinalButton(ctx, round, next) {
   if (!ctx.isHost) return html`<p class="note center">Waiting for the host…</p>`;
@@ -145,7 +232,7 @@ export function voteView(ctx, { candidates, voters, max, prompt, details }) {
     ${canVote ? (locked
       ? button('Change my vote', action(change), { kind: 'white' })
       : button('Lock in vote', action(submit), { kind: 'yellow', disabled: picks.size === 0 })) : nothing}
-    ${hostSkip(ctx, 'Skip to results', { phase: 'results', 'round/endsAt': null })}`;
+    ${hostSkip(ctx, 'Skip to results', toResults(ctx))}`;
 }
 
 export function tally(ctx, candidates, voters) {
@@ -164,14 +251,47 @@ export function mostVoted(rows, slots) {
   return withVotes.filter(r => r.voters.length >= cutoff).map(r => r.player.id);
 }
 
-export function resultsList(ctx, rows, { badge, detail }) {
+// ----- revealing the votes -----
+
+const VOTE_GAP_MS = 1300;
+const SUSPENSE_MS = 2000;
+
+// Players nobody voted for show straight away. Then the rest appear one at a time, fewest votes first,
+// and after a pause the answer (who was really the spy, imposter…) is stamped on.
+export function voteStage(ctx, rows) {
+  const start = ctx.round.revealAt;
+  if (!start) return { shown: rows.length, counting: false, done: true };
+  const elapsed = ctx.now() - start;
+  const voted = rows.filter(r => r.voters.length).length;
+  const shownVoted = elapsed < 0 ? 0 : Math.min(voted, Math.floor(elapsed / VOTE_GAP_MS));
+  return {
+    shown: elapsed < 0 ? 0 : rows.length - voted + shownVoted,
+    counting: shownVoted < voted,
+    done: elapsed >= voted * VOTE_GAP_MS + SUSPENSE_MS,
+  };
+}
+
+// The headline, the votes and whatever comes after, revealed in order.
+// `question` is asked during the pause, e.g. "So, who was the spy?"
+export function voteResults(ctx, rows, { headline, question, badge, detail, mood, top = nothing, bottom = nothing }) {
+  const stage = voteStage(ctx, rows);
+  return html`
+    <h1 class="center scribble ${stage.done ? 'pop-in' : ''}">${stage.done ? headline : stage.counting ? 'The votes are in…' : question}</h1>
+    ${stage.done ? top : nothing}
+    ${resultsList(ctx, rows, { badge, detail, mood, stage })}
+    ${stage.done ? bottom : nothing}`;
+}
+
+export function resultsList(ctx, rows, { badge, detail, mood, stage }) {
+  const done = !stage || stage.done;
   return html`<div class="results">
-    ${rows.map(r => {
-      const label = badge(r.player);
-      return html`<div class="result wobble ${label ? 'result--marked' : ''}">
-        ${avatar(r.player, 40)}
+    ${rows.map((r, i) => {
+      const hidden = stage && i < rows.length - stage.shown;
+      const label = done ? badge(r.player) : null;
+      return html`<div class="result wobble ${label ? 'result--marked' : ''} ${hidden ? 'result--hidden' : stage ? 'result--reveal' : ''}">
+        ${avatar(r.player, 40, done && mood ? mood(r.player) : null)}
         <div class="result__body">
-          <span><b>${r.player.name}${r.player.id === ctx.uid ? ' (you)' : ''}</b> ${label ? html`<span class="hl">${label}</span>` : nothing}</span>
+          <span><b>${r.player.name}${r.player.id === ctx.uid ? ' (you)' : ''}</b> ${label ? html`<span class="hl stamp">${label}</span>` : nothing}</span>
           ${detail ? detail(r.player) : nothing}
           ${r.voters.length ? html`<small>Voted by ${r.voters.join(', ')}</small>` : nothing}
         </div>

@@ -1,6 +1,6 @@
 import { html, nothing, button, timer, selectField, action, progress, toast, avatar } from '../ui.js';
 import { shuffle } from '../room.js';
-import { isTimeUp, isGraceOver, normalize, pickUnused, roundsField, secondsOptions, leaderboard, nextOrFinalButton, finalScores } from './common.js';
+import { isTimeUp, isGraceOver, normalize, pickUnused, roundsField, secondsOptions, leaderboard, nextOrFinalButton, finalScores, bumpStat, award, plural } from './common.js';
 import questions from '../data/fake-answer-questions.json';
 
 const TRUTH_POINTS = 1000;
@@ -36,13 +36,21 @@ function buildOptions(ctx) {
 function scoreRound(ctx) {
   const { round } = ctx;
   const delta = {};
+  const updates = { phase: 'reveal', 'round/endsAt': null, 'round/delta': delta, 'round/revealAt': ctx.now() + 600 };
   ctx.inGame.forEach(p => {
     const pick = round.options?.[round.picks?.[p.id]];
     if (!pick) return;
-    if (pick.truth) delta[p.id] = (delta[p.id] || 0) + TRUTH_POINTS;
-    else Object.keys(pick.authors || {}).filter(id => id !== p.id).forEach(id => { delta[id] = (delta[id] || 0) + FOOL_POINTS; });
+    if (pick.truth) {
+      delta[p.id] = (delta[p.id] || 0) + TRUTH_POINTS;
+      bumpStat(updates, round, p.id, 'found');
+    } else {
+      bumpStat(updates, round, p.id, 'duped');
+      Object.keys(pick.authors || {}).filter(id => id !== p.id).forEach(id => {
+        delta[id] = (delta[id] || 0) + FOOL_POINTS;
+        bumpStat(updates, round, id, 'fooled');
+      });
+    }
   });
-  const updates = { phase: 'reveal', 'round/endsAt': null, 'round/delta': delta, 'round/revealAt': ctx.now() + 600 };
   Object.entries(delta).forEach(([id, pts]) => { updates[`round/scores/${id}`] = (round.scores?.[id] || 0) + pts; });
   return updates;
 }
@@ -102,12 +110,20 @@ export default {
   },
 
   view(ctx, s) {
-    const views = { final: finalScores, write, pick, reveal };
+    const views = { final, write, pick, reveal };
     return views[ctx.room.phase]?.(ctx, s) ?? nothing;
   },
 };
 
 const header = ctx => html`<p class="note center">Round ${ctx.round.no} of ${ctx.round.total}</p>`;
+
+const final = ctx => finalScores(ctx, {
+  awards: [
+    award(ctx, 'fooled', 'Master liar', n => `Fooled ${plural(n, 'person')} with their lies`.replace('persons', 'people')),
+    award(ctx, 'found', 'Truth detector', n => `Found the truth ${plural(n, 'time')}`),
+    award(ctx, 'duped', 'Most gullible', n => `Fell for ${plural(n, 'lie')}`),
+  ],
+});
 
 function write(ctx) {
   const { round } = ctx;
@@ -186,7 +202,7 @@ function reveal(ctx, s) {
             <span><b>${titleCase(o.text)}</b> ${o.truth ? html`<span class="hl">the truth</span>` : nothing}</span>
             <small>${o.truth ? (fooled.length ? `Found by ${names(fooled)}` : 'Nobody found it!') : `${names(authors)}'s lie${fooled.length ? ` fooled ${names(fooled)}` : ' fooled nobody'}`}</small>
           </div>
-          ${fooled.length ? html`<span class="pickers">${fooled.map(p => avatar(p, 24))}</span>` : nothing}
+          ${fooled.length ? html`<span class="pickers">${fooled.map(p => avatar(p, 24, o.truth ? 'happy' : 'shock'))}</span>` : nothing}
         </div>`;
       })}
     </div>

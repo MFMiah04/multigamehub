@@ -1,6 +1,6 @@
 import { html, nothing, button, timer, selectField, action } from '../ui.js';
 import { randomItem, shuffle } from '../room.js';
-import { minutes, counts, startVoting, isTimeUp, voteRequestBar, voteRequestsPassed, voteView, votedCount, tally, mostVoted, resultsList, revealButton, backToLobbyButton } from './common.js';
+import { minutes, counts, startVoting, isTimeUp, voteRequestBar, voteRequestsPassed, voteView, votedCount, tally, mostVoted, voteResults, toResults, revealButton, backToLobbyButton } from './common.js';
 import locations from '../data/spyfall-locations.json';
 
 const enabledLocations = settings => locations.filter((_, i) => !settings.off?.[i]);
@@ -64,7 +64,7 @@ export default {
   tick(ctx, s) {
     const { phase } = ctx.room;
     if (phase === 'playing' && (isTimeUp(ctx) || voteRequestsPassed(ctx))) return startVoting(ctx, s.voteTime);
-    if (phase === 'voting' && (isTimeUp(ctx) || votedCount(ctx, ctx.inGame) === ctx.inGame.length)) return { phase: 'results', 'round/endsAt': null };
+    if (phase === 'voting' && (isTimeUp(ctx) || votedCount(ctx, ctx.inGame) === ctx.inGame.length)) return toResults(ctx);
     return null;
   },
 
@@ -117,15 +117,17 @@ function results(ctx) {
     ? (spies.length > 1 ? 'Both spies caught!' : 'Spy caught!')
     : caught > 0 ? 'One spy caught, one got away!' : (spies.length > 1 ? 'The spies got away!' : 'The spy got away!');
 
-  return html`
-    <h1 class="center scribble">${headline}</h1>
-    ${round.revealed ? html`<div class="secret wobble"><small>The location was</small><b>${round.location}</b></div>` : nothing}
-    ${revealButton(ctx, round.revealed, 'Reveal the location', 'revealed')}
-    ${resultsList(ctx, rows, {
-      badge: p => (round.roles?.[p.id] === 'spy' ? 'spy' : null),
-      detail: p => (round.revealed && round.roles?.[p.id] !== 'spy' ? html`<small>${round.roles?.[p.id]}</small>` : nothing),
-    })}
+  return voteResults(ctx, rows, {
+    headline,
+    question: spies.length > 1 ? 'So, who were the spies?' : 'So, who was the spy?',
+    badge: p => (round.roles?.[p.id] === 'spy' ? 'spy' : null),
+    detail: p => (round.revealed && round.roles?.[p.id] !== 'spy' ? html`<small>${round.roles?.[p.id]}</small>` : nothing),
+    mood: p => (round.roles?.[p.id] === 'spy' ? (suspects.includes(p.id) ? 'shock' : 'happy') : null),
+    top: html`${round.revealed ? html`<div class="secret wobble pop-in"><small>The location was</small><b>${round.location}</b></div>` : nothing}
+      ${revealButton(ctx, round.revealed, 'Reveal the location', 'revealed')}`,
+    bottom: html`
     <div class="push"></div>
     ${ctx.isHost ? button('Play again', action(ctx.startGame), { kind: 'yellow' }) : nothing}
-    ${backToLobbyButton(ctx)}`;
+    ${backToLobbyButton(ctx)}`,
+  });
 }

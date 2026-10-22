@@ -1,7 +1,7 @@
 import { svg } from 'lit-html';
 import { html, nothing, button, timer, selectField, action, progress, toast, avatar } from '../ui.js';
 import { shuffle } from '../room.js';
-import { isTimeUp, pickUnused, turnOf, roundsField, secondsOptions, leaderboard, nextOrFinalButton, finalScores, backToLobbyButton } from './common.js';
+import { isTimeUp, pickUnused, turnOf, roundsField, secondsOptions, leaderboard, nextOrFinalButton, finalScores, backToLobbyButton, bumpStat, award, plural } from './common.js';
 import spectrums from '../data/spectrums.json';
 
 // Scoring bands, measured from the target on a 0–100 scale. Zones past either end are simply cut off.
@@ -18,6 +18,8 @@ function scoreRound(ctx) {
   guessers.forEach(p => { delta[p.id] = pointsFor(round.guesses[p.id], round.target); });
   if (guessers.length) delta[round.psychic] = Math.round(guessers.reduce((sum, p) => sum + delta[p.id], 0) / guessers.length);
   const updates = { phase: 'reveal', 'round/endsAt': null, 'round/delta': delta };
+  guessers.forEach(p => bumpStat(updates, round, p.id, delta[p.id] === 4 ? 'bullseyes' : delta[p.id] === 0 ? 'misses' : 'near'));
+  if (guessers.length && delta[round.psychic]) bumpStat(updates, round, round.psychic, 'psychic', delta[round.psychic]);
   Object.entries(delta).forEach(([id, pts]) => { if (pts) updates[`round/scores/${id}`] = (round.scores?.[id] || 0) + pts; });
   return updates;
 }
@@ -148,7 +150,7 @@ export default {
   },
 
   view(ctx, s) {
-    const views = { final: isTeam(ctx) ? teamFinal : finalScores, clue, guess, reveal };
+    const views = { final: isTeam(ctx) ? teamFinal : final, clue, guess, reveal };
     return views[ctx.room.phase]?.(ctx, s) ?? nothing;
   },
 };
@@ -170,6 +172,14 @@ function teamFinal(ctx) {
     ${ctx.isHost ? button('Play again', action(ctx.startGame)) : nothing}
     ${backToLobbyButton(ctx)}`;
 }
+
+const final = ctx => finalScores(ctx, {
+  awards: [
+    award(ctx, 'bullseyes', 'Sharpshooter', n => `Hit ${plural(n, 'bullseye')}`),
+    award(ctx, 'psychic', 'Best psychic', n => `Earned ${plural(n, 'point')} with their clues`),
+    award(ctx, 'misses', 'Way off', n => `Missed completely ${plural(n, 'time')}`),
+  ],
+});
 
 const psychicName = ctx => ctx.room.players[ctx.round.psychic]?.name || 'The psychic';
 

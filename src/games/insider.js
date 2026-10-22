@@ -1,6 +1,6 @@
 import { html, nothing, button, timer, selectField, action, avatar } from '../ui.js';
 import { shuffle } from '../room.js';
-import { minutes, startVoting, isTimeUp, voteView, votedCount, tally, mostVoted, resultsList, pickUnused, backToLobbyButton } from './common.js';
+import { minutes, startVoting, isTimeUp, voteView, votedCount, tally, mostVoted, voteResults, toResults, pickUnused, backToLobbyButton } from './common.js';
 import words from '../data/one-word-words.json';
 
 const suspectsOf = ctx => ctx.inGame.filter(p => p.id !== ctx.round.master);
@@ -47,7 +47,7 @@ export default {
   tick(ctx) {
     const { phase } = ctx.room;
     if (phase === 'questions' && isTimeUp(ctx)) return { phase: 'results', 'round/endsAt': null, 'round/timedOut': true };
-    if (phase === 'voting' && (isTimeUp(ctx) || votedCount(ctx, ctx.inGame) === ctx.inGame.length)) return { phase: 'results', 'round/endsAt': null };
+    if (phase === 'voting' && (isTimeUp(ctx) || votedCount(ctx, ctx.inGame) === ctx.inGame.length)) return toResults(ctx);
     return null;
   },
 
@@ -119,12 +119,16 @@ function results(ctx) {
   const rows = tally(ctx, suspectsOf(ctx), ctx.inGame);
   const top = mostVoted(rows, 1);
   const caught = top.length === 1 && top[0] === round.insider;
-  return html`
-    <h1 class="center scribble">${caught ? 'Insider caught!' : 'The Insider got away!'}</h1>
-    <p class="note center">${insider ? `${insider.name} was the Insider` : 'The Insider left'}. The word was <span class="hl">${word}</span>.</p>
-    ${resultsList(ctx, rows, { badge: roleOf })}
+  return voteResults(ctx, rows, {
+    headline: caught ? 'Insider caught!' : 'The Insider got away!',
+    question: 'So, who was the Insider?',
+    badge: roleOf,
+    mood: p => (p.id === round.insider ? (caught ? 'shock' : 'happy') : null),
+    top: html`<p class="note center">${insider ? `${insider.name} was the Insider` : 'The Insider left'}. The word was <span class="hl">${word}</span>.</p>`,
+    bottom: html`
     <div class="push"></div>
     ${ctx.isHost ? button('Play again', action(ctx.startGame)) : nothing}
-    ${backToLobbyButton(ctx)}`;
+    ${backToLobbyButton(ctx)}`,
+  });
 }
 
