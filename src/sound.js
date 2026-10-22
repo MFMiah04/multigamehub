@@ -136,16 +136,17 @@ export function cue(key, name, { at, now, late = 1500, args = [] } = {}) {
 // ----- the speaker button and its volume popover -----
 
 let open = false;
-const SPEAKER = (muted) => html`<svg viewBox="0 0 28 24" width="26" height="22" aria-hidden="true">${svg`
+// The speaker shows a cross when silent, one sound wave up to half volume, and two above that.
+const SPEAKER = level => html`<svg viewBox="0 0 28 24" width="26" height="22" aria-hidden="true">${svg`
   <g fill="none" stroke="#222" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
     <path d="M3 9 h4 l6 -5 v16 l-6 -5 h-4 z" fill="#fff" />
-    ${muted
-      ? svg`<path d="M18 8 l7 8 M25 8 l-7 8" />`
-      : svg`<path d="M17 9 q2.5 3 0 6 M20.5 6 q5 6 0 12" />`}
+    ${level === 0 ? svg`<path d="M18 8 l7 8 M25 8 l-7 8" />` : svg`<path d="M17 9 q2.5 3 0 6" />`}
+    ${level > 0.5 ? svg`<path d="M20.5 6 q5 6 0 12" />` : ''}
   </g>`}</svg>`;
 
 export function soundControl(rerender) {
-  const quiet = settings.muted || !settings.volume;
+  const level = settings.muted ? 0 : settings.volume;
+  const quiet = level === 0;
   const setVolume = v => {
     settings.volume = v;
     settings.muted = v === 0;
@@ -163,7 +164,7 @@ export function soundControl(rerender) {
   };
   return html`<span class="sound">
     <button class="link sound__button" aria-label="Sound settings" aria-expanded=${open ? 'true' : 'false'}
-      @click=${() => { open = !open; rerender(); }}>${SPEAKER(quiet)}</button>
+      @click=${() => { open = !open; rerender(); }}>${SPEAKER(level)}</button>
     ${open ? html`<div class="sound__panel wobble">
       <button class="link" @click=${toggleMute}>${quiet ? 'Turn sound on' : 'Mute'}</button>
       <input class="sound__slider" type="range" min="0" max="100" step="5" aria-label="Volume"
