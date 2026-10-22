@@ -5,6 +5,11 @@ const FACE = 'M24 4 C36.5 3.5, 44.5 12, 44 24.5 C43.5 36.5, 35.5 44.5, 23.5 44 C
 const YELLOW = '#ffe066';
 const SKIN = '#ffd6a5';
 const BLUE = '#9ad0f5';
+// A teardrop with its point at the top, turned to fly off the face.
+const TEAR = 'M0 -7 C3.5 -1.5, 4.5 2.5, 3.2 4.8 C1.8 7.2, -1.8 7.2, -3.2 4.8 C-4.5 2.5, -3.5 -1.5, 0 -7 Z';
+// A hand with fingers up and thumb out to the left. The clap uses it twice, the back one mirrored.
+const HAND = 'M6.5 18 L6.5 -11 C6.5 -18, -6.5 -18, -6.5 -11 L-6.5 -1.5 C-9 -5.5, -14 -4, -12.8 0.5 C-11.8 4, -9 7, -6.5 10 L-6.5 18 Z';
+const FINGERS = 'M-3 -15.8 L-3 -7 M0 -16.4 L0 -7 M3 -15.8 L3 -7';
 const dot = (x, y, r = 2.4) => svg`<circle cx=${x} cy=${y} r=${r} fill="#222" stroke="none" />`;
 
 const ART = {
@@ -13,7 +18,8 @@ const ART = {
     <path d="M13 19 q4 -5 8 0 M27 19 q4 -5 8 0" />
     <path d="M12.5 25.5 h23 q-1.5 12 -11.5 12 q-10 0 -11.5 -12 z" fill="#fff" />
     <path d="M17 31.5 q7 3 14 0" stroke-width="1.8" />
-    <path d="M6.5 17 q-4 6 -1 9 q4 -1 1 -9 z M41.5 17 q4 6 1 9 q-4 -1 -1 -9 z" fill=${BLUE} stroke-width="1.8" />`,
+    <path d=${TEAR} fill=${BLUE} stroke-width="1.8" transform="translate(6.5 22) rotate(62)" />
+    <path d=${TEAR} fill=${BLUE} stroke-width="1.8" transform="translate(41.5 22) rotate(-62)" />`,
 
   shock: svg`
     <path d=${FACE} fill=${YELLOW} />
@@ -22,11 +28,15 @@ const ART = {
     ${dot(17, 19.5, 1.8)}${dot(31, 19.5, 1.8)}
     <ellipse cx="24" cy="33" rx="4.5" ry="6.5" fill="#fff" />`,
 
+  // Two hands side on, one behind the other, with little clap lines by the fingertips.
   clap: svg`
-    <rect x="9" y="15" width="13" height="27" rx="6.5" fill=${SKIN} transform="rotate(-16 15.5 28.5)" />
-    <rect x="26" y="15" width="13" height="27" rx="6.5" fill=${SKIN} transform="rotate(16 32.5 28.5)" />
-    <path d="M14 21 l1 5 M18.5 20 l0.5 5 M33.5 21 l-1 5 M29 20 l-0.5 5" stroke-width="1.8" />
-    <path d="M24 3 v6 M14.5 6 l3 4.5 M33.5 6 l-3 4.5" />`,
+    <g transform="translate(30.5 23) rotate(50) scale(-0.9 0.9)">
+      <path d=${HAND} fill="#f2b886" /><path d=${FINGERS} stroke-width="1.5" />
+    </g>
+    <g transform="translate(20.5 29) rotate(16) scale(0.9)">
+      <path d=${HAND} fill=${SKIN} /><path d=${FINGERS} stroke-width="1.5" />
+    </g>
+    <path d="M8 7 l3.5 3.5 M4 14 l4.5 1 M14.5 2.5 l1 4.5" />`,
 
   fire: svg`
     <path d="M24 44.5 C12.5 44.5, 7.5 35, 10.5 26.5 C12.5 21, 17 18.5, 16 11 C22.5 14, 25.5 19.5, 24.5 25.5 C27.5 23.5, 28.5 19.5, 28 14.5 C35.5 20, 40.5 28, 38.5 35.5 C37 41, 31.5 44.5, 24 44.5 Z" fill="#ff9a5c" />
