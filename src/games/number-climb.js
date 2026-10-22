@@ -150,7 +150,15 @@ function playing(ctx) {
     ${showMistake ? html`<p class="nc-oops center">Oops! ${mistake.missed.map(m => `${ctx.room.players[m.by]?.name || 'Someone'} had ${m.n}`).join(', ')}.</p>` : nothing}
 
     <div class="nc-others">
-      ${ctx.inGame.filter(p => p.id !== ctx.uid).map(p => html`<span class="tag wobble">${avatar(p, 22)} ${p.name} <small>${handOf(round, p.id).length} left</small></span>`)}
+      ${ctx.inGame.filter(p => p.id !== ctx.uid).map(p => {
+        const left = handOf(round, p.id).length;
+        return html`<div class="nc-player ${left ? '' : 'nc-player--out'}">
+          <span class="nc-player__name">${avatar(p, 26)} ${p.name}</span>
+          <span class="nc-backs" aria-label="${left} cards left">
+            ${left ? Array.from({ length: left }, (_, i) => html`<span class="nc-back" style="--i: ${i - (left - 1) / 2}"></span>`) : html`<small>all out!</small>`}
+          </span>
+        </div>`;
+      })}
     </div>
 
     <div class="push"></div>
@@ -164,10 +172,14 @@ function playing(ctx) {
       : html`<p class="note center">You're out of cards. Willing the others on…</p>`}`;
 }
 
+// The end: hearts, a few numbers, then every card in the order it hit the pile, climbing in steps.
 function finished(ctx) {
   const { round } = ctx;
   const won = round.result === 'won';
   const mistakes = round.mistakes || 0;
+  const log = round.log || [];
+  const played = log.filter(e => e.type === 'play').length;
+  const total = log.length + cardsLeft(round); // played, thrown away and never played
   const headline = won
     ? (mistakes === 0 ? 'Perfect climb!' : 'You made it!')
     : 'Game over!';
@@ -175,18 +187,27 @@ function finished(ctx) {
     ? (mistakes === 0 ? 'Every card in order. Are you all telepathic?' : `All cards played, with ${mistakes} slip${mistakes === 1 ? '' : 's'} on the way.`)
     : `${round.startLives <= 1 ? 'One slip ended it' : 'You ran out of lives'} with ${cardsLeft(round)} card${cardsLeft(round) === 1 ? '' : 's'} still to play.`;
   const win = sideResult(ctx, () => won);
+  const stat = (value, label, color) => html`<div class="nc-stat sticky--${color}"><b>${value}</b><small>${label}</small></div>`;
   return html`
     ${endScreen(ctx, { win, title: endTitle(win, { won: 'Victory!', lost: 'Failure!', watching: headline }), note })}
-    <h1 class="center scribble">${headline}</h1>
+    <h1 class="center scribble pop-in">${headline}</h1>
+    ${hearts(round.lives || 0, round.startLives || 1)}
     <p class="note center">${note}</p>
-    <h3 class="section-title">How it went</h3>
-    <div class="nc-log">
-      ${(round.log || []).map(e => {
+    <div class="nc-stats">
+      ${stat(`${played}/${total}`, 'cards played', 'orange')}
+      ${stat(mistakes, mistakes === 1 ? 'slip' : 'slips', mistakes ? 'pink' : 'mint')}
+      ${stat(round.lives || 0, (round.lives || 0) === 1 ? 'life left' : 'lives left', round.lives ? 'mint' : 'blue')}
+    </div>
+    <h3 class="section-title">The climb</h3>
+    <div class="nc-climb">
+      ${log.map((e, i) => {
         const who = ctx.room.players[e.by];
-        return html`<span class="nc-log__card ${e.type === 'missed' ? 'nc-log__card--missed' : ''}" title="${who?.name || ''}">
-          <b>${e.n}</b><small>${who?.name || '?'}</small></span>`;
+        return html`<span class="nc-step ${e.type === 'missed' ? 'nc-step--missed' : ''}" style="--i: ${i}" title=${who ? `${who.name}${e.type === 'missed' ? ' (missed)' : ''}` : ''}>
+          <b>${e.n}</b>${who ? avatar(who, 20) : nothing}
+        </span>`;
       })}
     </div>
+    ${!won && cardsLeft(round) ? html`<p class="note center">Never played: ${Object.entries(round.hands || {}).flatMap(([, cards]) => cards || []).sort((a, b) => a - b).join(', ')}</p>` : nothing}
     <div class="push"></div>
     ${ctx.isHost ? button('Play again', action(ctx.startGame)) : nothing}
     ${backToLobbyButton(ctx)}`;
