@@ -122,22 +122,16 @@ const RAINCLOUD = html`<svg class="end-art" viewBox="0 0 64 64" aria-hidden="tru
   <path d="M25 27 l3 2 M39 27 l-3 2 M27 33 q5 -3 10 0" />
 </g>`}</svg>`;
 
-// A big "you won / you lost" card over the end of a game. `win` is true, false, or null for someone
-// just watching. It plays once per ending, and "See how it went" clears it to show the details.
+// A "you won / you lost" banner at the top of a game's results. `win` is true, false, or null for
+// someone just watching. It plays its sound once per ending; winners get confetti too.
 export function endScreen(ctx, { win, title, note, delay = 0 }) {
-  if (ctx.local.endSeen) return nothing;
   const key = `end:${ctx.room.code}:${ctx.round.id}:${ctx.room.phase}:${ctx.round.no || 0}`;
   setTimeout(() => cue(key, win === false ? 'sad' : 'fanfare'), delay * 1000);
-  const mood = win === false ? 'lose' : 'win';
-  return html`<div class="end-screen end-screen--${mood}" style="--delay: ${delay}s" role="dialog" aria-label=${title}>
+  return html`<div class="end-banner end-banner--${win === false ? 'lose' : 'win'} wobble" style="--delay: ${delay}s" role="status">
     ${win !== false ? confetti() : nothing}
-    <div class="end-card wobble">
-      ${win === false ? RAINCLOUD : TROPHY}
-      <h1 class="end-card__title">${title}</h1>
-      ${note ? html`<p class="end-card__note">${note}</p>` : nothing}
-      ${ctx.me?.inGame ? html`<div class="end-card__me">${avatar(ctx.me, 56, win === false ? 'sad' : 'happy')}</div>` : nothing}
-      ${button('See how it went', () => { ctx.local.endSeen = true; ctx.rerender(); }, { kind: win === false ? 'white' : 'yellow' })}
-    </div>
+    ${win === false ? RAINCLOUD : TROPHY}
+    <div class="end-banner__text"><b>${title}</b>${note ? html`<small>${note}</small>` : nothing}</div>
+    ${ctx.me?.inGame ? avatar(ctx.me, 40, win === false ? 'sad' : 'happy') : nothing}
   </div>`;
 }
 
@@ -344,7 +338,7 @@ export function spotlight(people, caption, mood = 'shock') {
 export function voteResults(ctx, rows, { headline, question, badge, detail, mood, top = nothing, bottom = nothing, outcome }) {
   const stage = voteStage(ctx, rows);
   return html`
-    ${stage.done && outcome ? endScreen(ctx, { ...outcome, delay: 1.4 }) : nothing}
+    ${stage.done && outcome ? endScreen(ctx, { ...outcome, delay: 0.5 }) : nothing}
     <h1 class="center scribble ${stage.done ? 'pop-in' : ''}">${stage.done ? headline : stage.counting ? 'The votes are in…' : question}</h1>
     ${stage.done ? top : nothing}
     ${resultsList(ctx, rows, { badge, detail, mood, stage })}

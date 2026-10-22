@@ -9,17 +9,21 @@ const CLUE_GAP_MS = 700;
 const giversOf = ctx => ctx.inGame.filter(p => p.id !== ctx.round.guesser);
 const cleanClue = text => text.trim().split(/\s+/)[0]?.slice(0, 20) || '';
 
+// A clue that is the secret word, or contains it (or the other way round), gives it away.
+function givesAway(ctx, clue) {
+  const word = normalize(words[ctx.round.word]);
+  const n = normalize(clue);
+  return !!n && (n === word || (n.length >= 3 && (word.includes(n) || n.includes(word))));
+}
+
 // Clues that match each other, or give the word away, are cancelled before the guesser sees them.
 function autoCancel(ctx) {
-  const word = normalize(words[ctx.round.word]);
   const clues = ctx.round.clues || {};
   const counts = {};
   Object.values(clues).forEach(c => { counts[normalize(c)] = (counts[normalize(c)] || 0) + 1; });
   const cancelled = {};
   Object.entries(clues).forEach(([id, c]) => {
-    const n = normalize(c);
-    const givesAway = n.length >= 3 && (word.includes(n) || n.includes(word));
-    if (counts[n] > 1 || givesAway) cancelled[id] = true;
+    if (counts[normalize(c)] > 1 || givesAway(ctx, c)) cancelled[id] = true;
   });
   return cancelled;
 }
@@ -72,7 +76,7 @@ export default {
     if (ctx.room.phase !== 'clues' || ctx.uid === round.guesser || !isTimeUp(ctx) || round.clues?.[ctx.uid] || ctx.local.autoSent) return null;
     ctx.local.autoSent = true;
     const typed = cleanClue(document.getElementById('clue')?.value || '');
-    return typed ? { [`round/clues/${ctx.uid}`]: typed } : null;
+    return typed && !givesAway(ctx, typed) ? { [`round/clues/${ctx.uid}`]: typed } : null;
   },
 
   tick(ctx, s) {
@@ -113,6 +117,7 @@ function clues(ctx) {
   const submit = async () => {
     const clue = cleanClue(document.getElementById('clue').value);
     if (!clue) return toast('Write a one-word clue first.');
+    if (givesAway(ctx, clue)) return toast("That gives the word away! Try a different clue.");
     await ctx.update({ [`round/clues/${ctx.uid}`]: clue });
   };
   return html`${header(ctx)}${timer(round.endsAt, 10)}
@@ -163,12 +168,15 @@ function check(ctx, s) {
   }
   const toggle = (id, cancel) => ctx.update({ [`round/cancelled/${id}`]: cancel || null });
   const show = () => ctx.update({ phase: 'guess', 'round/endsAt': ctx.now() + s.guessTime * 1000, 'round/flipAt': ctx.now() + 300 });
+  // Wait until the clues have flipped and any matches are crossed out, so nobody skips past the reveal.
+  const clueCount = giversOf(ctx).filter(p => ctx.round.clues?.[p.id]).length;
+  const ready = !ctx.round.flipAt || ctx.now() >= ctx.round.flipAt + clueCount * CLUE_GAP_MS + 1500;
   return html`${header(ctx)}
     <h2 class="center">Check the clues</h2>
     <p class="note center">The word is <span class="hl">${words[ctx.round.word]}</span>. Matching clues were crossed out. Tap a clue to cross it out or bring it back.</p>
     ${clueChips(ctx, { showCancelled: true, toggle, flipFrom: ctx.round.flipAt })}
     <div class="push"></div>
-    ${button(`Show ${guesserName(ctx)} the clues`, action(show))}`;
+    ${button(ready ? `Show ${guesserName(ctx)} the clues` : 'Checking the clues…', action(show), { disabled: !ready })}`;
 }
 
 function guess(ctx) {

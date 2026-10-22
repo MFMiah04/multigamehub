@@ -5,6 +5,8 @@ import { cue } from '../sound.js';
 
 const pickQuestion = used => pickUnused(questions, used);
 const GROUP_GAP_MS = 1200;
+// The pink cow wanders off after this many rounds with the same person, unless they earn it again.
+const COW_ROUNDS = 3;
 
 const COW_ART = html`<svg class="art" viewBox="0 0 64 56" aria-hidden="true"><g fill="none" stroke="#222" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round">
     <path d="M22 12 C20 7, 21 4, 24 2 M42 12 C44 7, 43 4, 40 2" />
@@ -60,6 +62,7 @@ export default {
     'Everyone answers the same question at the same time.',
     "You score a point if you're in the biggest group with the same answer (the herd).",
     "If you're the only person with an odd answer, you get the pink cow. You can't win while you hold it.",
+    'The pink cow wanders off after 3 rounds, unless you earn it again.',
     'The first player to reach the target score without the pink cow wins.',
   ],
 
@@ -154,9 +157,16 @@ function reveal(ctx) {
     });
     groups.filter(g => g.members.length === 1).forEach(g => bumpStat(updates, ctx.round, g.members[0].id, 'alone'));
     updates['round/lastCow'] = ctx.round.cow || null;
+    updates['round/cowGone'] = null;
     if (cow) {
+      // Earning the cow (again) starts its three rounds afresh.
       updates['round/cow'] = cow;
+      updates['round/cowAge'] = 0;
       if (cow !== ctx.round.cow) bumpStat(updates, ctx.round, cow, 'cows');
+    } else if (ctx.round.cow) {
+      const age = (ctx.round.cowAge || 0) + 1;
+      if (age >= COW_ROUNDS) Object.assign(updates, { 'round/cow': null, 'round/cowAge': null, 'round/cowGone': ctx.round.cow });
+      else updates['round/cowAge'] = age;
     }
     updates['round/last'] = herdGroup ? {
       herd: herdGroup.members.map(p => p.id),
@@ -194,6 +204,15 @@ function reveal(ctx) {
 // When the pink cow changes hands, it trots across from the old holder to the new one.
 function cowMove(ctx) {
   const { round } = ctx;
+  const gone = ctx.room.players[round.cowGone];
+  if (gone) {
+    return html`<div class="cow-move cow-move--gone">
+      <span class="cow-move__who">${avatar(gone, 34, 'happy')}<small>${gone.name}</small></span>
+      <span class="cow-move__track"><span class="cow-move__cow">${COW_ART}</span></span>
+      <span class="cow-move__who"></span>
+    </div>
+    <p class="note center">After ${COW_ROUNDS} rounds, the pink cow wanders off from ${gone.name}!</p>`;
+  }
   if (!round.cow || round.cow === round.lastCow) return nothing;
   const from = ctx.room.players[round.lastCow];
   const to = ctx.room.players[round.cow];
@@ -225,7 +244,7 @@ function results(ctx, s) {
     const q = pickQuestion(round.used);
     return ctx.update({
       phase: 'question', 'round/no': round.no + 1, 'round/question': q, [`round/used/${q}`]: true,
-      'round/answers': null, 'round/group': null, 'round/last': null, 'round/delta': null, 'round/revealAt': null, 'round/lastCow': null, 'round/endsAt': ctx.now() + s.time * 1000,
+      'round/answers': null, 'round/group': null, 'round/last': null, 'round/delta': null, 'round/revealAt': null, 'round/lastCow': null, 'round/cowGone': null, 'round/endsAt': ctx.now() + s.time * 1000,
     });
   };
 
@@ -233,7 +252,7 @@ function results(ctx, s) {
     <h2 class="center">${herdNames.length ? html`The herd said <span class="hl">"${round.last.answer}"</span>` : 'No herd this time!'}</h2>
     ${herdNames.length ? html`<p class="note center">+1 for ${herdNames.join(', ')}${round.last.cowMissedOut ? ' (the pink cow holder misses out)' : ''}</p>` : nothing}
     ${cowMove(ctx)}
-    ${leaderboard(ctx, round.scores, round.delta, { badge: p => (p.id === round.cow ? 'pink cow' : null) })}
+    ${leaderboard(ctx, round.scores, round.delta, { badge: p => (p.id === round.cow ? `pink cow · ${COW_ROUNDS - (round.cowAge || 0)} round${COW_ROUNDS - (round.cowAge || 0) === 1 ? '' : 's'} left` : null) })}
     ${s.target ? html`<p class="note center">First to ${s.target} points without the pink cow wins.</p>` : nothing}
     <div class="push"></div>
     ${ctx.isHost ? button('Next question', action(next)) : html`<p class="note center">Waiting for the host…</p>`}
