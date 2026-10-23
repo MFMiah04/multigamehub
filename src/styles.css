@@ -828,8 +828,7 @@ button.quest-card { transition: transform 0.15s; }
 sketch-board { display: grid; justify-content: center; align-items: start; gap: 10px 12px; grid-template-areas: "canvas" "tools" "colors" "stats"; }
 sketch-board.board--bare { grid-template-areas: "canvas" "stats"; }
 .board__frame { grid-area: canvas; justify-self: center; background: #fff; box-shadow: var(--shadow); padding: 0; overflow: hidden; }
-.board__canvas { display: block; touch-action: none; cursor: crosshair; -webkit-user-select: none; user-select: none; }
-.board--locked .board__canvas { cursor: default; }
+.board__canvas { display: block; touch-action: none; -webkit-user-select: none; user-select: none; }
 .board__side { display: flex; flex-direction: column; align-items: center; gap: 8px; }
 .board__side--tools { grid-area: tools; }
 .board__side--colors { grid-area: colors; }

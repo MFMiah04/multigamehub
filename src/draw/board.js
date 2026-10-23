@@ -61,6 +61,21 @@ const TOOLS = [
   ['circleFill', 'Filled circle', icon('<ellipse cx="12" cy="12" rx="8" ry="7" fill="#222" />')],
   ['picker', 'Eyedropper', icon('<path d="M14 4 l6 6 l-3 3 l-6 -6 z" fill="#c3b1e1" /><path d="M12 9 l-7 7 v3 h3 l7 -7" />')],
 ];
+// Cursors drawn in black with a white outline, so they show up on any colour (the browser's own
+// crosshair can be white, and vanishes on a white page).
+const svgCursor = (svg, x, y, fallback) => `url("data:image/svg+xml,${encodeURIComponent(svg)}") ${x} ${y}, ${fallback}`;
+const outlined = (size, body) => `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">
+  <g fill="none" stroke-linecap="round" stroke-linejoin="round"><g stroke="#fff" stroke-width="4">${body}</g><g stroke="#222" stroke-width="1.6">${body}</g></g></svg>`;
+// A ring the size of the brush, with a dot in the middle.
+function brushCursor(diameter) {
+  const d = Math.round(Math.min(96, Math.max(6, diameter)));
+  const size = d + 6, c = size / 2;
+  return svgCursor(outlined(size, `<circle cx="${c}" cy="${c}" r="${d / 2}" /><path d="M${c} ${c} h0.01" />`), Math.round(c), Math.round(c), 'crosshair');
+}
+const CROSS_CURSOR = svgCursor(outlined(24, '<path d="M12 3 v6 M12 15 v6 M3 12 h6 M15 12 h6" />'), 12, 12, 'crosshair');
+const FILL_CURSOR = svgCursor(outlined(28, '<path d="M6 13 l7 -7 l8 8 l-7 7 z" /><path d="M24 18 q2 3 0 5 q-2 -2 0 -5 z" /><path d="M9 10 l-3 -4" />'), 24, 24, 'pointer');
+const PICKER_CURSOR = svgCursor(outlined(28, '<path d="M17 4 l7 7 l-3 3 l-7 -7 z" /><path d="M14 9 l-9 9 v4 h4 l9 -9" />'), 5, 23, 'pointer');
+
 const TYPE_OF = { pen: 'p', eraser: 'p', line: 'l', rect: 'r', rectFill: 'R', circle: 'e', circleFill: 'E', fill: 'f' };
 const UNDO_ICON = icon('<path d="M9 6 L4 11 L9 16" /><path d="M4 11 H14 a5 5 0 0 1 0 10 H11" />');
 const REDO_ICON = icon('<path d="M15 6 L20 11 L15 16" /><path d="M20 11 H10 a5 5 0 0 0 0 10 H13" />');
@@ -317,7 +332,17 @@ class SketchBoard extends HTMLElement {
     const undoable = this.ownVisible().length > 0;
     this.querySelector('[data-act="undo"]').disabled = !undoable;
     this.querySelector('[data-act="redo"]').disabled = !this.redoStack.length;
-    this.canvas.style.cursor = this.tool === 'fill' || this.tool === 'picker' ? 'pointer' : 'crosshair';
+    this.setCursor();
+  }
+
+  setCursor() {
+    if (!this.canvas) return;
+    const width = parseFloat(this.canvas.style.width) || this.canvas.clientWidth;
+    this.canvas.style.cursor = !this.canDrawNow() ? 'default'
+      : this.tool === 'fill' ? FILL_CURSOR
+      : this.tool === 'picker' ? PICKER_CURSOR
+      : this.tool === 'pen' || this.tool === 'eraser' ? brushCursor(this.size * width)
+      : CROSS_CURSOR;
   }
 
   // Matches the screen canvas to its box (and the screen's pixel density).
@@ -331,6 +356,7 @@ class SketchBoard extends HTMLElement {
     this.canvas.style.height = `${height}px`;
     this.canvas.width = Math.round(width * dpr);
     this.canvas.height = Math.round(height * dpr);
+    this.setCursor();
     this.show();
   }
 
