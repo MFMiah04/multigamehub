@@ -37,7 +37,7 @@ export function noteName(game) {
   if (!game.twoLines || !name.includes(' ')) return name;
   const spaces = [...name].map((ch, i) => (ch === ' ' ? i : -1)).filter(i => i >= 0);
   const cut = spaces.reduce((best, i) => (Math.abs(i - name.length / 2) < Math.abs(best - name.length / 2) ? i : best));
-  return html`${name.slice(0, cut)}<br>${name.slice(cut + 1)}`;
+  return html`${name.slice(0, cut)} <br>${name.slice(cut + 1)}`; // the space keeps the name readable as text
 }
 
 export function showRules(game) {

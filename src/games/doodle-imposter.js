@@ -51,14 +51,14 @@ export default {
     <path d="M46 34 q2 -6 6 -4" stroke-width="2" />
   </g></svg>`,
 
-  defaults: () => ({ laps: 2, turnTime: 30, hint: 'list', voteTime: 90 }),
+  defaults: () => ({ laps: 2, turnTime: 30, hint: 'growing', voteTime: 90 }),
 
   settingsView(ctx, s, set) {
     const disabled = !ctx.isHost;
     return html`
       ${selectField('Laps of the table', s.laps, [[1, '1 lap'], [2, '2 laps'], [3, '3 laps']], v => set({ laps: +v }), disabled)}
       ${selectField('Time for each line', s.turnTime, [[15, '15 seconds'], [20, '20 seconds'], [30, '30 seconds'], [45, '45 seconds'], [60, '1 min']], v => set({ turnTime: +v }), disabled)}
-      ${selectField("Imposter's hint", s.hint, [['list', `A list of ${DECOYS + 1} words, one is right`], ['category', 'The category (like "Animal")'], ['none', 'No hint']], v => set({ hint: v }), disabled)}
+      ${selectField("Imposter's hint", s.hint, [['growing', 'Gets better: category, then a word list'], ['list', `A list of ${DECOYS + 1} words, one is right`], ['category', 'The category (like "Animal")'], ['none', 'No hint']], v => set({ hint: v }), disabled)}
       ${selectField('Time to vote', s.voteTime, [[60, '1 min'], [90, '1½ min'], [120, '2 min']], v => set({ voteTime: +v }), disabled)}`;
   },
 
@@ -71,7 +71,7 @@ export default {
       phase: 'draw',
       round: {
         word, order, imposter: shuffle(order)[0], laps: s.laps, hint: s.hint, turn: 0,
-        choices: s.hint === 'list' ? wordList(word) : null,
+        choices: s.hint === 'list' || s.hint === 'growing' ? wordList(word) : null,
         colors: Object.fromEntries(order.map((id, i) => [id, INKS[i % INKS.length]])),
         // A few extra seconds on the first turn to read the word.
         turnEndsAt: ctx.now() + (s.turnTime + 5) * 1000,
@@ -121,13 +121,15 @@ function secretCard(ctx) {
   const { round, local } = ctx;
   const imposter = round.imposter === ctx.uid;
   const category = words[round.word]?.category;
-  const list = imposter && round.hint === 'list' && round.choices;
+  // 'growing': just the category on the first lap, then the word list from the second lap on.
+  const lap = Math.floor((round.turn || 0) / Math.max(1, present(ctx).length)) + 1;
+  const list = imposter && round.choices && (round.hint === 'list' || (round.hint === 'growing' && (lap > 1 || ctx.room.phase !== 'draw')));
   return html`<button class="secret secret--slim wobble ${local.show ? '' : 'secret--hidden'} ${imposter ? 'secret--spy' : ''} ${list && local.show ? 'secret--list' : ''}"
     @click=${() => { local.show = !local.show; ctx.rerender(); }}>
     ${!local.show ? html`<b>Tap to see your word</b>`
       : list ? html`<small>You're the imposter! The word is one of these:</small>
         <span class="di-choices">${round.choices.map(i => html`<span class="di-choice">${words[i]?.word}</span>`)}</span>`
-      : imposter ? html`<small>You're the imposter!</small><b>${round.hint === 'none' ? 'No hint' : `Hint: ${category}`}</b>`
+      : imposter ? html`<small>You're the imposter!${round.hint === 'growing' ? ' More help after this lap.' : ''}</small><b>${round.hint === 'none' ? 'No hint' : `Hint: ${category}`}</b>`
       : html`<small>The secret word is</small><b>${wordOf(round)}</b>`}
   </button>`;
 }
@@ -152,6 +154,11 @@ function drawing(ctx, s) {
   const timeLeft = round.turnEndsAt - ctx.now();
   const lap = Math.min(round.laps, Math.floor((round.turn || 0) / Math.max(1, order.length)) + 1);
   cue(`di:${round.word}:${round.turn}`, mine ? 'ding' : 'pop');
+  // The imposter's better hint arrives at the start of lap 2.
+  if (round.hint === 'growing' && round.imposter === ctx.uid && lap === 2 && round.turn === order.length) {
+    cue(`di:${round.word}:betterhint`, 'ding');
+    if (!ctx.local.toldHint) { ctx.local.toldHint = true; toast('New hint! Tap your card to see a list of possible words.'); }
+  }
 
   // Your line is done: pass the pen on. The transaction makes sure the turn only moves on once.
   const passPen = () => {
