@@ -48,19 +48,36 @@ export function paintShape(ctx, op, scaleX = PAPER_W, scaleY = PAPER_H) {
   else ctx.stroke();
 }
 
+const WHITE = '#ffffff';
+
+// `transparent`: an "ink" page with nothing behind it, so whatever's underneath on screen shows
+// through the gaps. White (the eraser) rubs the ink away instead of painting white, and bucket fills
+// work out their area from `maskFrom` (the normal white page with the same drawing on it).
 export class Painter {
-  constructor(canvas) {
+  constructor(canvas, { transparent = false, maskFrom = null } = {}) {
     this.canvas = canvas;
     this.ctx = canvas.getContext('2d', { willReadFrequently: true });
+    this.transparent = transparent;
+    this.maskFrom = maskFrom;
     this.layers = new Map(); // see-through pen lines still being drawn: opId → { canvas, ctx, op }
+    this.progress = new Map(); // opId → how many of its points have been drawn
   }
 
   // A blank page, optionally starting from another picture (e.g. earlier players' drawings).
   wipe(base) {
-    this.ctx.fillStyle = '#ffffff';
-    this.ctx.fillRect(0, 0, PAPER_W, PAPER_H);
+    if (this.transparent) this.ctx.clearRect(0, 0, PAPER_W, PAPER_H);
+    else {
+      this.ctx.fillStyle = WHITE;
+      this.ctx.fillRect(0, 0, PAPER_W, PAPER_H);
+    }
     if (base) this.ctx.drawImage(base, 0, 0);
     this.layers.clear();
+    this.progress.clear();
+  }
+
+  // On an ink page, white rubs out rather than painting.
+  erases(op) {
+    return this.transparent && op.c === WHITE;
   }
 
   // Draws whatever's new in an op. Pens grow a bit at a time; everything else is drawn in one go.
@@ -68,17 +85,21 @@ export class Painter {
   // opacity, so the places where the line crosses itself don't come out darker.
   // Returns true if anything was drawn.
   paint(op) {
-    if (op.hidden || !op.points.length || op.drawn >= op.points.length) return false;
+    const from = this.progress.get(op.id) || 0;
+    if (op.hidden || !op.points.length || from >= op.points.length) return false;
     const alpha = op.o ?? 1;
     this.commitLayers(op.id); // keep things in order: earlier see-through lines go down first
-    if (op.t === 'p') this.paintPen(op, op.drawn, alpha < 1 ? this.layerFor(op).ctx : this.ctx);
+    if (this.erases(op) && op.t !== 'f') this.ctx.globalCompositeOperation = 'destination-out';
+    if (op.t === 'p') this.paintPen(op, from, alpha < 1 ? this.layerFor(op).ctx : this.ctx);
     else if (op.t === 'f') this.floodFill(op.points[0], op.c, alpha);
     else if (op.points.length >= 2) {
       this.ctx.globalAlpha = alpha;
       paintShape(this.ctx, op);
       this.ctx.globalAlpha = 1;
-    } else return false;
-    op.drawn = op.points.length;
+    }
+    this.ctx.globalCompositeOperation = 'source-over';
+    if (op.t !== 'p' && op.t !== 'f' && op.points.length < 2) return false;
+    this.progress.set(op.id, op.points.length);
     return true;
   }
 
@@ -97,8 +118,10 @@ export class Painter {
     this.layers.forEach((layer, id) => {
       if (id === keep) return;
       this.ctx.globalAlpha = layer.op.o ?? 1;
+      if (this.erases(layer.op)) this.ctx.globalCompositeOperation = 'destination-out';
       this.ctx.drawImage(layer.canvas, 0, 0);
       this.ctx.globalAlpha = 1;
+      this.ctx.globalCompositeOperation = 'source-over';
       this.layers.delete(id);
     });
   }
@@ -136,8 +159,9 @@ export class Painter {
     const W = PAPER_W, H = PAPER_H;
     const sx = Math.min(W - 1, Math.max(0, Math.round(fx * W)));
     const sy = Math.min(H - 1, Math.max(0, Math.round(fy * H)));
-    const image = this.ctx.getImageData(0, 0, W, H);
-    const d = image.data;
+    // The area is worked out on a white page (this one, or the one we're shadowing).
+    const source = (this.maskFrom || this).ctx.getImageData(0, 0, W, H);
+    const d = source.data;
     const start = (sy * W + sx) * 4;
     const [tr, tg, tb] = [d[start], d[start + 1], d[start + 2]];
     const [fr, fg, fb] = hexToRgb(hex);
@@ -165,9 +189,18 @@ export class Painter {
         x++; i++;
       }
     }
-    // See-through fills mix with what's underneath.
+    // See-through fills mix with what's underneath. On an ink page, a white fill rubs the ink away.
+    const image = this.maskFrom ? this.ctx.getImageData(0, 0, W, H) : source;
+    const out = image.data;
+    const rubOut = this.erases({ c: hex });
     const mix = (under, over) => Math.round(under + (over - under) * alpha);
-    const paint = i => { const p = i * 4; d[p] = mix(d[p], fr); d[p + 1] = mix(d[p + 1], fg); d[p + 2] = mix(d[p + 2], fb); d[p + 3] = 255; };
+    const paint = i => {
+      const p = i * 4;
+      if (rubOut) { out[p + 3] = Math.round(out[p + 3] * (1 - alpha)); return; }
+      if (this.transparent && out[p + 3] === 0) { out[p] = fr; out[p + 1] = fg; out[p + 2] = fb; out[p + 3] = Math.round(255 * alpha); return; }
+      out[p] = mix(out[p], fr); out[p + 1] = mix(out[p + 1], fg); out[p + 2] = mix(out[p + 2], fb);
+      out[p + 3] = this.transparent ? Math.max(out[p + 3], Math.round(255 * alpha)) : 255;
+    };
     for (let y = 0; y < H; y++) {
       for (let x = 0; x < W; x++) {
         const i = y * W + x;
@@ -188,7 +221,7 @@ export async function loadOps(code, layer) {
     .filter(([, v]) => v?.m && !v.x)
     .map(([id, v]) => {
       const chunks = Array.isArray(v.k) ? v.k : Object.values(v.k || {});
-      return { id, t: v.m.t || 'p', c: v.m.c, w: v.m.w, o: v.m.o ?? 1, u: v.m.u, drawn: 0, points: chunks.flatMap(c => decode(c?.p)) };
+      return { id, t: v.m.t || 'p', c: v.m.c, w: v.m.w, o: v.m.o ?? 1, u: v.m.u, points: chunks.flatMap(c => decode(c?.p)) };
     });
 }
 

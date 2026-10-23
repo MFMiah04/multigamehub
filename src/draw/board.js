@@ -337,15 +337,24 @@ class SketchBoard extends HTMLElement {
   // ----- painting onto the paper -----
 
   // In 'base' mode the paper starts from the drawings underneath, so fills and the eyedropper see them.
+  // With a faded guide behind, your drawing is also kept on a see-through "ink" page, so on screen it
+  // covers the guide where you've drawn and the guide shows through everywhere else.
   wipePaper() {
+    const faded = this.under && this.config.underMode === 'faded';
+    if (faded && !this.ink) this.ink = new Painter(Object.assign(document.createElement('canvas'), { width: PAPER_W, height: PAPER_H }), { transparent: true, maskFrom: this.painter });
+    if (!faded) this.ink = null;
     this.painter.wipe(this.config.underMode === 'base' ? this.under : null);
+    this.ink?.wipe();
   }
 
   paint(op) {
+    // The ink page goes first: its fills look at the white page before this op is added to it.
+    this.ink?.paint(op);
     if (this.painter.paint(op)) this.show();
   }
 
   commitLayers(keep) {
+    this.ink?.commitLayers(keep);
     this.painter.commitLayers(keep);
   }
 
@@ -368,7 +377,7 @@ class SketchBoard extends HTMLElement {
   // Paints everything again from scratch, oldest first. Used after an undo, redo or clear.
   repaint() {
     this.wipePaper();
-    [...this.ops.values()].sort((a, b) => (a.id < b.id ? -1 : 1)).forEach(op => { op.drawn = 0; this.paint(op); });
+    [...this.ops.values()].sort((a, b) => (a.id < b.id ? -1 : 1)).forEach(op => this.paint(op));
     this.show();
   }
 
@@ -381,17 +390,17 @@ class SketchBoard extends HTMLElement {
       const { width, height } = this.canvas;
       const ctx = this.ctx;
       const cfg = this.config;
-      const faded = this.under && cfg.underMode === 'faded';
+      const faded = this.under && cfg.underMode === 'faded' && this.ink;
       if (faded) {
-        // The guide underneath shows through the white of your page (multiply keeps your lines on top).
+        // White page, the faded guide, then your ink on top: what you draw hides the guide beneath it.
         ctx.fillStyle = '#ffffff';
         ctx.fillRect(0, 0, width, height);
         if (cfg.showUnder) { ctx.globalAlpha = cfg.showMine ? 0.3 : 0.85; ctx.drawImage(this.under, 0, 0, width, height); ctx.globalAlpha = 1; }
         if (!cfg.showMine) return;
-        ctx.globalCompositeOperation = 'multiply';
       }
-      if (cfg.showMine || faded) ctx.drawImage(this.paper, 0, 0, width, height);
-      this.painter.layers.forEach(layer => {
+      ctx.drawImage(faded ? this.ink.canvas : this.paper, 0, 0, width, height);
+      (faded ? this.ink : this.painter).layers.forEach(layer => {
+        if (faded && layer.op.c === '#ffffff') return; // a see-through rub-out only shows once it's finished
         ctx.globalAlpha = layer.op.o ?? 1;
         ctx.drawImage(layer.canvas, 0, 0, width, height);
       });
@@ -411,7 +420,7 @@ class SketchBoard extends HTMLElement {
 
   newOp(type, color, points) {
     const id = push(ref(db, `${this.base}/s`)).key;
-    const op = { id, t: type, c: color, w: this.size, o: this.alpha, u: this.uid, points, drawn: 0, sent: 0, chunk: 0, metaSent: false, mine: true };
+    const op = { id, t: type, c: color, w: this.size, o: this.alpha, u: this.uid, points, sent: 0, chunk: 0, metaSent: false, mine: true };
     this.ops.set(id, op);
     // Doing something new forgets anything you could have redone.
     this.redoStack.splice(0).forEach(old => { this.ops.delete(old); remove(ref(db, `${this.base}/s/${old}`)); });
@@ -570,7 +579,7 @@ class SketchBoard extends HTMLElement {
       if (!value?.m) return;
       let op = this.ops.get(snap.key);
       if (op?.mine) return; // already drawn as you drew it
-      if (!op) { op = { id: snap.key, t: value.m.t || 'p', c: value.m.c, w: value.m.w, o: value.m.o ?? 1, u: value.m.u, points: [], drawn: 0, chunks: 0, hidden: !!value.x }; this.ops.set(snap.key, op); }
+      if (!op) { op = { id: snap.key, t: value.m.t || 'p', c: value.m.c, w: value.m.w, o: value.m.o ?? 1, u: value.m.u, points: [], chunks: 0, hidden: !!value.x }; this.ops.set(snap.key, op); }
       const chunks = Array.isArray(value.k) ? value.k : Object.values(value.k || {});
       for (let i = op.chunks; i < chunks.length; i++) {
         if (!chunks[i]) break;
