@@ -22,6 +22,24 @@ const features = word => {
   const w = words[word] || {};
   return [w.alive ? 'alive' : 'not alive', SHAPES[w.shape], SIZES[w.size]].filter(Boolean);
 };
+// Only the features every word in the list shares, so the later word list never contradicts them.
+const sharedFeatures = list => features(list[0]).filter(f => list.every(i => features(i).includes(f)));
+
+// For the hint that gets better: decoys that are as alike as possible (same alive-ness, shape and
+// size), so the list can't be narrowed down without watching the drawing.
+function lookalikes(word) {
+  const w = words[word];
+  const others = shuffle(words.map((_, i) => i).filter(i => i !== word && words[i].alive === w.alive));
+  const same = key => others.filter(i => words[i][key] === w[key]);
+  const exact = others.filter(i => words[i].shape === w.shape && words[i].size === w.size);
+  // Not enough exact matches? Keep one more feature in common (shape or size, whichever has enough),
+  // so the imposter still gets at least two clues.
+  const pool = exact.length >= DECOYS ? exact
+    : same('shape').length >= DECOYS ? [...exact, ...same('shape').filter(i => !exact.includes(i))]
+    : same('size').length >= DECOYS ? [...exact, ...same('size').filter(i => !exact.includes(i))]
+    : [...exact, ...same('shape'), ...same('size'), ...others].filter((i, n, list) => list.indexOf(i) === n);
+  return shuffle([word, ...pool.slice(0, DECOYS)]);
+}
 
 // The real word hidden among a few others from the same category, in a random order.
 function wordList(word) {
@@ -79,7 +97,7 @@ export default {
       phase: 'draw',
       round: {
         word, order, imposter: shuffle(order)[0], laps: s.laps, hint: s.hint, turn: 0,
-        choices: s.hint === 'list' || s.hint === 'growing' ? wordList(word) : null,
+        choices: s.hint === 'list' ? wordList(word) : s.hint === 'growing' ? lookalikes(word) : null,
         colors: Object.fromEntries(order.map((id, i) => [id, INKS[i % INKS.length]])),
         // A few extra seconds on the first turn to read the word.
         turnEndsAt: ctx.now() + (s.turnTime + 5) * 1000,
@@ -139,7 +157,7 @@ function secretCard(ctx) {
       : list ? html`<small>You're the imposter! The word is one of these:</small>
         <span class="di-choices">${round.choices.map(i => html`<span class="di-choice">${words[i]?.word}</span>`)}</span>`
       : imposter && (round.hint === 'growing' || round.hint === 'features') ? html`<small>You're the imposter!${round.hint === 'growing' ? ' More help after this lap.' : ''} It's…</small>
-        <span class="di-choices">${features(round.word).map(f => html`<span class="di-choice">${f}</span>`)}</span>`
+        <span class="di-choices">${(round.hint === 'growing' && round.choices ? sharedFeatures(round.choices) : features(round.word)).map(f => html`<span class="di-choice">${f}</span>`)}</span>`
       : imposter ? html`<small>You're the imposter!</small><b>${round.hint === 'none' ? 'No hint' : `Hint: ${category}`}</b>`
       : html`<small>The secret word is</small><b>${wordOf(round)}</b>`}
   </button>`;
