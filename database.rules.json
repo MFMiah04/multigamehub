@@ -8,16 +8,26 @@
         "players": {
           "$uid": {
             ".write": "auth != null && auth.uid === $uid && root.child('rooms').child($code).child('hostId').exists() && !root.child('rooms').child($code).child('kicked').child($uid).exists()",
-            "name": { ".validate": "newData.isString() && newData.val().length >= 2 && newData.val().length <= 16" }
+            "name": {
+              ".validate": "newData.isString() && newData.val().length >= 2 && newData.val().length <= 16"
+            }
           }
         },
         "reactions": {
           "$uid": {
             ".validate": "$uid === auth.uid && newData.hasChildren(['e', 'n', 'at']) && newData.child('e').isString() && newData.child('e').val().matches(/^[a-z]{2,8}$/) && newData.child('n').isString() && newData.child('n').val().matches(/^[a-z0-9]{1,10}$/) && newData.child('at').val() === now && (!data.exists() || now - data.child('at').val() >= 700)",
-            "e": { ".validate": true },
-            "n": { ".validate": true },
-            "at": { ".validate": true },
-            "$other": { ".validate": false }
+            "e": {
+              ".validate": true
+            },
+            "n": {
+              ".validate": true
+            },
+            "at": {
+              ".validate": true
+            },
+            "$other": {
+              ".validate": false
+            }
           }
         }
       }
@@ -28,13 +38,50 @@
         ".write": "auth != null && (root.child('rooms').child($code).child('players').child(auth.uid).exists() || (!newData.exists() && (!root.child('rooms').child($code).exists() || root.child('roomIndex').child(root.child('rooms').child($code).child('token').val() + '').val() < now - 1800000)))",
         "s": {
           "$stroke": {
-            "m": { ".validate": "newData.hasChildren(['c', 'w', 'u']) && newData.child('c').isString() && newData.child('c').val().length <= 9 && newData.child('w').isNumber() && newData.child('u').val() === auth.uid && (!newData.child('t').exists() || newData.child('t').val().matches(/^[plrReEf]$/))" },
-            "x": { ".validate": "newData.isBoolean() && root.child('canvases').child($code).child('s').child($stroke).child('m').child('u').val() === auth.uid" },
-            "k": { "$n": { ".validate": "newData.hasChildren(['p']) && newData.child('p').isString() && newData.child('p').val().length <= 4000" } },
-            "$other": { ".validate": false }
+            "m": {
+              ".validate": "newData.hasChildren(['c', 'w', 'u']) && newData.child('c').isString() && newData.child('c').val().length <= 9 && newData.child('w').isNumber() && newData.child('u').val() === auth.uid && (!newData.child('t').exists() || newData.child('t').val().matches(/^[plrReEf]$/))"
+            },
+            "x": {
+              ".validate": "newData.isBoolean() && newData.parent().child('m').child('u').val() === auth.uid"
+            },
+            "k": {
+              "$n": {
+                ".validate": "newData.hasChildren(['p']) && newData.child('p').isString() && newData.child('p').val().length <= 4000"
+              }
+            },
+            "$other": {
+              ".validate": false
+            }
           }
         },
-        "$other": { ".validate": false }
+        "$other": {
+          ".validate": false
+        },
+        "b": {
+          "$layer": {
+            "s": {
+              "$stroke": {
+                "m": {
+                  ".validate": "newData.hasChildren(['c', 'w', 'u']) && newData.child('c').isString() && newData.child('c').val().length <= 9 && newData.child('w').isNumber() && newData.child('u').val() === auth.uid && (!newData.child('t').exists() || newData.child('t').val().matches(/^[plrReEf]$/))"
+                },
+                "x": {
+                  ".validate": "newData.isBoolean() && newData.parent().child('m').child('u').val() === auth.uid"
+                },
+                "k": {
+                  "$n": {
+                    ".validate": "newData.hasChildren(['p']) && newData.child('p').isString() && newData.child('p').val().length <= 4000"
+                  }
+                },
+                "$other": {
+                  ".validate": false
+                }
+              }
+            },
+            "$other": {
+              ".validate": false
+            }
+          }
+        }
       }
     },
     "roomIndex": {

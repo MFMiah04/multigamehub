@@ -2,6 +2,7 @@ import { ref, push, update, remove, onChildAdded, onChildChanged, onChildRemoved
 import { db, serverNow } from '../firebase.js';
 
 // A shared drawing board: <sketch-board room="ABCD" uid="..."></sketch-board>
+// Add layer="..." for a board of its own (e.g. one per player): canvases/{room}/b/{layer}/...
 //
 // Everything is drawn onto a fixed-size "paper" (PAPER_W × PAPER_H) that's then scaled onto the
 // screen. That way a bucket fill floods exactly the same pixels on every phone and computer.
@@ -89,6 +90,8 @@ class SketchBoard extends HTMLElement {
     this.ready = true;
     this.code = this.getAttribute('room');
     this.uid = this.getAttribute('uid');
+    const layer = this.getAttribute('layer');
+    this.base = layer ? `canvases/${this.code}/b/${layer}` : `canvases/${this.code}`;
     this.tool = 'pen';
     this.color = COLORS[0];
     this.custom = '#3fa7a0';
@@ -174,7 +177,7 @@ class SketchBoard extends HTMLElement {
     this.querySelectorAll('[data-size]').forEach(b => b.addEventListener('click', () => { this.size = +b.dataset.size; this.markTools(); }));
     this.querySelector('[data-act="undo"]').addEventListener('click', () => this.undo());
     this.querySelector('[data-act="redo"]').addEventListener('click', () => this.redo());
-    this.querySelector('[data-act="clear"]').addEventListener('click', () => remove(ref(db, `canvases/${this.code}`)));
+    this.querySelector('[data-act="clear"]').addEventListener('click', () => remove(ref(db, this.base)));
     const customInput = this.querySelector('.board__custom input');
     customInput.addEventListener('input', () => this.setCustom(customInput.value));
     this.markTools();
@@ -398,11 +401,11 @@ class SketchBoard extends HTMLElement {
   }
 
   newOp(type, color, points) {
-    const id = push(ref(db, `canvases/${this.code}/s`)).key;
+    const id = push(ref(db, `${this.base}/s`)).key;
     const op = { id, t: type, c: color, w: this.size, u: this.uid, points, drawn: 0, sent: 0, chunk: 0, metaSent: false, mine: true };
     this.ops.set(id, op);
     // Doing something new forgets anything you could have redone.
-    this.redoStack.splice(0).forEach(old => { this.ops.delete(old); remove(ref(db, `canvases/${this.code}/s/${old}`)); });
+    this.redoStack.splice(0).forEach(old => { this.ops.delete(old); remove(ref(db, `${this.base}/s/${old}`)); });
     return op;
   }
 
@@ -498,7 +501,7 @@ class SketchBoard extends HTMLElement {
     if (!op) return;
     op.hidden = true;
     this.redoStack.push(op.id);
-    update(ref(db, `canvases/${this.code}/s/${op.id}`), { x: true }).catch(() => {});
+    update(ref(db, `${this.base}/s/${op.id}`), { x: true }).catch(() => {});
     this.repaint();
     this.markTools();
   }
@@ -509,7 +512,7 @@ class SketchBoard extends HTMLElement {
     const op = id && this.ops.get(id);
     if (!op) return this.markTools();
     op.hidden = false;
-    update(ref(db, `canvases/${this.code}/s/${op.id}`), { x: null }).catch(() => {});
+    update(ref(db, `${this.base}/s/${op.id}`), { x: null }).catch(() => {});
     this.repaint();
     this.markTools();
   }
@@ -529,7 +532,7 @@ class SketchBoard extends HTMLElement {
     if (!mine.length) return;
     const updates = {};
     mine.forEach(op => {
-      const base = `canvases/${this.code}/s/${op.id}`;
+      const base = `${this.base}/s/${op.id}`;
       if (!op.metaSent) { updates[`${base}/m`] = { t: op.t, c: op.c, w: op.w, u: op.u }; op.metaSent = true; }
       const p = encode(op.points.slice(op.sent));
       updates[`${base}/k/${op.chunk++}`] = { p, t: Math.round(serverNow()) };
@@ -540,7 +543,7 @@ class SketchBoard extends HTMLElement {
   }
 
   listen() {
-    this.opsRef = ref(db, `canvases/${this.code}/s`);
+    this.opsRef = ref(db, `${this.base}/s`);
     const take = snap => {
       const value = snap.val();
       if (!value?.m) return;
