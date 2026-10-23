@@ -15,6 +15,14 @@ const LINE_SIZE = 0.012;
 const GUESS_MS = 60000;
 const DECOYS = 5; // other words shown to the imposter alongside the real one
 
+// A few clues about what the thing is like, without naming it: its size, rough shape, and whether it's alive.
+const SIZES = { hand: 'fits in your hand', carry: 'you could carry it', you: 'about as big as a person', big: 'bigger than a person', huge: 'enormous' };
+const SHAPES = { round: 'roundish', long: 'long and thin', tall: 'tall', boxy: 'boxy', pointy: 'pointy', wiggly: 'wiggly or wavy', flat: 'flat', lumpy: 'an odd, lumpy shape', spiky: 'spiky or leggy', curved: 'curved', person: 'person-shaped' };
+const features = word => {
+  const w = words[word] || {};
+  return [w.alive ? 'alive' : 'not alive', SHAPES[w.shape], SIZES[w.size]].filter(Boolean);
+};
+
 // The real word hidden among a few others from the same category, in a random order.
 function wordList(word) {
   const { category } = words[word];
@@ -37,7 +45,7 @@ export default {
   players: '3–12',
   blurb: 'Take turns adding one line to a drawing of the secret word. One of you is faking it.',
   rules: [
-    "Everyone sees the secret word except the imposter. By default they see a short list of words, and one of them is the real one.",
+    "Everyone sees the secret word except the imposter. By default they get a few clues about what it's like (alive? what shape? how big?), then a short list of possible words from the second lap.",
     'Take turns adding one line each to the same drawing. Lift your pen and your turn is over.',
     'Prove you know the word, but not so clearly that the imposter can work it out. Two laps, then vote.',
     "If the imposter isn't caught, they win. If they are, they get one guess at the word to steal the win.",
@@ -58,7 +66,7 @@ export default {
     return html`
       ${selectField('Laps of the table', s.laps, [[1, '1 lap'], [2, '2 laps'], [3, '3 laps']], v => set({ laps: +v }), disabled)}
       ${selectField('Time for each line', s.turnTime, [[15, '15 seconds'], [20, '20 seconds'], [30, '30 seconds'], [45, '45 seconds'], [60, '1 min']], v => set({ turnTime: +v }), disabled)}
-      ${selectField("Imposter's hint", s.hint, [['growing', 'Gets better: category, then a word list'], ['list', `A list of ${DECOYS + 1} words, one is right`], ['category', 'The category (like "Animal")'], ['none', 'No hint']], v => set({ hint: v }), disabled)}
+      ${selectField("Imposter's hint", s.hint, [['growing', 'Gets better: what it\'s like, then a word list'], ['list', `A list of ${DECOYS + 1} words, one is right`], ['features', 'What it\'s like (alive? shape? size?)'], ['category', 'The category (like "Animal")'], ['none', 'No hint']], v => set({ hint: v }), disabled)}
       ${selectField('Time to vote', s.voteTime, [[60, '1 min'], [90, '1½ min'], [120, '2 min']], v => set({ voteTime: +v }), disabled)}`;
   },
 
@@ -121,15 +129,18 @@ function secretCard(ctx) {
   const { round, local } = ctx;
   const imposter = round.imposter === ctx.uid;
   const category = words[round.word]?.category;
-  // 'growing': just the category on the first lap, then the word list from the second lap on.
+  // 'growing': what it's like on the first lap, then the word list from the second lap on.
   const lap = Math.floor((round.turn || 0) / Math.max(1, present(ctx).length)) + 1;
   const list = imposter && round.choices && (round.hint === 'list' || (round.hint === 'growing' && (lap > 1 || ctx.room.phase !== 'draw')));
-  return html`<button class="secret secret--slim wobble ${local.show ? '' : 'secret--hidden'} ${imposter ? 'secret--spy' : ''} ${list && local.show ? 'secret--list' : ''}"
+  const roomy = imposter && local.show && (list || round.hint === 'growing' || round.hint === 'features');
+  return html`<button class="secret secret--slim wobble ${local.show ? '' : 'secret--hidden'} ${imposter ? 'secret--spy' : ''} ${roomy ? 'secret--list' : ''}"
     @click=${() => { local.show = !local.show; ctx.rerender(); }}>
     ${!local.show ? html`<b>Tap to see your word</b>`
       : list ? html`<small>You're the imposter! The word is one of these:</small>
         <span class="di-choices">${round.choices.map(i => html`<span class="di-choice">${words[i]?.word}</span>`)}</span>`
-      : imposter ? html`<small>You're the imposter!${round.hint === 'growing' ? ' More help after this lap.' : ''}</small><b>${round.hint === 'none' ? 'No hint' : `Hint: ${category}`}</b>`
+      : imposter && (round.hint === 'growing' || round.hint === 'features') ? html`<small>You're the imposter!${round.hint === 'growing' ? ' More help after this lap.' : ''} It's…</small>
+        <span class="di-choices">${features(round.word).map(f => html`<span class="di-choice">${f}</span>`)}</span>`
+      : imposter ? html`<small>You're the imposter!</small><b>${round.hint === 'none' ? 'No hint' : `Hint: ${category}`}</b>`
       : html`<small>The secret word is</small><b>${wordOf(round)}</b>`}
   </button>`;
 }
