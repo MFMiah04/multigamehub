@@ -101,8 +101,8 @@ export function homeView({ onHost, onJoin, rerender, rejoin, onRejoin, onForget 
 
       <h2 class="section-title">The rules</h2>
       <div class="notes">
-        ${gameList.map(g => html`<button class="sticky sticky--${g.color} wobble" @click=${() => showRules(g)} aria-label="How to play ${g.name}">
-          <b class=${g.name.length > 13 ? 'sticky__long' : ''}>${g.name}</b>${g.art}<small>${g.players} players</small>
+        ${gameList.map(g => html`<button class="sticky sticky--${g.color} ${g.name.length > 30 ? 'sticky--long-name' : ''} wobble" @click=${() => showRules(g)} aria-label="How to play ${g.name}">
+          <b>${g.name}</b>${g.art}<small>${g.players} players</small>
         </button>`)}
       </div>
       <p class="note center">More games coming soon.</p>

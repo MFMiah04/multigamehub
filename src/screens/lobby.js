@@ -107,11 +107,11 @@ export function lobbyView(ctx) {
 
     <h2 class="section-title">${isHost ? 'Pick a game' : 'The game'}</h2>
     <div class="notes">
-      ${byPlayable(ctx.players.length).map(({ game: g, problem }) => html`<div class="sticky sticky--${g.color} wobble ${room.game === g.id ? 'sticky--picked' : ''} ${!isHost && room.game !== g.id ? 'sticky--faded' : ''} ${problem ? 'sticky--unplayable' : ''}">
+      ${byPlayable(ctx.players.length).map(({ game: g, problem }) => html`<div class="sticky sticky--${g.color} ${g.name.length > 30 ? 'sticky--long-name' : ''} wobble ${room.game === g.id ? 'sticky--picked' : ''} ${!isHost && room.game !== g.id ? 'sticky--faded' : ''} ${problem ? 'sticky--unplayable' : ''}">
         <button class="sticky__pick" ?disabled=${!isHost} @click=${action(() => pickGame(g))}>
-          <b class=${g.name.length > 13 ? 'sticky__long' : ''}>${g.name}</b>${g.art}<small>${problem || `${g.players} players`}</small>
+          <b>${g.name}</b>${g.art}<small>${problem || `${g.players} players`}</small>
         </button>
-        <button class="sticky__rules" @click=${() => showRules(g)}>how to play</button>
+        <button class="sticky__rules" aria-label="How to play ${g.name}" title="How to play" @click=${() => showRules(g)}>?</button>
       </div>`)}
     </div>
 

@@ -213,13 +213,13 @@ details.field summary { cursor: pointer; text-decoration: underline wavy; text-u
   align-items: center;
   gap: 2px;
   height: calc(var(--row) * 5);
-  padding: 8px 10px;
+  padding: 6px 10px;
   text-align: center;
   background: var(--note);
   box-shadow: var(--shadow);
   transition: transform 0.15s;
 }
-.sticky b { font-size: 20px; line-height: 24px; }
+.sticky b { font-size: 20px; line-height: 22px; }
 .sticky small { font-size: 15px; color: var(--ink-soft); line-height: 20px; }
 .sticky .art { width: 72px; height: 63px; flex: none; }
 .sticky { transform: rotate(var(--tilt, 0deg)); }
@@ -247,7 +247,10 @@ details.field summary { cursor: pointer; text-decoration: underline wavy; text-u
 .sticky__pick { all: unset; display: flex; flex-direction: column; align-items: center; gap: 0; cursor: pointer; flex: 1; width: 100%; }
 .sticky__pick .art { width: 60px; height: 52px; }
 .sticky__pick:disabled { cursor: default; }
-.sticky__rules { all: unset; display: inline-block; cursor: pointer; font-size: 15px; line-height: 20px; color: var(--ink-soft); text-decoration: underline wavy; text-underline-offset: 3px; }
+/* "How to play" is a little "?" sticker on the note's top corner, so the name has room for two lines. */
+.sticky__rules { all: unset; position: absolute; top: -11px; left: -9px; display: grid; place-items: center; width: 28px; height: 28px; border: 2px solid var(--ink); border-radius: 50%; background: #fff; font-size: 17px; font-weight: 700; line-height: 1; cursor: pointer; transform: rotate(-8deg); box-shadow: 1px 2px 0 rgba(0, 0, 0, 0.15); }
+/* Names too long for two lines: the picture shrinks to make room. */
+.sticky--long-name .art { width: 44px; height: 38px; }
 
 /* ---------- room ---------- */
 
@@ -922,9 +925,6 @@ sketch-board.do-mini .board__frame { box-shadow: none; border: 1.5px solid #ddd;
 .di-turn__ring .avatar { display: block; }
 .di-turn small { padding: 0 6px; border-radius: 8px; background: var(--ink); color: #fff; font-weight: 700; }
 
-/* Long game names shrink a little so they stay on one line in the notes */
-.sticky b { white-space: nowrap; }
-.sticky b.sticky__long { font-size: 17px; letter-spacing: -0.2px; }
 
 /* The custom colour panel: shades box, hue strip, preview */
 .board__picker { position: fixed; left: 50%; bottom: max(16px, env(safe-area-inset-bottom)); z-index: 40; display: flex; flex-direction: column; gap: 12px; width: min(340px, calc(100vw - 32px)); padding: 14px; background: #fff; box-shadow: 6px 6px 0 rgba(0, 0, 0, 0.18); transform: translateX(-50%); animation: pop 0.18s; }
