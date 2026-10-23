@@ -980,3 +980,10 @@ frame-reel { display: block; max-width: 760px; width: 100%; margin: 8px auto; }
 .chain-card .btn { width: auto; padding: 0 16px; }
 .chain-card__buttons { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; }
 .chain-show > .btn { margin-bottom: 8px; }
+
+/* Doodle Imposter: the imposter's list of possible words */
+.secret.secret--list { height: auto; min-height: calc(var(--row) * 2.5); padding: 8px 12px; }
+.di-choices { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; margin-top: 4px; }
+.di-choice { padding: 0 10px; border: 2px solid var(--ink); border-radius: 14px; background: #fff; font-size: 17px; font-weight: 700; line-height: 26px; }
+.di-guess-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 10px; margin: 8px 0 14px; }
+.di-guess-list .btn { width: 100%; }

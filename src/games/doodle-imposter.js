@@ -13,6 +13,14 @@ import '../draw/board.js';
 const INKS = ['#d23c5f', '#3b82c4', '#3fae5b', '#f28c28', '#8e5bd1', '#222222', '#8b5a3c', '#e85d9a', '#1fa3a3', '#c9a227', '#6b7280', '#5b4bdb'];
 const LINE_SIZE = 0.012;
 const GUESS_MS = 60000;
+const DECOYS = 5; // other words shown to the imposter alongside the real one
+
+// The real word hidden among a few others from the same category, in a random order.
+function wordList(word) {
+  const { category } = words[word];
+  const others = shuffle(words.map((w, i) => i).filter(i => i !== word && words[i].category === category)).slice(0, DECOYS);
+  return shuffle([word, ...others]);
+}
 
 const wordOf = round => words[round.word]?.word || '';
 const present = ctx => (ctx.round.order || []).filter(id => ctx.room.players[id]?.inGame);
@@ -29,7 +37,7 @@ export default {
   players: '3–12',
   blurb: 'Take turns adding one line to a drawing of the secret word. One of you is faking it.',
   rules: [
-    "Everyone sees the secret word except the imposter, who only gets a hint (if it's turned on).",
+    "Everyone sees the secret word except the imposter. By default they see a short list of words, and one of them is the real one.",
     'Take turns adding one line each to the same drawing. Lift your pen and your turn is over.',
     'Prove you know the word, but not so clearly that the imposter can work it out. Two laps, then vote.',
     "If the imposter isn't caught, they win. If they are, they get one guess at the word to steal the win.",
@@ -43,14 +51,14 @@ export default {
     <path d="M46 34 q2 -6 6 -4" stroke-width="2" />
   </g></svg>`,
 
-  defaults: () => ({ laps: 2, turnTime: 30, hint: 'category', voteTime: 90 }),
+  defaults: () => ({ laps: 2, turnTime: 30, hint: 'list', voteTime: 90 }),
 
   settingsView(ctx, s, set) {
     const disabled = !ctx.isHost;
     return html`
       ${selectField('Laps of the table', s.laps, [[1, '1 lap'], [2, '2 laps'], [3, '3 laps']], v => set({ laps: +v }), disabled)}
       ${selectField('Time for each line', s.turnTime, [[15, '15 seconds'], [20, '20 seconds'], [30, '30 seconds'], [45, '45 seconds'], [60, '1 min']], v => set({ turnTime: +v }), disabled)}
-      ${selectField("Imposter's hint", s.hint, [['category', 'The category (like "Animal")'], ['none', 'No hint']], v => set({ hint: v }), disabled)}
+      ${selectField("Imposter's hint", s.hint, [['list', `A list of ${DECOYS + 1} words, one is right`], ['category', 'The category (like "Animal")'], ['none', 'No hint']], v => set({ hint: v }), disabled)}
       ${selectField('Time to vote', s.voteTime, [[60, '1 min'], [90, '1½ min'], [120, '2 min']], v => set({ voteTime: +v }), disabled)}`;
   },
 
@@ -63,6 +71,7 @@ export default {
       phase: 'draw',
       round: {
         word, order, imposter: shuffle(order)[0], laps: s.laps, hint: s.hint, turn: 0,
+        choices: s.hint === 'list' ? wordList(word) : null,
         colors: Object.fromEntries(order.map((id, i) => [id, INKS[i % INKS.length]])),
         // A few extra seconds on the first turn to read the word.
         turnEndsAt: ctx.now() + (s.turnTime + 5) * 1000,
@@ -112,9 +121,12 @@ function secretCard(ctx) {
   const { round, local } = ctx;
   const imposter = round.imposter === ctx.uid;
   const category = words[round.word]?.category;
-  return html`<button class="secret secret--slim wobble ${local.show ? '' : 'secret--hidden'} ${imposter ? 'secret--spy' : ''}"
+  const list = imposter && round.hint === 'list' && round.choices;
+  return html`<button class="secret secret--slim wobble ${local.show ? '' : 'secret--hidden'} ${imposter ? 'secret--spy' : ''} ${list && local.show ? 'secret--list' : ''}"
     @click=${() => { local.show = !local.show; ctx.rerender(); }}>
     ${!local.show ? html`<b>Tap to see your word</b>`
+      : list ? html`<small>You're the imposter! The word is one of these:</small>
+        <span class="di-choices">${round.choices.map(i => html`<span class="di-choice">${words[i]?.word}</span>`)}</span>`
       : imposter ? html`<small>You're the imposter!</small><b>${round.hint === 'none' ? 'No hint' : `Hint: ${category}`}</b>`
       : html`<small>The secret word is</small><b>${wordOf(round)}</b>`}
   </button>`;
@@ -183,7 +195,10 @@ function results(ctx) {
   const guessPart = !round.caught ? nothing
     : !guessed
       ? (isImposter
-        ? html`<div class="question wobble"><small>You've been caught! One guess to steal the win</small>What was the secret word?</div>
+        ? round.choices ? html`<div class="question wobble"><small>You've been caught! One guess to steal the win</small>Which one was the secret word?</div>
+          ${timer(round.guessEndsAt, 15)}
+          <div class="di-guess-list">${round.choices.map(i => button(words[i]?.word, action(() => ctx.update({ 'round/guess': words[i]?.word })), { kind: 'white' }))}</div>`
+        : html`<div class="question wobble"><small>You've been caught! One guess to steal the win</small>What was the secret word?</div>
           ${timer(round.guessEndsAt, 15)}
           <label class="field"><span>Your guess</span>
             <input id="di-guess" class="wobble" maxlength="40" autocomplete="off" placeholder="The secret word"
