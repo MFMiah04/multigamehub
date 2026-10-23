@@ -104,7 +104,7 @@ function playing(ctx, s) {
       </div>
     </details>
     <div class="push"></div>
-    ${voteRequestBar(ctx, s.voteTime)}`;
+    ${voteRequestBar(ctx)}`;
 }
 
 function results(ctx) {

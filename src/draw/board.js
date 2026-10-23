@@ -1,4 +1,4 @@
-import { ref, push, update, remove, onChildAdded, onChildChanged, onChildRemoved, off } from 'firebase/database';
+import { ref, push, update, remove, onChildAdded, onChildChanged, onChildRemoved } from 'firebase/database';
 import { db, serverNow } from '../firebase.js';
 
 // A shared drawing board: <sketch-board room="ABCD" uid="..."></sketch-board>
@@ -15,6 +15,14 @@ import { db, serverNow } from '../firebase.js';
 //
 // Points are stored as fractions of the board, each coordinate packed into 2 base-36 characters
 // (0 to 1295), so a point costs 4 bytes.
+//
+// Each game sets `.config` to choose what the board offers (anything left out uses the default):
+//   tools: list of tool ids to show (default: all). Empty or one tool hides the tool buttons.
+//   colors / sizes: show the palette / brush sizes (default true). color / size: fixed values.
+//   undo, clear, stats: show those buttons and the data line (default true).
+//   canDraw: whether you can draw right now (default true).
+//   oneStroke: after one finished line, shape or fill, stop until `turnKey` changes.
+// When you finish a line, shape or fill the board fires a `strokeend` event.
 
 const SEND_MS = 40;
 const PAPER_W = 1200;
@@ -24,6 +32,7 @@ const COLORS = ['#222222', '#ffffff', '#d23c5f', '#f28c28', '#f2c94c', '#3fae5b'
 const SIZES = [0.006, 0.014, 0.03, 0.06]; // as a fraction of the board's width
 const ERASER = '#ffffff';
 const FILL_TOLERANCE = 60;
+const DEFAULTS = { tools: null, colors: true, sizes: true, undo: true, clear: true, stats: true, canDraw: true, oneStroke: false };
 
 const pack = v => Math.round(Math.min(1, Math.max(0, v)) * STEPS).toString(36).padStart(2, '0');
 const encode = points => points.map(([x, y]) => pack(x) + pack(y)).join('');
@@ -55,6 +64,26 @@ const UNDO_ICON = icon('<path d="M9 6 L4 11 L9 16" /><path d="M4 11 H14 a5 5 0 0
 const REDO_ICON = icon('<path d="M15 6 L20 11 L15 16" /><path d="M20 11 H10 a5 5 0 0 0 0 10 H13" />');
 
 class SketchBoard extends HTMLElement {
+  get config() { return this.cfg || DEFAULTS; }
+
+  // Games set this on every redraw, so only react when something actually changed.
+  set config(value) {
+    const next = { ...DEFAULTS, ...value };
+    const key = JSON.stringify(next);
+    if (key === this.cfgKey) return;
+    const turnChanged = this.cfg && next.turnKey !== this.cfg.turnKey;
+    this.cfg = next;
+    this.cfgKey = key;
+    if (turnChanged) this.used = false;
+    if (next.color) this.color = next.color;
+    if (next.size) this.size = next.size;
+    const tools = next.tools || TOOLS.map(t => t[0]);
+    if (!tools.includes(this.tool)) this.tool = tools[0] || 'pen';
+    // Your turn ended mid-line: finish it off without starting the next turn.
+    if (!next.canDraw && this.pointer !== undefined) this.finish(false);
+    if (this.ready) this.applyConfig();
+  }
+
   connectedCallback() {
     if (this.ready) return;
     this.ready = true;
@@ -64,6 +93,10 @@ class SketchBoard extends HTMLElement {
     this.color = COLORS[0];
     this.custom = '#3fa7a0';
     this.size = SIZES[1];
+    // A game may have fixed these before the board appeared on the page.
+    if (this.cfg?.color) this.color = this.cfg.color;
+    if (this.cfg?.size) this.size = this.cfg.size;
+    if (this.cfg?.tools?.length) this.tool = this.cfg.tools[0];
     this.ops = new Map(); // id → { id, t, c, w, u, points, drawn, hidden, chunks }
     this.redoStack = [];
     this.stats = { sentBytes: 0, gotBytes: 0, delays: [] };
@@ -73,9 +106,12 @@ class SketchBoard extends HTMLElement {
     this.pctx = this.paper.getContext('2d', { willReadFrequently: true });
     this.wipePaper();
     this.build();
+    this.applyConfig();
     this.listen();
     this.resizer = new ResizeObserver(() => this.fit());
-    this.resizer.observe(this.frame);
+    this.resizer.observe(this);
+    this.onResize = () => this.fit();
+    window.addEventListener('resize', this.onResize);
     this.timer = setInterval(() => this.flush(), SEND_MS);
     this.statsTimer = setInterval(() => this.showStats(), 1000);
     this.onKey = e => this.key(e);
@@ -91,29 +127,42 @@ class SketchBoard extends HTMLElement {
       clearInterval(this.statsTimer);
       this.resizer?.disconnect();
       document.removeEventListener('keydown', this.onKey);
-      off(this.opsRef);
+      window.removeEventListener('resize', this.onResize);
+      this.unlisten?.forEach(stop => stop());
       this.ready = false;
     });
   }
 
   // ----- the page bits -----
 
+  // On wide screens the tools and colours sit in columns either side of the canvas.
+  // Only when the board is wide enough that the canvas still gets most of the room.
+  sideWidth() {
+    const sides = [...this.querySelectorAll('.board__side')].filter(el => !el.hidden);
+    const wide = sides.length > 0 && this.clientWidth >= 640;
+    this.classList.toggle('board--wide', wide);
+    return wide ? sides.reduce((sum, el) => sum + el.offsetWidth + 12, 0) : 0;
+  }
+
   build() {
     this.innerHTML = `
       <div class="board__frame wobble"><canvas class="board__canvas"></canvas></div>
-      <div class="board__tools">
-        <div class="board__row">${TOOLS.map(([id, label, svg]) => `<button class="board__tool" data-tool="${id}" aria-label="${label}" title="${label}">${svg}</button>`).join('')}</div>
-        <div class="board__row">
+      <div class="board__side board__side--tools">
+        <div class="board__group board__group--tools">${TOOLS.map(([id, label, svg]) => `<button class="board__tool" data-tool="${id}" aria-label="${label}" title="${label}">${svg}</button>`).join('')}</div>
+        <div class="board__group board__group--actions">
+          <button class="board__tool" data-act="undo" aria-label="Undo (Ctrl+Z)" title="Undo (Ctrl+Z)">${UNDO_ICON}</button>
+          <button class="board__tool" data-act="redo" aria-label="Redo (Ctrl+Y)" title="Redo (Ctrl+Y)">${REDO_ICON}</button>
+          <button class="board__clear link" data-act="clear">clear</button>
+        </div>
+      </div>
+      <div class="board__side board__side--colors">
+        <div class="board__group board__group--colors">
           ${COLORS.map(c => `<button class="board__color" style="--c:${c}" data-color="${c}" aria-label="Colour ${c}"></button>`).join('')}
           <label class="board__color board__custom" title="Pick any colour" style="--c:${this.custom}">
             <input type="color" value="${this.custom}" aria-label="Pick any colour"></label>
         </div>
-        <div class="board__row">
+        <div class="board__group board__group--sizes">
           ${SIZES.map((s, i) => `<button class="board__size" data-size="${s}" aria-label="Brush size ${i + 1}"><i style="--d:${4 + i * 5}px"></i></button>`).join('')}
-          <span class="board__gap"></span>
-          <button class="board__tool" data-act="undo" aria-label="Undo (Ctrl+Z)" title="Undo (Ctrl+Z)">${UNDO_ICON}</button>
-          <button class="board__tool" data-act="redo" aria-label="Redo (Ctrl+Y)" title="Redo (Ctrl+Y)">${REDO_ICON}</button>
-          <button class="board__clear link" data-act="clear">clear</button>
         </div>
       </div>
       <p class="board__stats note center"></p>`;
@@ -134,6 +183,34 @@ class SketchBoard extends HTMLElement {
     c.addEventListener('pointerdown', e => this.down(e));
     c.addEventListener('pointermove', e => this.move(e));
     ['pointerup', 'pointercancel', 'lostpointercapture'].forEach(t => c.addEventListener(t, e => this.up(e)));
+  }
+
+  // Shows only what this game wants, and greys the board out when it isn't your turn.
+  applyConfig() {
+    const cfg = this.config;
+    const tools = cfg.tools || TOOLS.map(t => t[0]);
+    this.querySelectorAll('[data-tool]').forEach(b => { b.hidden = !tools.includes(b.dataset.tool); });
+    const show = (sel, on) => { const el = this.querySelector(sel); if (el) el.hidden = !on; };
+    show('.board__group--tools', tools.length > 1);
+    show('[data-act="undo"]', cfg.undo);
+    show('[data-act="redo"]', cfg.undo);
+    show('[data-act="clear"]', cfg.clear);
+    show('.board__group--actions', cfg.undo || cfg.clear);
+    show('.board__group--colors', cfg.colors && !cfg.color);
+    show('.board__group--sizes', cfg.sizes && !cfg.size);
+    show('.board__stats', cfg.stats);
+    const toolsShown = tools.length > 1 || cfg.undo || cfg.clear;
+    const colorsShown = (cfg.colors && !cfg.color) || (cfg.sizes && !cfg.size);
+    show('.board__side--tools', toolsShown);
+    show('.board__side--colors', colorsShown);
+    this.classList.toggle('board--bare', !toolsShown && !colorsShown);
+    this.classList.toggle('board--locked', !this.canDrawNow());
+    this.markTools();
+    if (this.canvas) this.fit();
+  }
+
+  canDrawNow() {
+    return this.config.canDraw && !(this.config.oneStroke && this.used);
   }
 
   pickTool(tool) {
@@ -168,8 +245,11 @@ class SketchBoard extends HTMLElement {
 
   // Matches the screen canvas to its box (and the screen's pixel density).
   fit() {
-    const width = this.frame.clientWidth;
+    const room = this.clientWidth - this.sideWidth();
+    const tallest = Math.max(240, window.innerHeight * 0.72);
+    const width = Math.max(120, Math.floor(Math.min(room, tallest * PAPER_W / PAPER_H)));
     const height = Math.round(width * PAPER_H / PAPER_W);
+    this.canvas.style.width = `${width}px`;
     const dpr = Math.min(window.devicePixelRatio || 1, 3);
     this.canvas.style.height = `${height}px`;
     this.canvas.width = Math.round(width * dpr);
@@ -327,7 +407,7 @@ class SketchBoard extends HTMLElement {
   }
 
   down(e) {
-    if (this.pointer !== undefined) return; // one finger at a time
+    if (this.pointer !== undefined || !this.canDrawNow()) return; // one finger at a time
     e.preventDefault();
     const p = this.pointAt(e);
     if (this.tool === 'picker') return this.pickAt(p);
@@ -335,7 +415,7 @@ class SketchBoard extends HTMLElement {
       const op = this.newOp('f', this.color, [p]);
       this.paint(op);
       this.flush();
-      return this.markTools();
+      return this.done(op);
     }
     try { this.canvas.setPointerCapture(e.pointerId); } catch { /* keep drawing without capture */ }
     this.pointer = e.pointerId;
@@ -369,18 +449,31 @@ class SketchBoard extends HTMLElement {
   }
 
   up(e) {
-    if (e.pointerId !== this.pointer) return;
+    if (e.pointerId === this.pointer) this.finish(true);
+  }
+
+  // Ends the line or shape in progress. `announce` is false when it was cut short by the turn ending.
+  finish(announce) {
     this.pointer = undefined;
+    let op = this.current;
     if (this.preview) {
       const { t, c, points } = this.preview;
       this.preview = null;
       const moved = Math.abs(points[0][0] - points[1][0]) + Math.abs(points[0][1] - points[1][1]) > 0.004;
-      if (moved) this.paint(this.newOp(t, c, points));
+      op = moved ? this.newOp(t, c, points) : null;
+      if (op) this.paint(op);
       else this.show();
     }
     this.flush();
     this.current = null;
-    this.markTools();
+    if (op && announce) this.done(op);
+    else this.markTools();
+  }
+
+  done(op) {
+    if (this.config.oneStroke) { this.used = true; this.applyConfig(); }
+    else this.markTools();
+    this.dispatchEvent(new CustomEvent('strokeend', { bubbles: true, detail: { id: op.id } }));
   }
 
   // The eyedropper: takes the colour under your finger and switches back to the pencil.
@@ -400,6 +493,7 @@ class SketchBoard extends HTMLElement {
   }
 
   undo() {
+    if (!this.config.undo) return;
     const op = this.ownVisible().at(-1);
     if (!op) return;
     op.hidden = true;
@@ -410,6 +504,7 @@ class SketchBoard extends HTMLElement {
   }
 
   redo() {
+    if (!this.config.undo) return;
     const id = this.redoStack.pop();
     const op = id && this.ops.get(id);
     if (!op) return this.markTools();
@@ -465,14 +560,17 @@ class SketchBoard extends HTMLElement {
       if (!!value.x !== op.hidden) { op.hidden = !!value.x; this.repaint(); return; }
       this.paint(op);
     };
-    onChildAdded(this.opsRef, take);
-    onChildChanged(this.opsRef, take);
-    onChildRemoved(this.opsRef, snap => {
+    // Keep the unsubscribe functions: another board for the same room may be listening too.
+    this.unlisten = [
+      onChildAdded(this.opsRef, take),
+      onChildChanged(this.opsRef, take),
+      onChildRemoved(this.opsRef, snap => {
       if (!this.ops.delete(snap.key)) return;
       this.redoStack = this.redoStack.filter(id => id !== snap.key);
       clearTimeout(this.repaintSoon);
       this.repaintSoon = setTimeout(() => { this.repaint(); this.markTools(); }, 30); // a clear removes many at once
-    });
+      }),
+    ];
   }
 
   showStats() {

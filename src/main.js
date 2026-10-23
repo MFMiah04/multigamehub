@@ -1,8 +1,8 @@
 import { render } from 'lit-html';
 import { soundControl } from './sound.js';
 import { reactionBar, reactionLayer } from './reactions.js';
-import { onValue, get, update } from 'firebase/database';
-import { signIn, serverNow } from './firebase.js';
+import { onValue, get, update, remove, ref } from 'firebase/database';
+import { db, signIn, serverNow } from './firebase.js';
 import { roomRef, createRoom, joinRoom, leaveRoom, trackPresence, stopPresence, sortedPlayers, claimHostIfNeeded, touchRoom } from './room.js';
 import { html, nothing, toast, confirmDialog, action, avatar } from './ui.js';
 import { games } from './games/index.js';
@@ -118,7 +118,9 @@ function makeCtx() {
     share: () => copyInviteLink(room.code),
     copyCode: () => copyCode(room.code),
   };
-  ctx.startGame = () => {
+  ctx.startGame = async () => {
+    // Drawing games start on a blank board.
+    if (game.canvas) await remove(ref(db, `canvases/${room.code}`));
     const changes = game.start(ctx, ctx.settings);
     changes.round = { ...changes.round, id: Date.now() };
     players.forEach(p => { changes[`players/${p.id}/inGame`] = true; });
@@ -176,7 +178,7 @@ function roomView(ctx) {
   else body = game.view(ctx, ctx.settings);
 
   return html`
-    <main class="page room ${game && !inLobby ? `room--${game.color}` : ''}">
+    <main class="page room ${game && !inLobby ? `room--${game.color} ${game.canvas ? 'room--wide' : ''}` : ''}">
       ${roomHeader(ctx, inLobby)}
       ${body}
     </main>

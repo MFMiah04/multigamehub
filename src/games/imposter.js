@@ -83,7 +83,7 @@ function playing(ctx, s) {
       ${order.map(p => html`<li>${playerTag(p, { you: p.id === ctx.uid })}</li>`)}
     </ol>
     <div class="push"></div>
-    ${voteRequestBar(ctx, s.voteTime)}`;
+    ${voteRequestBar(ctx)}`;
 }
 
 function results(ctx) {

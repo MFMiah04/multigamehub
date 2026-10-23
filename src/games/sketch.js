@@ -7,6 +7,7 @@ export default {
   id: 'sketch',
   name: 'Sketch Pad',
   color: 'lilac',
+  canvas: true,
   players: '1–16',
   blurb: 'A shared drawing board. Everyone can doodle at once.',
   rules: [

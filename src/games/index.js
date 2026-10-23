@@ -10,7 +10,8 @@ import numberClimb from './number-climb.js';
 import insider from './insider.js';
 import avalon from './avalon.js';
 import sketch from './sketch.js';
+import doodleImposter from './doodle-imposter.js';
 
 // To add a game: create a module with the same shape and list it here.
-export const gameList = [spyfall, imposter, fakinIt, herdMentality, oneWord, fakeAnswer, spectrum, wordSync, numberClimb, insider, avalon, sketch];
+export const gameList = [spyfall, imposter, fakinIt, herdMentality, oneWord, fakeAnswer, spectrum, wordSync, numberClimb, insider, avalon, doodleImposter, sketch];
 export const games = Object.fromEntries(gameList.map(g => [g.id, g]));

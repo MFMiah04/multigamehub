@@ -16,6 +16,8 @@ Party games to play together on phones or computers. Make a character, then one 
 - **Number Climb** (2+ players): everyone gets secret numbers from 1 to 100 and has to play them all in order, lowest to highest, without talking.
 - **Insider** (4+ players): ask the Master yes/no questions to find the secret word, then vote on who secretly knew it all along.
 - **Avalon** (5–10 players): loyal knights versus hidden traitors. Approve teams, play Success or Fail cards on five quests, and watch out for the Assassin.
+- **Doodle Imposter** (3–12 players): take turns adding one line each to a drawing of the secret word. One player only gets a hint. Vote them out, then they get one guess to steal the win.
+- **Sketch Pad** (1–16 players): a shared drawing board for trying out the drawing tools.
 
 ## Tech
 Vite, [lit-html](https://lit.dev/docs/libraries/standalone-templates/) for rendering, Firebase Realtime Database, Firebase anonymous auth and Firebase Hosting.

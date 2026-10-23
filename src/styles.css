@@ -820,15 +820,22 @@ button.quest-card { transition: transform 0.15s; }
 @media (prefers-reduced-motion: reduce) { .end-banner, .end-banner .end-art { animation: none; } }
 
 /* ----- drawing board ----- */
-sketch-board { display: block; max-width: 640px; margin: 0 auto; }
-.board__frame { background: #fff; box-shadow: var(--shadow); padding: 0; overflow: hidden; }
-.board__canvas { display: block; width: 100%; touch-action: none; cursor: crosshair; -webkit-user-select: none; user-select: none; }
-.board__tools { display: flex; flex-direction: column; align-items: center; gap: 8px; margin: 14px 0 0; }
-.board__row { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 6px; }
-.board__gap { width: 10px; }
+/* Phones: canvas on top, tools and colours in rows underneath. Wide screens: tools in a column on
+   the left, colours on the right, canvas in the middle. Games hide whatever they don't use. */
+sketch-board { display: grid; justify-content: center; align-items: start; gap: 10px 12px; grid-template-areas: "canvas" "tools" "colors" "stats"; }
+sketch-board.board--bare { grid-template-areas: "canvas" "stats"; }
+.board__frame { grid-area: canvas; justify-self: center; background: #fff; box-shadow: var(--shadow); padding: 0; overflow: hidden; }
+.board__canvas { display: block; touch-action: none; cursor: crosshair; -webkit-user-select: none; user-select: none; }
+.board--locked .board__canvas { cursor: default; }
+.board__side { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+.board__side--tools { grid-area: tools; }
+.board__side--colors { grid-area: colors; }
+.board__group { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 6px; }
+.board__stats { grid-area: stats; margin: 0; font-size: 14px; }
+[hidden] { display: none !important; }
 .board__tool { display: grid; place-items: center; width: 38px; height: 38px; padding: 0; border: 2px solid var(--ink); border-radius: 10px 8px 11px 7px; background: #fff; transition: transform 0.12s; }
 .board__tool:disabled { opacity: 0.35; }
-.board__color { position: relative; width: 30px; height: 30px; border-radius: 50%; border: 2px solid var(--ink); background: var(--c); padding: 0; transition: transform 0.12s; }
+.board__color { position: relative; flex: none; width: 30px; height: 30px; border-radius: 50%; border: 2px solid var(--ink); background: var(--c); padding: 0; transition: transform 0.12s; }
 .board__custom { display: inline-block; cursor: pointer; background: conic-gradient(#d23c5f, #f2c94c, #3fae5b, #3b82c4, #8e5bd1, #d23c5f); }
 .board__custom::after { content: ''; position: absolute; inset: 5px; border-radius: 50%; border: 1.5px solid var(--ink); background: var(--c); }
 .board__custom input { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; border: 0; padding: 0; }
@@ -838,12 +845,30 @@ sketch-board { display: block; max-width: 640px; margin: 0 auto; }
 .board__color.is-on { background-color: var(--c); }
 .board__custom.is-on { background: conic-gradient(#d23c5f, #f2c94c, #3fae5b, #3b82c4, #8e5bd1, #d23c5f); }
 @media (hover: hover) { .board__tool:not(:disabled):hover, .board__color:hover, .board__size:hover { transform: scale(1.12) rotate(-4deg); } }
-.board__stats { margin-top: 6px; font-size: 14px; }
+/* The board switches to side columns itself when it has room (board--wide), whatever the screen size. */
+sketch-board.board--wide { grid-template-columns: auto auto auto; grid-template-areas: "tools canvas colors" "stats stats stats"; }
+sketch-board.board--wide.board--bare { grid-template-columns: auto; grid-template-areas: "canvas" "stats"; }
+.board--wide .board__group--tools, .board--wide .board__group--actions, .board--wide .board__group--colors { display: grid; grid-template-columns: repeat(2, auto); }
+.board--wide .board__group--actions .board__clear { grid-column: span 2; }
+.board--wide .board__group--sizes { flex-direction: column; }
 @media (max-width: 420px) {
-  .board__row { gap: 4px; }
+  .board__group { gap: 4px; }
   .board__tool { width: 33px; height: 33px; }
   .board__tool svg { width: 19px; height: 19px; }
   .board__color { width: 25px; height: 25px; }
   .board__custom::after { inset: 4px; }
   .board__size { width: 30px; height: 30px; }
 }
+
+/* Drawing games get a wider page so the canvas can be big. */
+@media (min-width: 700px) { .page.room--wide { max-width: 1120px; } }
+
+/* ----- Doodle Imposter ----- */
+.di-top { display: flex; flex-direction: column; align-items: center; }
+.di-top .note { margin: 0; }
+.secret--slim { min-height: 0; padding-top: 6px; padding-bottom: 6px; width: 100%; max-width: 460px; }
+.secret--slim b { font-size: 24px; line-height: 30px; }
+.di-yours { color: #d23c5f; }
+.di-turns { display: flex; flex-wrap: wrap; justify-content: center; align-items: flex-end; gap: 6px 12px; margin: 6px 0 12px; }
+.di-turn { display: flex; flex-direction: column; align-items: center; padding: 2px 6px 0; border-bottom: 4px solid var(--ink); border-radius: 6px; font-size: 13px; line-height: 18px; opacity: 0.7; transition: transform 0.2s; }
+.di-turn--now { opacity: 1; transform: translateY(-3px) scale(1.08); background: #fff; box-shadow: var(--shadow); }

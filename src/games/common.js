@@ -1,5 +1,5 @@
 import { svg } from 'lit-html';
-import { html, nothing, button, avatar, timer, progress, action, confirmDialog } from '../ui.js';
+import { html, nothing, button, avatar, timer, progress, action } from '../ui.js';
 import { cue } from '../sound.js';
 
 export const minutes = (from, to) =>
@@ -33,6 +33,7 @@ export const normalize = answer => String(answer || '').toLowerCase()
   .replace(/^(the|a|an)\s+/, '')
   .replace(/\s+/g, ' ')
   .trim()
+  .replace(/(?<=\w{2})ies$/, 'y') // strawberries → strawberry
   .replace(/(?<=\w{2})(ch|sh|x|z|ss)es$/, '$1') // watches → watch, boxes → box
   .replace(/(?<=\w{3})s$/, '');
 
@@ -215,17 +216,17 @@ export function nextOrFinalButton(ctx, round, next) {
     : button('See the final scores', action(() => ctx.update({ phase: 'final' })));
 }
 
-// ----- asking the host to start voting -----
+// ----- starting the vote early -----
+// Everyone, the host included, can say they're ready. Voting starts once more than half are,
+// so nobody can force it on their own.
 
-export function voteRequestBar(ctx, seconds) {
+export function voteRequestBar(ctx) {
   const requests = Object.keys(ctx.round.voteRequests || {}).filter(id => ctx.room.players[id]?.inGame);
   const asked = requests.includes(ctx.uid);
-  const label = asked ? 'Cancel my vote request' : 'Ready to vote';
+  const label = asked ? 'Not ready after all' : 'Ready to vote';
   return html`
-    ${ctx.isHost
-      ? button('Start the vote', action(() => ctx.update(startVoting(ctx, seconds))), { kind: 'pink' })
-      : button(label, action(() => ctx.update({ [`round/voteRequests/${ctx.uid}`]: asked ? null : true })), { kind: asked ? 'white' : 'pink' })}
-    ${requests.length ? html`<p class="note center">${requests.length} of ${ctx.inGame.length} ready to vote. Voting starts when more than half are ready.</p>` : nothing}`;
+    ${button(label, action(() => ctx.update({ [`round/voteRequests/${ctx.uid}`]: asked ? null : true })), { kind: asked ? 'white' : 'pink' })}
+    <p class="note center">${requests.length ? `${requests.length} of ${ctx.inGame.length} ready to vote. ` : ''}Voting starts when more than half are ready.</p>`;
 }
 
 export function voteRequestsPassed(ctx) {
@@ -276,8 +277,7 @@ export function voteView(ctx, { candidates, voters, max, prompt, details }) {
     ${progress(votedCount(ctx, voters), voters.length, 'have voted')}
     ${canVote ? (locked
       ? button('Change my vote', action(change), { kind: 'white' })
-      : button('Lock in vote', action(submit), { kind: 'yellow', disabled: picks.size === 0 })) : nothing}
-    ${hostSkip(ctx, 'Skip to results', toResults(ctx))}`;
+      : button('Lock in vote', action(submit), { kind: 'yellow', disabled: picks.size === 0 })) : nothing}`;
 }
 
 export function tally(ctx, candidates, voters) {
@@ -365,13 +365,6 @@ export function resultsList(ctx, rows, { badge, detail, mood, stage }) {
 }
 
 // ----- host controls -----
-
-export function hostSkip(ctx, label, updates) {
-  if (!ctx.isHost) return nothing;
-  return html`<button class="link" @click=${action(async () => {
-    if (await confirmDialog(`${label}?`, 'Skip', 'yellow')) await ctx.update(updates);
-  })}>${label}</button>`;
-}
 
 export function revealButton(ctx, revealed, label, field) {
   if (revealed) return nothing;

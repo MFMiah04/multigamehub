@@ -1,6 +1,6 @@
 import { html, nothing, button, timer, selectField, action, progress, toast } from '../ui.js';
 import { shuffle } from '../room.js';
-import { minutes, counts, startVoting, isTimeUp, voteView, votedCount, tally, mostVoted, voteResults, toResults, endTitle, sideResult, spotlight, revealButton, backToLobbyButton, hostSkip } from './common.js';
+import { minutes, counts, startVoting, isTimeUp, voteView, votedCount, tally, mostVoted, voteResults, toResults, endTitle, sideResult, spotlight, revealButton, backToLobbyButton } from './common.js';
 
 const overseerOf = (ctx, s) => (ctx.room.players[s.overseer] ? s.overseer : ctx.room.hostId);
 const maxFakers = count => Math.max(1, Math.floor(count / 2));
@@ -115,8 +115,7 @@ function answering(ctx) {
     return html`${timer(round.endsAt)}
       <div class="question wobble"><small>Real question</small>${round.questions?.real}</div>
       <div class="question wobble question--fake"><small>Faker's question</small>${round.questions?.fake}</div>
-      ${status}
-      ${hostSkip(ctx, 'Skip to voting', startVoting(ctx, 180))}`;
+      ${status}`;
   }
 
   const mine = round.answers?.[ctx.uid];
@@ -135,8 +134,7 @@ function answering(ctx) {
       : html`<label class="field"><span>Your answer</span>
           <textarea id="answer" class="wobble" rows="2" maxlength="120" placeholder="Keep it short"></textarea></label>
         ${button('Submit answer', action(submit))}`}
-    ${status}
-    ${hostSkip(ctx, 'Skip to voting', startVoting(ctx, 180))}`;
+    ${status}`;
 }
 
 function results(ctx) {
