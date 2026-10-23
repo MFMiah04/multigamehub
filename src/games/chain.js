@@ -128,6 +128,11 @@ export function makeChainGame({ mode, texts, stepsFor, settingsView, defaults, .
     download(blob, `${game.id}-${name(ctx, round0(ctx, chain)).replace(/[^a-z0-9]+/gi, '-').toLowerCase()}.gif`);
   }
 
+  // Plays a built-up picture's steps once, ending on the finished picture again.
+  function replay(el) {
+    el.closest('.chain-show, .chain-card')?.querySelector('frame-reel')?.replay();
+  }
+
   // Whose chain it is: whoever started it.
   function round0(ctx, chain) {
     return authorOf(ctx.round, chain, 0);
@@ -151,7 +156,7 @@ export function makeChainGame({ mode, texts, stepsFor, settingsView, defaults, .
         <p class="note center">${texts.chainLabel} ${chain + 1} of ${chainCount(round)}</p>
         <h2 class="center">${name(ctx, round0(ctx, chain))}'s ${texts.thing}</h2>
         <frame-reel .code=${ctx.room.code} .mode=${mode} .frames=${frames} .step=${revealing ? shown : frames.length}
-          .fps=${round.play?.fps || 8} .direction=${round.play?.dir || 'forward'}></frame-reel>
+          .loop=${mode === 'animation'} .fps=${round.play?.fps || 8} .direction=${round.play?.dir || 'forward'}></frame-reel>
         <div class="chain-credits">
           ${frames.map((_, i) => {
             const who = ctx.room.players[authorOf(round, chain, i)];
@@ -160,7 +165,7 @@ export function makeChainGame({ mode, texts, stepsFor, settingsView, defaults, .
           })}
         </div>
         ${revealing ? html`<p class="note center">${texts.revealNote}</p>` : html`
-          ${controls(ctx)}
+          ${mode === 'animation' ? controls(ctx) : button('Replay', e => replay(e.currentTarget), { kind: 'white' })}
           ${button('Download GIF', action(e => saveGif(ctx, chain, e.currentTarget)), { kind: 'white' })}
           <div class="push"></div>
           ${ctx.isHost ? button(last ? 'Finish' : `Next ${texts.thing}`, action(next)) : html`<p class="note center">The host will show the next one.</p>`}`}
@@ -171,12 +176,15 @@ export function makeChainGame({ mode, texts, stepsFor, settingsView, defaults, .
     const { round } = ctx;
     return html`
       <h1 class="center scribble pop-in">${texts.endTitle}</h1>
-      ${controls(ctx)}
+      ${mode === 'animation' ? controls(ctx) : nothing}
       <div class="chain-gallery">
         ${Array.from({ length: chainCount(round) }, (_, chain) => html`<div class="chain-card wobble">
-          <frame-reel .code=${ctx.room.code} .mode=${mode} .frames=${framesOf(round, chain)} .fps=${round.play?.fps || 8} .direction=${round.play?.dir || 'forward'}></frame-reel>
+          <frame-reel .code=${ctx.room.code} .mode=${mode} .frames=${framesOf(round, chain)} .loop=${mode === 'animation'} .fps=${round.play?.fps || 8} .direction=${round.play?.dir || 'forward'}></frame-reel>
           <b>${name(ctx, round0(ctx, chain))}'s ${texts.thing}</b>
-          ${button('Download GIF', action(e => saveGif(ctx, chain, e.currentTarget)), { kind: 'white', small: true })}
+          <div class="chain-card__buttons">
+            ${mode === 'animation' ? nothing : button('Replay', e => replay(e.currentTarget), { kind: 'white', small: true })}
+            ${button('Download GIF', action(e => saveGif(ctx, chain, e.currentTarget)), { kind: 'white', small: true })}
+          </div>
         </div>`)}
       </div>
       <div class="push"></div>

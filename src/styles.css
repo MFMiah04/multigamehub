@@ -979,3 +979,5 @@ frame-reel { display: block; max-width: 760px; width: 100%; margin: 8px auto; }
 .chain-card frame-reel { margin: 0; }
 .chain-card .reel__frame { box-shadow: none; border: 1.5px solid #ddd; }
 .chain-card .btn { width: auto; padding: 0 16px; }
+.chain-card__buttons { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; }
+.chain-show > .btn { margin-bottom: 8px; }

@@ -5,12 +5,16 @@ import { PAPER_W, PAPER_H, makeCanvas, renderLayers } from './paint.js';
 //   code: the room, frames: list of layer ids in order,
 //   mode: 'animation' (each frame on its own) or 'stack' (each step adds to the picture so far),
 //   step: how many frames to show one by one (a still of that frame); at or past the end it loops,
+//   loop: false for a picture built up step by step: it rests on the finished picture, and replay()
+//     plays the steps once and stops on the last one again,
 //   fps and direction ('forward', 'backward' or 'boomerang') for the loop. (Not `dir`: every element
 //   already has a `dir` property, for text direction.)
 // It also turns the frames into a GIF for downloading: await reel.gif().
 
 const GIF_W = 480;
 const GIF_H = 360;
+const REPLAY_STEP_MS = 900; // each step of a built-up picture, when replayed
+const FINAL_HOLD_MS = 4000; // the finished picture at the end of its GIF
 
 export function playOrder(count, dir) {
   const forward = Array.from({ length: count }, (_, i) => i);
@@ -71,11 +75,20 @@ class FrameReel extends HTMLElement {
   }
 
   // Which frame to show right now: a still while frames are being revealed, otherwise the loop.
+  // Plays the steps of a built-up picture once from the start, ending on the finished picture.
+  replay() {
+    this.replayStart = performance.now();
+  }
+
   current() {
     const count = this.images.length;
     if (!count) return null;
     const step = this.step ?? count;
     if (step < count) return Math.max(0, step - 1);
+    if (this.loop === false) {
+      const i = this.replayStart ? Math.floor((performance.now() - this.replayStart) / REPLAY_STEP_MS) : count;
+      return Math.min(count - 1, i);
+    }
     const order = playOrder(count, this.direction);
     const fps = this.fps || 8;
     return order[Math.floor(performance.now() / (1000 / fps)) % order.length];
@@ -103,13 +116,16 @@ class FrameReel extends HTMLElement {
     const frame = makeCanvas(GIF_W, GIF_H);
     const ctx = frame.getContext('2d', { willReadFrequently: true });
     const encoder = GIFEncoder();
-    const delay = Math.round(1000 / (this.fps || 8));
-    for (const i of playOrder(this.images.length, this.direction)) {
+    // A built-up picture plays its steps once (no looping) and holds on the finished picture.
+    const once = this.loop === false;
+    const order = once ? this.images.map((_, i) => i) : playOrder(this.images.length, this.direction);
+    order.forEach((i, n) => {
       ctx.drawImage(this.images[i], 0, 0, GIF_W, GIF_H);
       const { data } = ctx.getImageData(0, 0, GIF_W, GIF_H);
       const palette = quantize(data, 256);
-      encoder.writeFrame(applyPalette(data, palette), GIF_W, GIF_H, { palette, delay });
-    }
+      const delay = !once ? Math.round(1000 / (this.fps || 8)) : n === order.length - 1 ? FINAL_HOLD_MS : REPLAY_STEP_MS;
+      encoder.writeFrame(applyPalette(data, palette), GIF_W, GIF_H, { palette, delay, repeat: once ? -1 : 0 });
+    });
     encoder.finish();
     return new Blob([encoder.bytes()], { type: 'image/gif' });
   }
