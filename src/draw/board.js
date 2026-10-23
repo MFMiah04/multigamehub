@@ -143,6 +143,7 @@ class SketchBoard extends HTMLElement {
       this.resizer?.disconnect();
       document.removeEventListener('keydown', this.onKey);
       window.removeEventListener('resize', this.onResize);
+      this.closePicker();
       this.unlisten?.forEach(stop => stop());
       this.ready = false;
     });
@@ -197,7 +198,7 @@ class SketchBoard extends HTMLElement {
     this.querySelector('[data-act="undo"]').addEventListener('click', () => this.undo());
     this.querySelector('[data-act="redo"]').addEventListener('click', () => this.redo());
     this.querySelector('[data-act="clear"]').addEventListener('click', () => remove(ref(db, this.base)));
-    this.querySelector('.board__custom').addEventListener('click', () => this.openPicker());
+    this.querySelector('.board__custom').addEventListener('click', () => (this.querySelector('.board__picker').hidden ? this.openPicker() : this.closePicker()));
     this.querySelector('.board__picker-done').addEventListener('click', () => this.closePicker());
     this.setupPicker();
     this.markTools();
@@ -261,10 +262,22 @@ class SketchBoard extends HTMLElement {
     this.querySelector('.board__picker').hidden = false;
     this.drawPicker();
     this.setCustom(this.custom);
+    // Tapping anywhere outside the panel (or pressing Escape) closes it.
+    this.outside = e => {
+      if (e.target.closest?.('.board__picker, .board__custom')) return;
+      this.closePicker();
+      // A tap on the canvas just closes the panel; it doesn't draw a dot as well.
+      if (e.target === this.canvas) { e.stopPropagation(); e.preventDefault(); }
+    };
+    this.escape = e => { if (e.key === 'Escape') this.closePicker(); };
+    document.addEventListener('pointerdown', this.outside, true);
+    document.addEventListener('keydown', this.escape);
   }
 
   closePicker() {
     this.querySelector('.board__picker').hidden = true;
+    document.removeEventListener('pointerdown', this.outside, true);
+    document.removeEventListener('keydown', this.escape);
   }
 
   drawPicker() {
