@@ -2,7 +2,7 @@ import { render } from 'lit-html';
 import { soundControl } from './sound.js';
 import { reactionBar, reactionLayer } from './reactions.js';
 import { onValue, get, update, remove, ref } from 'firebase/database';
-import { db, signIn, serverNow } from './firebase.js';
+import { db, signIn, serverNow, syncClock } from './firebase.js';
 import { roomRef, createRoom, joinRoom, leaveRoom, trackPresence, stopPresence, sortedPlayers, claimHostIfNeeded, touchRoom } from './room.js';
 import { html, nothing, toast, confirmDialog, action, avatar } from './ui.js';
 import { games } from './games/index.js';
@@ -69,6 +69,7 @@ function forgetLastRoom() {
 
 function enterRoom(code) {
   state.code = code;
+  syncClock(state.uid);
   state.rejoin = null;
   try { localStorage.setItem(LAST_ROOM_KEY, code); } catch { /* no storage */ }
   history.replaceState(null, '', `/?room=${code}`);
@@ -213,7 +214,14 @@ function waitingView(ctx) {
   </div>`;
 }
 
-// Keep timers ticking and catch time-based phase changes.
-setInterval(() => { if (state.room) rerender(); }, 500);
+// Keep timers ticking and catch time-based phase changes. The redraws line up with the server's
+// clock (every half second, just after it), so every phone's timer changes at the same moment.
+function tickSoon() {
+  const wait = 500 - (serverNow() % 500) + 20;
+  setTimeout(() => { if (state.room) rerender(); tickSoon(); }, wait);
+}
+tickSoon();
+// Re-measure the clock now and then; phones can drift or change networks.
+setInterval(() => { if (state.room) syncClock(state.uid); }, 3 * 60 * 1000);
 
 boot();

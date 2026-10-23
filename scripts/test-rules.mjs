@@ -54,6 +54,9 @@ await expect('create a room with token and index', true, () => update(ref(host.d
   'roomTokens/testtoken': 'TEST',
   'roomIndex/testtoken': Date.now(),
 }));
+await expect('stamp your own clock', true, () => set(ref(host.db, `clock/${user.uid}`), serverTimestamp()));
+await expect('stamp a fake time', false, () => set(ref(host.db, `clock/${user.uid}`), 12345));
+await expect('stamp someone else’s clock', false, () => set(ref(stranger.db, `clock/${user.uid}`), serverTimestamp()));
 await expect('host heartbeat', true, () => set(ref(host.db, 'roomIndex/testtoken'), Date.now()));
 
 // Reactions: one slot per player, no faster than one every 0.7 seconds.

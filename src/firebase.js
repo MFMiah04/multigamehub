@@ -1,6 +1,6 @@
 import { initializeApp } from 'firebase/app';
 import { getAuth, initializeAuth, browserSessionPersistence, signInAnonymously, connectAuthEmulator, onAuthStateChanged } from 'firebase/auth';
-import { getDatabase, connectDatabaseEmulator, ref, onValue } from 'firebase/database';
+import { getDatabase, connectDatabaseEmulator, ref, onValue, set, get, remove, serverTimestamp } from 'firebase/database';
 
 const useEmulator = import.meta.env.MODE === 'emulator';
 
@@ -38,6 +38,30 @@ export function signIn() {
 }
 
 // Offset between this device's clock and Firebase's, so timers agree across phones.
+// Firebase gives a rough offset when it connects; syncClock() then measures it properly.
 let serverOffset = 0;
-onValue(ref(db, '.info/serverTimeOffset'), snap => { serverOffset = snap.val() || 0; });
+let measured = false;
+onValue(ref(db, '.info/serverTimeOffset'), snap => { if (!measured) serverOffset = snap.val() || 0; });
 export const serverNow = () => Date.now() + serverOffset;
+
+// Writes the server's time to a scratch spot a few times and keeps the quickest round trip:
+// the server stamped it roughly halfway between sending and hearing back.
+export async function syncClock(uid) {
+  const spot = ref(db, `clock/${uid}`);
+  let best = null;
+  try {
+    for (let i = 0; i < 4; i++) {
+      const sent = Date.now();
+      await set(spot, serverTimestamp());
+      const back = Date.now();
+      const stamped = (await get(spot)).val();
+      if (typeof stamped !== 'number') continue;
+      const trip = back - sent;
+      if (!best || trip < best.trip) best = { trip, offset: stamped - (sent + trip / 2) };
+    }
+    if (best) { serverOffset = best.offset; measured = true; }
+    await remove(spot);
+  } catch {
+    // Keep Firebase's own estimate.
+  }
+}

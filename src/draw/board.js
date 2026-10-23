@@ -44,6 +44,18 @@ function decode(text = '') {
   }
   return points;
 }
+// Hue (0-360), saturation and value (0-1) to and from #rrggbb, for the custom colour panel.
+function hsvToHex(h, sat, val) {
+  const f = n => { const k = (n + h / 60) % 6; return val - val * sat * Math.max(0, Math.min(k, 4 - k, 1)); };
+  return rgbToHex(...[5, 3, 1].map(n => Math.round(f(n) * 255)));
+}
+function hexToHsv(hex) {
+  const [r, g, b] = hexToRgb(hex).map(v => v / 255);
+  const max = Math.max(r, g, b), min = Math.min(r, g, b), d = max - min;
+  let h = 0;
+  if (d) h = max === r ? ((g - b) / d) % 6 : max === g ? (b - r) / d + 2 : (r - g) / d + 4;
+  return [(h * 60 + 360) % 360, max ? d / max : 0, max];
+}
 const hexToRgb = hex => [1, 3, 5].map(i => parseInt(hex.slice(i, i + 2), 16));
 const rgbToHex = (r, g, b) => `#${[r, g, b].map(v => v.toString(16).padStart(2, '0')).join('')}`;
 
@@ -53,11 +65,11 @@ const TOOLS = [
   ['pen', 'Pencil', icon('<path d="M4 20 l1 -4 L16 5 l3 3 L8 19 z" fill="#ffe066" /><path d="M14 7 l3 3" />')],
   ['eraser', 'Eraser', icon('<path d="M10 20 h10" /><path d="M4 15 l9 -9 l6 6 l-8 8 h-3 z" fill="#ffaebc" /><path d="M8 11 l6 6" />')],
   ['line', 'Line', icon('<path d="M5 19 L19 5" />')],
+  ['fill', 'Bucket fill', icon('<path d="M5 11 l6 -6 l7 7 l-6 6 z" fill="#9ad0f5" /><path d="M8 8 l-2 -3" /><path d="M20 15 q2 3 0 5 q-2 -2 0 -5 z" fill="#3b82c4" />')],
   ['rect', 'Box', icon('<rect x="4" y="6" width="16" height="12" rx="1" />')],
   ['rectFill', 'Filled box', icon('<rect x="4" y="6" width="16" height="12" rx="1" fill="#222" />')],
   ['circle', 'Circle', icon('<ellipse cx="12" cy="12" rx="8" ry="7" />')],
   ['circleFill', 'Filled circle', icon('<ellipse cx="12" cy="12" rx="8" ry="7" fill="#222" />')],
-  ['fill', 'Bucket fill', icon('<path d="M5 11 l6 -6 l7 7 l-6 6 z" fill="#9ad0f5" /><path d="M8 8 l-2 -3" /><path d="M20 15 q2 3 0 5 q-2 -2 0 -5 z" fill="#3b82c4" />')],
   ['picker', 'Eyedropper', icon('<path d="M14 4 l6 6 l-3 3 l-6 -6 z" fill="#c3b1e1" /><path d="M12 9 l-7 7 v3 h3 l7 -7" />')],
 ];
 const TYPE_OF = { pen: 'p', eraser: 'p', line: 'l', rect: 'r', rectFill: 'R', circle: 'e', circleFill: 'E', fill: 'f' };
@@ -161,14 +173,21 @@ class SketchBoard extends HTMLElement {
       <div class="board__side board__side--colors">
         <div class="board__group board__group--colors">
           ${COLORS.map(c => `<button class="board__color" style="--c:${c}" data-color="${c}" aria-label="Colour ${c}"></button>`).join('')}
-          <label class="board__color board__custom" title="Pick any colour" style="--c:${this.custom}">
-            <input type="color" value="${this.custom}" aria-label="Pick any colour"></label>
+          <button class="board__color board__custom" title="Pick any colour" aria-label="Pick any colour" style="--c:${this.custom}"></button>
         </div>
         <div class="board__group board__group--sizes">
           ${SIZES.map((s, i) => `<button class="board__size" data-size="${s}" aria-label="Brush size ${i + 1}"><i style="--d:${4 + i * 5}px"></i></button>`).join('')}
         </div>
       </div>
-      <p class="board__stats note center"></p>`;
+      <p class="board__stats note center"></p>
+      <div class="board__picker wobble" hidden role="dialog" aria-label="Pick a colour">
+        <div class="board__sv"><span class="board__knob"></span></div>
+        <div class="board__hue"><span class="board__knob"></span></div>
+        <div class="board__picker-foot">
+          <span class="board__preview"></span><code class="board__hex"></code>
+          <button class="btn btn--yellow btn--small wobble board__picker-done">Done</button>
+        </div>
+      </div>`;
     this.frame = this.querySelector('.board__frame');
     this.canvas = this.querySelector('canvas');
     this.ctx = this.canvas.getContext('2d');
@@ -178,12 +197,14 @@ class SketchBoard extends HTMLElement {
     this.querySelector('[data-act="undo"]').addEventListener('click', () => this.undo());
     this.querySelector('[data-act="redo"]').addEventListener('click', () => this.redo());
     this.querySelector('[data-act="clear"]').addEventListener('click', () => remove(ref(db, this.base)));
-    const customInput = this.querySelector('.board__custom input');
-    customInput.addEventListener('input', () => this.setCustom(customInput.value));
+    this.querySelector('.board__custom').addEventListener('click', () => this.openPicker());
+    this.querySelector('.board__picker-done').addEventListener('click', () => this.closePicker());
+    this.setupPicker();
     this.markTools();
 
     const c = this.canvas;
     c.addEventListener('pointerdown', e => this.down(e));
+    c.addEventListener('contextmenu', e => e.preventDefault()); // right-click is the eraser here, not a menu
     c.addEventListener('pointermove', e => this.move(e));
     ['pointerup', 'pointercancel', 'lostpointercapture'].forEach(t => c.addEventListener(t, e => this.up(e)));
   }
@@ -229,10 +250,47 @@ class SketchBoard extends HTMLElement {
 
   setCustom(color) {
     this.custom = color;
-    const swatch = this.querySelector('.board__custom');
-    swatch.style.setProperty('--c', color);
-    swatch.querySelector('input').value = color;
+    this.querySelector('.board__custom').style.setProperty('--c', color);
     this.pickColor(color);
+  }
+
+  // ----- the custom colour panel: a box of shades on top, a strip of every hue underneath -----
+
+  openPicker() {
+    this.hsv = hexToHsv(this.custom);
+    this.querySelector('.board__picker').hidden = false;
+    this.drawPicker();
+    this.setCustom(this.custom);
+  }
+
+  closePicker() {
+    this.querySelector('.board__picker').hidden = true;
+  }
+
+  drawPicker() {
+    const [h, sat, val] = this.hsv;
+    const hex = hsvToHex(h, sat, val);
+    const panel = this.querySelector('.board__picker');
+    panel.style.setProperty('--hue', `hsl(${h} 100% 50%)`);
+    panel.querySelector('.board__sv .board__knob').style.cssText = `left:${sat * 100}%;top:${(1 - val) * 100}%;background:${hex}`;
+    panel.querySelector('.board__hue .board__knob').style.cssText = `left:${(h / 360) * 100}%;background:hsl(${h} 100% 50%)`;
+    panel.querySelector('.board__preview').style.background = hex;
+    panel.querySelector('.board__hex').textContent = hex;
+    return hex;
+  }
+
+  setupPicker() {
+    const drag = (el, onMove) => {
+      const at = e => {
+        const box = el.getBoundingClientRect();
+        onMove(Math.min(1, Math.max(0, (e.clientX - box.left) / box.width)), Math.min(1, Math.max(0, (e.clientY - box.top) / box.height)));
+        this.setCustom(this.drawPicker());
+      };
+      el.addEventListener('pointerdown', e => { e.preventDefault(); try { el.setPointerCapture(e.pointerId); } catch { /* fine */ } at(e); });
+      el.addEventListener('pointermove', e => { if (e.buttons || e.pointerType === 'touch') at(e); });
+    };
+    drag(this.querySelector('.board__sv'), (x, y) => { this.hsv[1] = x; this.hsv[2] = 1 - y; });
+    drag(this.querySelector('.board__hue'), x => { this.hsv[0] = Math.min(359.9, x * 360); });
   }
 
   markTools() {
@@ -411,8 +469,18 @@ class SketchBoard extends HTMLElement {
 
   down(e) {
     if (this.pointer !== undefined || !this.canDrawNow()) return; // one finger at a time
+    // Mice: the left button draws, the right button rubs out (if this game has an eraser), others do nothing.
+    const tools = this.config.tools || TOOLS.map(t => t[0]);
+    const rightErase = e.pointerType === 'mouse' && e.button === 2;
+    if (e.pointerType === 'mouse' && e.button !== 0 && !(rightErase && tools.includes('eraser'))) return;
     e.preventDefault();
     const p = this.pointAt(e);
+    if (rightErase) {
+      try { this.canvas.setPointerCapture(e.pointerId); } catch { /* keep drawing without capture */ }
+      this.pointer = e.pointerId;
+      this.current = this.newOp('p', ERASER, [p]);
+      return this.paint(this.current);
+    }
     if (this.tool === 'picker') return this.pickAt(p);
     if (this.tool === 'fill') {
       const op = this.newOp('f', this.color, [p]);

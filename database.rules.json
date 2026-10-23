@@ -98,6 +98,13 @@
         ".write": "auth != null && ((data.exists() && root.child('rooms').child(data.val()).child('players').child(auth.uid).exists()) || (!data.exists() && newData.exists() && newData.parent().parent().child('rooms').child(newData.val()).child('hostId').val() === auth.uid) || (!newData.exists() && root.child('roomIndex').child($token).val() < now - 1800000))",
         ".validate": "newData.isString() && newData.val().matches(/^[A-Z]{4}$/)"
       }
+    },
+    "clock": {
+      "$uid": {
+        ".read": "auth != null && auth.uid === $uid",
+        ".write": "auth != null && auth.uid === $uid",
+        ".validate": "!newData.exists() || newData.val() === now"
+      }
     }
   }
 }

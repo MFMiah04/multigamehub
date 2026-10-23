@@ -109,7 +109,7 @@ export function lobbyView(ctx) {
     <div class="notes">
       ${byPlayable(ctx.players.length).map(({ game: g, problem }) => html`<div class="sticky sticky--${g.color} wobble ${room.game === g.id ? 'sticky--picked' : ''} ${!isHost && room.game !== g.id ? 'sticky--faded' : ''} ${problem ? 'sticky--unplayable' : ''}">
         <button class="sticky__pick" ?disabled=${!isHost} @click=${action(() => pickGame(g))}>
-          <b>${g.name}</b>${g.art}<small>${problem || `${g.players} players`}</small>
+          <b class=${g.name.length > 13 ? 'sticky__long' : ''}>${g.name}</b>${g.art}<small>${problem || `${g.players} players`}</small>
         </button>
         <button class="sticky__rules" @click=${() => showRules(g)}>how to play</button>
       </div>`)}

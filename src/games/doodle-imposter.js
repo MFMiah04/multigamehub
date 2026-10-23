@@ -91,7 +91,7 @@ export default {
     const { phase } = ctx.room;
     if (phase === 'draw') return drawing(ctx, s);
     if (phase === 'voting') {
-      return html`${board(ctx, { canDraw: false })}
+      return html`${turnStrip(ctx, { showTurn: false })}${board(ctx, { canDraw: false })}
         ${voteView(ctx, { candidates: ctx.inGame, voters: ctx.inGame, max: 1, prompt: 'Who was faking it?' })}`;
     }
     return results(ctx);
@@ -119,12 +119,14 @@ function secretCard(ctx) {
   </button>`;
 }
 
-function turnStrip(ctx) {
+// Everyone in turn order, each ringed in their ink colour, so you can tell at a glance who drew which line.
+function turnStrip(ctx, { showTurn = true } = {}) {
   const order = present(ctx);
-  const drawer = drawerOf(ctx);
+  const drawer = showTurn ? drawerOf(ctx) : null;
   return html`<div class="di-turns">
     ${order.map(id => html`<span class="di-turn ${id === drawer ? 'di-turn--now' : ''}" style="--ink: ${ctx.round.colors?.[id]}">
-      ${avatar(ctx.room.players[id], id === drawer ? 34 : 26)}<small>${id === ctx.uid ? 'You' : name(ctx, id)}</small>
+      <span class="di-turn__ring">${avatar(ctx.room.players[id], id === drawer ? 34 : 28)}</span>
+      <small>${id === ctx.uid ? 'You' : name(ctx, id)}</small>
     </span>`)}
   </div>`;
 }
@@ -201,6 +203,7 @@ function results(ctx) {
     top: html`${spotlight(imposter ? [imposter] : [], 'was the imposter!', settled && imposterWins ? 'happy' : 'shock')}
       ${guessPart}
       ${settled && !(guessed && !right) ? html`<p class="note center">The word was <span class="hl">${word}</span>.</p>` : nothing}
+      ${turnStrip(ctx, { showTurn: false })}
       ${board(ctx, { canDraw: false })}`,
     bottom: settled ? html`
       <div class="push"></div>
