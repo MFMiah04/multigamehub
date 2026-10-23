@@ -101,7 +101,7 @@ const promptCard = ctx => html`<div class="question wobble center"><small>Round 
 
 // A small read-only copy of someone's drawing.
 const miniBoard = (ctx, id) => html`<sketch-board class="do-mini" room=${ctx.room.code} uid=${ctx.uid} layer=${id}
-  .config=${{ tools: [], colors: false, sizes: false, undo: false, clear: false, stats: false, canDraw: false }}></sketch-board>`;
+  .config=${{ tools: [], colors: false, sizes: false, opacity: false, undo: false, clear: false, stats: false, canDraw: false }}></sketch-board>`;
 
 function drawing(ctx) {
   const { round } = ctx;

@@ -9,7 +9,7 @@ import { db, serverNow } from '../firebase.js';
 //
 // Each thing someone draws is an "op", stored at canvases/{room}/s/{opId}, outside the room itself
 // so a busy board doesn't make the rest of the page redraw:
-//   m: { t: type, c: colour, w: width, u: who }   types: p pen, l line, r box, R filled box,
+//   m: { t: type, c: colour, w: width, u: who, o: opacity (left out when solid) }   types: p pen, l line, r box, R filled box,
 //                                                   e circle, E filled circle, f bucket fill
 //   k: batches of points. Pen strokes stream every SEND_MS; shapes and fills send theirs once.
 //   x: true when its owner has undone it.
@@ -19,7 +19,7 @@ import { db, serverNow } from '../firebase.js';
 //
 // Each game sets `.config` to choose what the board offers (anything left out uses the default):
 //   tools: list of tool ids to show (default: all). Empty or one tool hides the tool buttons.
-//   colors / sizes: show the palette / brush sizes (default true). color / size: fixed values.
+//   colors / sizes / opacity: show the palette / brush sizes / opacity slider (default true). color / size: fixed values.
 //   undo, clear, stats: show those buttons and the data line (default true).
 //   canDraw: whether you can draw right now (default true).
 //   oneStroke: after one finished line, shape or fill, stop until `turnKey` changes.
@@ -33,7 +33,7 @@ const COLORS = ['#222222', '#ffffff', '#d23c5f', '#f28c28', '#f2c94c', '#3fae5b'
 const SIZES = [0.006, 0.014, 0.03, 0.06]; // as a fraction of the board's width
 const ERASER = '#ffffff';
 const FILL_TOLERANCE = 60;
-const DEFAULTS = { tools: null, colors: true, sizes: true, undo: true, clear: true, stats: true, canDraw: true, oneStroke: false };
+const DEFAULTS = { tools: null, colors: true, sizes: true, opacity: true, undo: true, clear: true, stats: true, canDraw: true, oneStroke: false };
 
 const pack = v => Math.round(Math.min(1, Math.max(0, v)) * STEPS).toString(36).padStart(2, '0');
 const encode = points => points.map(([x, y]) => pack(x) + pack(y)).join('');
@@ -108,6 +108,8 @@ class SketchBoard extends HTMLElement {
     this.color = COLORS[0];
     this.custom = '#3fa7a0';
     this.size = SIZES[1];
+    this.alpha = 1;
+    this.layers = new Map(); // see-through pen lines still being drawn: opId → { canvas, ctx, op }
     // A game may have fixed these before the board appeared on the page.
     if (this.cfg?.color) this.color = this.cfg.color;
     if (this.cfg?.size) this.size = this.cfg.size;
@@ -177,7 +179,10 @@ class SketchBoard extends HTMLElement {
           <button class="board__color board__custom" title="Pick any colour" aria-label="Pick any colour" style="--c:${this.custom}"></button>
         </div>
         <div class="board__group board__group--sizes">
-          ${SIZES.map((s, i) => `<button class="board__size" data-size="${s}" aria-label="Brush size ${i + 1}"><i style="--d:${4 + i * 5}px"></i></button>`).join('')}
+          <div class="board__sizes">${SIZES.map((s, i) => `<button class="board__size" data-size="${s}" aria-label="Brush size ${i + 1}"><i style="--d:${4 + i * 5}px"></i></button>`).join('')}</div>
+          <label class="board__opacity" title="Opacity">
+            <input type="range" min="10" max="100" step="5" value="100" aria-label="Opacity"><small>100%</small>
+          </label>
         </div>
       </div>
       <p class="board__stats note center"></p>
@@ -195,6 +200,11 @@ class SketchBoard extends HTMLElement {
     this.querySelectorAll('[data-tool]').forEach(b => b.addEventListener('click', () => this.pickTool(b.dataset.tool)));
     this.querySelectorAll('[data-color]').forEach(b => b.addEventListener('click', () => this.pickColor(b.dataset.color)));
     this.querySelectorAll('[data-size]').forEach(b => b.addEventListener('click', () => { this.size = +b.dataset.size; this.markTools(); }));
+    const opacity = this.querySelector('.board__opacity input');
+    opacity.addEventListener('input', () => {
+      this.alpha = +opacity.value / 100;
+      this.querySelector('.board__opacity small').textContent = `${opacity.value}%`;
+    });
     this.querySelector('[data-act="undo"]').addEventListener('click', () => this.undo());
     this.querySelector('[data-act="redo"]').addEventListener('click', () => this.redo());
     this.querySelector('[data-act="clear"]').addEventListener('click', () => remove(ref(db, this.base)));
@@ -222,10 +232,12 @@ class SketchBoard extends HTMLElement {
     show('[data-act="clear"]', cfg.clear);
     show('.board__group--actions', cfg.undo || cfg.clear);
     show('.board__group--colors', cfg.colors && !cfg.color);
-    show('.board__group--sizes', cfg.sizes && !cfg.size);
+    show('.board__sizes', cfg.sizes && !cfg.size);
+    show('.board__opacity', cfg.opacity);
+    show('.board__group--sizes', (cfg.sizes && !cfg.size) || cfg.opacity);
     show('.board__stats', cfg.stats);
     const toolsShown = tools.length > 1 || cfg.undo || cfg.clear;
-    const colorsShown = (cfg.colors && !cfg.color) || (cfg.sizes && !cfg.size);
+    const colorsShown = (cfg.colors && !cfg.color) || (cfg.sizes && !cfg.size) || cfg.opacity;
     show('.board__side--tools', toolsShown);
     show('.board__side--colors', colorsShown);
     this.classList.toggle('board--bare', !toolsShown && !colorsShown);
@@ -338,8 +350,7 @@ class SketchBoard extends HTMLElement {
     this.pctx.fillRect(0, 0, PAPER_W, PAPER_H);
   }
 
-  style(op) {
-    const ctx = this.pctx;
+  style(op, ctx = this.pctx) {
     ctx.strokeStyle = op.c;
     ctx.fillStyle = op.c;
     ctx.lineWidth = Math.max(1, op.w * PAPER_W);
@@ -348,20 +359,49 @@ class SketchBoard extends HTMLElement {
   }
 
   // Draws whatever's new in an op. Pens grow a bit at a time; everything else is drawn in one go.
+  // A see-through pen line is drawn solid on a layer of its own and laid onto the paper at its
+  // opacity, so the places where the line crosses itself don't come out darker.
   paint(op) {
     if (op.hidden || !op.points.length || op.drawn >= op.points.length) return;
-    if (op.t === 'p') this.paintPen(op, op.drawn);
-    else if (op.t === 'f') this.floodFill(op.points[0], op.c);
-    else if (op.points.length >= 2) this.paintShape(this.pctx, op);
-    else return;
+    const alpha = op.o ?? 1;
+    this.commitLayers(op.id); // keep things in order: earlier see-through lines go down first
+    if (op.t === 'p') this.paintPen(op, op.drawn, alpha < 1 ? this.layerFor(op).ctx : this.pctx);
+    else if (op.t === 'f') this.floodFill(op.points[0], op.c, alpha);
+    else if (op.points.length >= 2) {
+      this.pctx.globalAlpha = alpha;
+      this.paintShape(this.pctx, op);
+      this.pctx.globalAlpha = 1;
+    } else return;
     op.drawn = op.points.length;
     this.show();
   }
 
+  layerFor(op) {
+    let layer = this.layers.get(op.id);
+    if (!layer) {
+      const canvas = document.createElement('canvas');
+      canvas.width = PAPER_W;
+      canvas.height = PAPER_H;
+      layer = { canvas, ctx: canvas.getContext('2d'), op };
+      this.layers.set(op.id, layer);
+    }
+    return layer;
+  }
+
+  // Lays the see-through lines (except `keep`) onto the paper for good.
+  commitLayers(keep) {
+    this.layers.forEach((layer, id) => {
+      if (id === keep) return;
+      this.pctx.globalAlpha = layer.op.o ?? 1;
+      this.pctx.drawImage(layer.canvas, 0, 0);
+      this.pctx.globalAlpha = 1;
+      this.layers.delete(id);
+    });
+  }
+
   // Smooth pen lines: a curve from the middle of each segment to the middle of the next.
-  paintPen(op, from) {
-    const ctx = this.pctx;
-    this.style(op);
+  paintPen(op, from, ctx = this.pctx) {
+    this.style(op, ctx);
     const px = ([x, y]) => [x * PAPER_W, y * PAPER_H];
     if (from === 0) {
       const [x, y] = px(op.points[0]);
@@ -401,7 +441,7 @@ class SketchBoard extends HTMLElement {
 
   // Bucket fill: floods the area of similar colour around the point, then grows it by one pixel
   // so there's no pale fringe left along soft line edges.
-  floodFill([fx, fy], hex) {
+  floodFill([fx, fy], hex, alpha = 1) {
     const W = PAPER_W, H = PAPER_H;
     const sx = Math.min(W - 1, Math.max(0, Math.round(fx * W)));
     const sy = Math.min(H - 1, Math.max(0, Math.round(fy * H)));
@@ -410,7 +450,7 @@ class SketchBoard extends HTMLElement {
     const start = (sy * W + sx) * 4;
     const [tr, tg, tb] = [d[start], d[start + 1], d[start + 2]];
     const [fr, fg, fb] = hexToRgb(hex);
-    if (Math.abs(tr - fr) + Math.abs(tg - fg) + Math.abs(tb - fb) < 8) return;
+    if (alpha >= 1 && Math.abs(tr - fr) + Math.abs(tg - fg) + Math.abs(tb - fb) < 8) return;
     const like = p => Math.abs(d[p] - tr) + Math.abs(d[p + 1] - tg) + Math.abs(d[p + 2] - tb) <= FILL_TOLERANCE;
     const mask = new Uint8Array(W * H);
     const stack = [sx, sy];
@@ -434,7 +474,9 @@ class SketchBoard extends HTMLElement {
         x++; i++;
       }
     }
-    const paint = i => { const p = i * 4; d[p] = fr; d[p + 1] = fg; d[p + 2] = fb; d[p + 3] = 255; };
+    // See-through fills mix with what's underneath.
+    const mix = (under, over) => Math.round(under + (over - under) * alpha);
+    const paint = i => { const p = i * 4; d[p] = mix(d[p], fr); d[p + 1] = mix(d[p + 1], fg); d[p + 2] = mix(d[p + 2], fb); d[p + 3] = 255; };
     for (let y = 0; y < H; y++) {
       for (let x = 0; x < W; x++) {
         const i = y * W + x;
@@ -448,6 +490,7 @@ class SketchBoard extends HTMLElement {
   // Paints everything again from scratch, oldest first. Used after an undo, redo or clear.
   repaint() {
     this.wipePaper();
+    this.layers.clear();
     [...this.ops.values()].sort((a, b) => (a.id < b.id ? -1 : 1)).forEach(op => { op.drawn = 0; this.paint(op); });
     this.show();
   }
@@ -460,7 +503,13 @@ class SketchBoard extends HTMLElement {
       this.frameRequested = false;
       const { width, height } = this.canvas;
       this.ctx.drawImage(this.paper, 0, 0, width, height);
+      this.layers.forEach(layer => {
+        this.ctx.globalAlpha = layer.op.o ?? 1;
+        this.ctx.drawImage(layer.canvas, 0, 0, width, height);
+      });
+      this.ctx.globalAlpha = this.preview?.o ?? 1;
       if (this.preview) this.paintShape(this.ctx, this.preview, width, height);
+      this.ctx.globalAlpha = 1;
     });
   }
 
@@ -473,7 +522,7 @@ class SketchBoard extends HTMLElement {
 
   newOp(type, color, points) {
     const id = push(ref(db, `${this.base}/s`)).key;
-    const op = { id, t: type, c: color, w: this.size, u: this.uid, points, drawn: 0, sent: 0, chunk: 0, metaSent: false, mine: true };
+    const op = { id, t: type, c: color, w: this.size, o: this.alpha, u: this.uid, points, drawn: 0, sent: 0, chunk: 0, metaSent: false, mine: true };
     this.ops.set(id, op);
     // Doing something new forgets anything you could have redone.
     this.redoStack.splice(0).forEach(old => { this.ops.delete(old); remove(ref(db, `${this.base}/s/${old}`)); });
@@ -492,6 +541,7 @@ class SketchBoard extends HTMLElement {
       try { this.canvas.setPointerCapture(e.pointerId); } catch { /* keep drawing without capture */ }
       this.pointer = e.pointerId;
       this.current = this.newOp('p', ERASER, [p]);
+      this.current.o = 1; // the right-click eraser always rubs out fully
       return this.paint(this.current);
     }
     if (this.tool === 'picker') return this.pickAt(p);
@@ -509,7 +559,7 @@ class SketchBoard extends HTMLElement {
       this.current = this.newOp('p', color, [p]);
       this.paint(this.current);
     } else {
-      this.preview = { t: type, c: color, w: this.size, points: [p, p] };
+      this.preview = { t: type, c: color, w: this.size, o: this.alpha, points: [p, p] };
       this.show();
     }
   }
@@ -539,6 +589,7 @@ class SketchBoard extends HTMLElement {
   // Ends the line or shape in progress. `announce` is false when it was cut short by the turn ending.
   finish(announce) {
     this.pointer = undefined;
+    if (this.current) this.commitLayers(null);
     let op = this.current;
     if (this.preview) {
       const { t, c, points } = this.preview;
@@ -614,7 +665,7 @@ class SketchBoard extends HTMLElement {
     const updates = {};
     mine.forEach(op => {
       const base = `${this.base}/s/${op.id}`;
-      if (!op.metaSent) { updates[`${base}/m`] = { t: op.t, c: op.c, w: op.w, u: op.u }; op.metaSent = true; }
+      if (!op.metaSent) { updates[`${base}/m`] = { t: op.t, c: op.c, w: op.w, u: op.u, ...(op.o < 1 ? { o: op.o } : {}) }; op.metaSent = true; }
       const p = encode(op.points.slice(op.sent));
       updates[`${base}/k/${op.chunk++}`] = { p, t: Math.round(serverNow()) };
       this.stats.sentBytes += p.length + 40;
@@ -630,7 +681,7 @@ class SketchBoard extends HTMLElement {
       if (!value?.m) return;
       let op = this.ops.get(snap.key);
       if (op?.mine) return; // already drawn as you drew it
-      if (!op) { op = { id: snap.key, t: value.m.t || 'p', c: value.m.c, w: value.m.w, u: value.m.u, points: [], drawn: 0, chunks: 0, hidden: !!value.x }; this.ops.set(snap.key, op); }
+      if (!op) { op = { id: snap.key, t: value.m.t || 'p', c: value.m.c, w: value.m.w, o: value.m.o ?? 1, u: value.m.u, points: [], drawn: 0, chunks: 0, hidden: !!value.x }; this.ops.set(snap.key, op); }
       const chunks = Array.isArray(value.k) ? value.k : Object.values(value.k || {});
       for (let i = op.chunks; i < chunks.length; i++) {
         if (!chunks[i]) break;

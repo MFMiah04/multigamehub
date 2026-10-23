@@ -54,6 +54,7 @@ const winnerOf = (ctx, s) => {
 export default {
   id: 'herd-mentality',
   name: 'Herd Mentality',
+  twoLines: true, // shown over two lines on its note
   color: 'mint',
   players: '3–12',
   blurb: 'Answer the same as everyone else to score.',

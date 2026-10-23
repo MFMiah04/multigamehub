@@ -4,7 +4,7 @@ import { repeat } from 'lit-html/directives/repeat.js';
 import { html, nothing, button, action, avatar, toast, confirmDialog } from '../ui.js';
 import { kickPlayer } from '../room.js';
 import { gameList } from '../games/index.js';
-import { showRules, creator, saveLook, homeState } from './home.js';
+import { showRules, noteName, creator, saveLook, homeState } from './home.js';
 import { cue } from '../sound.js';
 
 export const inviteLink = code => `${location.origin}/?room=${code}`;
@@ -109,7 +109,7 @@ export function lobbyView(ctx) {
     <div class="notes">
       ${byPlayable(ctx.players.length).map(({ game: g, problem }) => html`<div class="sticky sticky--${g.color} ${g.name.length > 30 ? 'sticky--long-name' : ''} wobble ${room.game === g.id ? 'sticky--picked' : ''} ${!isHost && room.game !== g.id ? 'sticky--faded' : ''} ${problem ? 'sticky--unplayable' : ''}">
         <button class="sticky__pick" ?disabled=${!isHost} @click=${action(() => pickGame(g))}>
-          <b>${g.name}</b>${g.art}<small>${problem || `${g.players} players`}</small>
+          <b>${noteName(g)}</b>${g.art}<small>${problem || `${g.players} players`}</small>
         </button>
         <button class="sticky__rules" aria-label="How to play ${g.name}" title="How to play" @click=${() => showRules(g)}>?</button>
       </div>`)}

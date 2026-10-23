@@ -23,6 +23,7 @@ const name = (ctx, id) => ctx.room.players[id]?.name || 'Someone';
 export default {
   id: 'doodle-imposter',
   name: 'Doodle Imposter',
+  twoLines: true, // shown over two lines on its note
   color: 'peach',
   canvas: true,
   players: '3–12',
@@ -101,7 +102,7 @@ export default {
 // The shared drawing. Everyone uses just a pencil in their own colour; only the current artist can draw.
 const board = (ctx, { canDraw, onStroke }) => html`<sketch-board room=${ctx.room.code} uid=${ctx.uid}
   .config=${{
-    tools: ['pen'], colors: false, sizes: false, undo: false, clear: false, stats: false,
+    tools: ['pen'], colors: false, sizes: false, opacity: false, undo: false, clear: false, stats: false,
     color: ctx.round.colors?.[ctx.uid] || '#222222', size: LINE_SIZE,
     canDraw, oneStroke: true, turnKey: ctx.round.turn || 0,
   }}

@@ -30,6 +30,16 @@ function readName() {
   return name;
 }
 
+// A game's name for its note. Some are split over two lines (at the space nearest the middle)
+// so the notes look even.
+export function noteName(game) {
+  const name = game.name;
+  if (!game.twoLines || !name.includes(' ')) return name;
+  const spaces = [...name].map((ch, i) => (ch === ' ' ? i : -1)).filter(i => i >= 0);
+  const cut = spaces.reduce((best, i) => (Math.abs(i - name.length / 2) < Math.abs(best - name.length / 2) ? i : best));
+  return html`${name.slice(0, cut)}<br>${name.slice(cut + 1)}`;
+}
+
 export function showRules(game) {
   return confirmDialog(html`<h2>${game.name}</h2><p class="note">${game.blurb} ${game.players} players.</p>
     <ol class="rules">${game.rules.map(r => html`<li>${r}</li>`)}</ol>`, 'Got it', 'yellow', false);
@@ -102,7 +112,7 @@ export function homeView({ onHost, onJoin, rerender, rejoin, onRejoin, onForget 
       <h2 class="section-title">The rules</h2>
       <div class="notes">
         ${gameList.map(g => html`<button class="sticky sticky--${g.color} ${g.name.length > 30 ? 'sticky--long-name' : ''} wobble" @click=${() => showRules(g)} aria-label="How to play ${g.name}">
-          <b>${g.name}</b>${g.art}<small>${g.players} players</small>
+          <b>${noteName(g)}</b>${g.art}<small>${g.players} players</small>
         </button>`)}
       </div>
       <p class="note center">More games coming soon.</p>

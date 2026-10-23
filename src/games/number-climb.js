@@ -48,6 +48,7 @@ function playLowest(ctx) {
 export default {
   id: 'number-climb',
   name: 'Number Climb',
+  twoLines: true, // shown over two lines on its note
   color: 'orange',
   players: '2–8',
   blurb: 'Play all your cards from lowest to highest, without talking.',

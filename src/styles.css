@@ -936,3 +936,19 @@ sketch-board.do-mini .board__frame { box-shadow: none; border: 1.5px solid #ddd;
 .board__preview { width: 36px; height: 36px; flex: none; border: 2px solid var(--ink); border-radius: 50%; }
 .board__hex { flex: 1; font-size: 16px; }
 .board__picker-done { width: auto; padding: 0 22px; }
+
+/* Brush sizes with the opacity slider beside them: a row on phones, side-by-side columns on wide boards. */
+.board__group--sizes { flex-wrap: nowrap; gap: 10px; }
+.board__sizes { display: flex; align-items: center; gap: 6px; }
+.board__opacity { display: flex; align-items: center; gap: 6px; }
+.board__opacity input { width: 110px; accent-color: #222; cursor: pointer; }
+.board__opacity small { min-width: 36px; font-size: 13px; color: var(--ink-soft); text-align: center; }
+.board--wide .board__group--sizes { flex-direction: row; align-items: flex-start; }
+.board--wide .board__sizes { flex-direction: column; }
+.board--wide .board__opacity { flex-direction: column; gap: 4px; }
+.board--wide .board__opacity input { writing-mode: vertical-lr; direction: rtl; width: 24px; height: 140px; }
+@media (max-width: 420px) { .board__opacity input { width: 84px; } }
+
+/* Note contents sit in the middle, so one-line names don't leave a gap at the bottom. */
+.sticky, .sticky__pick { justify-content: center; }
+.sticky__pick { flex: 0 1 auto; }

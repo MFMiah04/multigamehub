@@ -39,7 +39,7 @@
         "s": {
           "$stroke": {
             "m": {
-              ".validate": "newData.hasChildren(['c', 'w', 'u']) && newData.child('c').isString() && newData.child('c').val().length <= 9 && newData.child('w').isNumber() && newData.child('u').val() === auth.uid && (!newData.child('t').exists() || newData.child('t').val().matches(/^[plrReEf]$/))"
+              ".validate": "newData.hasChildren(['c', 'w', 'u']) && newData.child('c').isString() && newData.child('c').val().length <= 9 && newData.child('w').isNumber() && newData.child('u').val() === auth.uid && (!newData.child('t').exists() || newData.child('t').val().matches(/^[plrReEf]$/)) && (!newData.child('o').exists() || (newData.child('o').isNumber() && newData.child('o').val() >= 0.05 && newData.child('o').val() <= 1))"
             },
             "x": {
               ".validate": "newData.isBoolean() && newData.parent().child('m').child('u').val() === auth.uid"
@@ -62,7 +62,7 @@
             "s": {
               "$stroke": {
                 "m": {
-                  ".validate": "newData.hasChildren(['c', 'w', 'u']) && newData.child('c').isString() && newData.child('c').val().length <= 9 && newData.child('w').isNumber() && newData.child('u').val() === auth.uid && (!newData.child('t').exists() || newData.child('t').val().matches(/^[plrReEf]$/))"
+                  ".validate": "newData.hasChildren(['c', 'w', 'u']) && newData.child('c').isString() && newData.child('c').val().length <= 9 && newData.child('w').isNumber() && newData.child('u').val() === auth.uid && (!newData.child('t').exists() || newData.child('t').val().matches(/^[plrReEf]$/)) && (!newData.child('o').exists() || (newData.child('o').isNumber() && newData.child('o').val() >= 0.05 && newData.child('o').val() <= 1))"
                 },
                 "x": {
                   ".validate": "newData.isBoolean() && newData.parent().child('m').child('u').val() === auth.uid"

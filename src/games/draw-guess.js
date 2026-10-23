@@ -74,6 +74,7 @@ function endTurn(ctx) {
 export default {
   id: 'draw-guess',
   name: 'Draw & Guess',
+  twoLines: true, // shown over two lines on its note
   color: 'cyan',
   canvas: true,
   players: '3–12',
@@ -263,7 +264,7 @@ function turn(ctx, s) {
       ${choosing
         ? html`<div class="dg-choices">${(round.choices || []).map(w => button(words[w]?.word, action(() => pick(w)), { kind: 'white' }))}</div>`
         : html`<sketch-board room=${ctx.room.code} uid=${ctx.uid}
-            .config=${drawing ? { stats: false, canDraw: true } : { tools: [], colors: false, sizes: false, undo: false, clear: false, stats: false, canDraw: false }}></sketch-board>`}
+            .config=${drawing ? { stats: false, canDraw: true } : { tools: [], colors: false, sizes: false, opacity: false, undo: false, clear: false, stats: false, canDraw: false }}></sketch-board>`}
       ${phase === 'reveal' ? html`<div class="dg-side">${leaderboard(ctx, round.scores, round.delta)}</div>` : chat(ctx)}
     </div>
     ${scoreStrip(ctx)}`;
