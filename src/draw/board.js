@@ -1,5 +1,6 @@
 import { ref, push, update, remove, onChildAdded, onChildChanged, onChildRemoved } from 'firebase/database';
 import { db, serverNow } from '../firebase.js';
+import { PAPER_W, PAPER_H, Painter, paintShape, encode, decode, hexToRgb, rgbToHex, renderLayers } from './paint.js';
 
 // A shared drawing board: <sketch-board room="ABCD" uid="..."></sketch-board>
 // Add layer="..." for a board of its own (e.g. one per player): canvases/{room}/b/{layer}/...
@@ -23,27 +24,18 @@ import { db, serverNow } from '../firebase.js';
 //   undo, clear, stats: show those buttons and the data line (default true).
 //   canDraw: whether you can draw right now (default true).
 //   oneStroke: after one finished line, shape or fill, stop until `turnKey` changes.
+//   under: other layers to show underneath (finished drawings, loaded once). underMode:
+//     'faded'  a see-through guide behind your drawing (the last frame of an animation)
+//     'base'   part of the picture you're adding to, so fills and the eyedropper see it too
+//   showUnder / showMine: hide either, to compare (default true).
 // When you finish a line, shape or fill the board fires a `strokeend` event.
 
 const SEND_MS = 40;
-const PAPER_W = 1200;
-const PAPER_H = 900;
-const STEPS = 1295;
 const COLORS = ['#222222', '#ffffff', '#d23c5f', '#f28c28', '#f2c94c', '#3fae5b', '#3b82c4', '#8e5bd1', '#8b5a3c', '#f7a8c4'];
 const SIZES = [0.006, 0.014, 0.03, 0.06]; // as a fraction of the board's width
 const ERASER = '#ffffff';
-const FILL_TOLERANCE = 60;
-const DEFAULTS = { tools: null, colors: true, sizes: true, opacity: true, undo: true, clear: true, stats: true, canDraw: true, oneStroke: false };
+const DEFAULTS = { tools: null, colors: true, sizes: true, opacity: true, undo: true, clear: true, stats: true, canDraw: true, oneStroke: false, under: null, underMode: 'faded', showUnder: true, showMine: true };
 
-const pack = v => Math.round(Math.min(1, Math.max(0, v)) * STEPS).toString(36).padStart(2, '0');
-const encode = points => points.map(([x, y]) => pack(x) + pack(y)).join('');
-function decode(text = '') {
-  const points = [];
-  for (let i = 0; i + 3 < text.length; i += 4) {
-    points.push([parseInt(text.slice(i, i + 2), 36) / STEPS, parseInt(text.slice(i + 2, i + 4), 36) / STEPS]);
-  }
-  return points;
-}
 // Hue (0-360), saturation and value (0-1) to and from #rrggbb, for the custom colour panel.
 function hsvToHex(h, sat, val) {
   const f = n => { const k = (n + h / 60) % 6; return val - val * sat * Math.max(0, Math.min(k, 4 - k, 1)); };
@@ -56,9 +48,6 @@ function hexToHsv(hex) {
   if (d) h = max === r ? ((g - b) / d) % 6 : max === g ? (b - r) / d + 2 : (r - g) / d + 4;
   return [(h * 60 + 360) % 360, max ? d / max : 0, max];
 }
-const hexToRgb = hex => [1, 3, 5].map(i => parseInt(hex.slice(i, i + 2), 16));
-const rgbToHex = (r, g, b) => `#${[r, g, b].map(v => v.toString(16).padStart(2, '0')).join('')}`;
-
 // Little doodled icons for the tools.
 const icon = path => `<svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><g fill="none" stroke="#222" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${path}</g></svg>`;
 const TOOLS = [
@@ -95,6 +84,7 @@ class SketchBoard extends HTMLElement {
     // Your turn ended mid-line: finish it off without starting the next turn.
     if (!next.canDraw && this.pointer !== undefined) this.finish(false);
     if (this.ready) this.applyConfig();
+    if (this.ready && JSON.stringify(next.under) !== this.underKey) this.loadUnder();
   }
 
   connectedCallback() {
@@ -109,7 +99,6 @@ class SketchBoard extends HTMLElement {
     this.custom = '#3fa7a0';
     this.size = SIZES[1];
     this.alpha = 1;
-    this.layers = new Map(); // see-through pen lines still being drawn: opId → { canvas, ctx, op }
     // A game may have fixed these before the board appeared on the page.
     if (this.cfg?.color) this.color = this.cfg.color;
     if (this.cfg?.size) this.size = this.cfg.size;
@@ -120,10 +109,12 @@ class SketchBoard extends HTMLElement {
     this.paper = document.createElement('canvas');
     this.paper.width = PAPER_W;
     this.paper.height = PAPER_H;
-    this.pctx = this.paper.getContext('2d', { willReadFrequently: true });
+    this.painter = new Painter(this.paper);
+    this.pctx = this.painter.ctx;
     this.wipePaper();
     this.build();
     this.applyConfig();
+    this.loadUnder();
     this.listen();
     this.resizer = new ResizeObserver(() => this.fit());
     this.resizer.observe(this);
@@ -345,152 +336,38 @@ class SketchBoard extends HTMLElement {
 
   // ----- painting onto the paper -----
 
+  // In 'base' mode the paper starts from the drawings underneath, so fills and the eyedropper see them.
   wipePaper() {
-    this.pctx.fillStyle = '#ffffff';
-    this.pctx.fillRect(0, 0, PAPER_W, PAPER_H);
+    this.painter.wipe(this.config.underMode === 'base' ? this.under : null);
   }
 
-  style(op, ctx = this.pctx) {
-    ctx.strokeStyle = op.c;
-    ctx.fillStyle = op.c;
-    ctx.lineWidth = Math.max(1, op.w * PAPER_W);
-    ctx.lineCap = 'round';
-    ctx.lineJoin = 'round';
-  }
-
-  // Draws whatever's new in an op. Pens grow a bit at a time; everything else is drawn in one go.
-  // A see-through pen line is drawn solid on a layer of its own and laid onto the paper at its
-  // opacity, so the places where the line crosses itself don't come out darker.
   paint(op) {
-    if (op.hidden || !op.points.length || op.drawn >= op.points.length) return;
-    const alpha = op.o ?? 1;
-    this.commitLayers(op.id); // keep things in order: earlier see-through lines go down first
-    if (op.t === 'p') this.paintPen(op, op.drawn, alpha < 1 ? this.layerFor(op).ctx : this.pctx);
-    else if (op.t === 'f') this.floodFill(op.points[0], op.c, alpha);
-    else if (op.points.length >= 2) {
-      this.pctx.globalAlpha = alpha;
-      this.paintShape(this.pctx, op);
-      this.pctx.globalAlpha = 1;
-    } else return;
-    op.drawn = op.points.length;
-    this.show();
+    if (this.painter.paint(op)) this.show();
   }
 
-  layerFor(op) {
-    let layer = this.layers.get(op.id);
-    if (!layer) {
-      const canvas = document.createElement('canvas');
-      canvas.width = PAPER_W;
-      canvas.height = PAPER_H;
-      layer = { canvas, ctx: canvas.getContext('2d'), op };
-      this.layers.set(op.id, layer);
-    }
-    return layer;
-  }
-
-  // Lays the see-through lines (except `keep`) onto the paper for good.
   commitLayers(keep) {
-    this.layers.forEach((layer, id) => {
-      if (id === keep) return;
-      this.pctx.globalAlpha = layer.op.o ?? 1;
-      this.pctx.drawImage(layer.canvas, 0, 0);
-      this.pctx.globalAlpha = 1;
-      this.layers.delete(id);
-    });
+    this.painter.commitLayers(keep);
   }
 
-  // Smooth pen lines: a curve from the middle of each segment to the middle of the next.
-  paintPen(op, from, ctx = this.pctx) {
-    this.style(op, ctx);
-    const px = ([x, y]) => [x * PAPER_W, y * PAPER_H];
-    if (from === 0) {
-      const [x, y] = px(op.points[0]);
-      ctx.beginPath();
-      ctx.arc(x, y, ctx.lineWidth / 2, 0, Math.PI * 2);
-      ctx.fill();
+  // Loads the finished drawings to show underneath. Done twice, in case the last strokes of the
+  // previous turn were still on their way.
+  async loadUnder() {
+    const layers = this.config.under;
+    const key = JSON.stringify(layers);
+    this.underKey = key;
+    if (!layers?.length) { this.under = null; return this.repaint(); }
+    for (const delay of [0, 1500]) {
+      if (delay) await new Promise(r => setTimeout(r, delay));
+      const picture = await renderLayers(this.code, layers);
+      if (this.underKey !== key) return; // something newer was asked for meanwhile
+      this.under = picture;
+      this.repaint();
     }
-    if (op.points.length < 2) return;
-    ctx.beginPath();
-    for (let i = Math.max(1, from); i < op.points.length; i++) {
-      const [ax, ay] = px(op.points[i - 1]);
-      const [bx, by] = px(op.points[i]);
-      let sx = ax, sy = ay;
-      if (i > 1) { const [zx, zy] = px(op.points[i - 2]); sx = (zx + ax) / 2; sy = (zy + ay) / 2; }
-      ctx.moveTo(sx, sy);
-      ctx.quadraticCurveTo(ax, ay, (ax + bx) / 2, (ay + by) / 2);
-    }
-    ctx.stroke();
-  }
-
-  // Lines, boxes and circles, from the first point to the last. Also used for the drag preview.
-  paintShape(ctx, op, scaleX = PAPER_W, scaleY = PAPER_H) {
-    const [a, b] = [op.points[0], op.points.at(-1)];
-    const [x1, y1, x2, y2] = [a[0] * scaleX, a[1] * scaleY, b[0] * scaleX, b[1] * scaleY];
-    ctx.strokeStyle = op.c;
-    ctx.fillStyle = op.c;
-    ctx.lineWidth = Math.max(1, op.w * scaleX);
-    ctx.lineCap = 'round';
-    ctx.lineJoin = 'round';
-    ctx.beginPath();
-    if (op.t === 'l') { ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke(); return; }
-    if (op.t === 'r' || op.t === 'R') ctx.rect(Math.min(x1, x2), Math.min(y1, y2), Math.abs(x2 - x1), Math.abs(y2 - y1));
-    else ctx.ellipse((x1 + x2) / 2, (y1 + y2) / 2, Math.abs(x2 - x1) / 2, Math.abs(y2 - y1) / 2, 0, 0, Math.PI * 2);
-    if (op.t === 'R' || op.t === 'E') ctx.fill();
-    else ctx.stroke();
-  }
-
-  // Bucket fill: floods the area of similar colour around the point, then grows it by one pixel
-  // so there's no pale fringe left along soft line edges.
-  floodFill([fx, fy], hex, alpha = 1) {
-    const W = PAPER_W, H = PAPER_H;
-    const sx = Math.min(W - 1, Math.max(0, Math.round(fx * W)));
-    const sy = Math.min(H - 1, Math.max(0, Math.round(fy * H)));
-    const image = this.pctx.getImageData(0, 0, W, H);
-    const d = image.data;
-    const start = (sy * W + sx) * 4;
-    const [tr, tg, tb] = [d[start], d[start + 1], d[start + 2]];
-    const [fr, fg, fb] = hexToRgb(hex);
-    if (alpha >= 1 && Math.abs(tr - fr) + Math.abs(tg - fg) + Math.abs(tb - fb) < 8) return;
-    const like = p => Math.abs(d[p] - tr) + Math.abs(d[p + 1] - tg) + Math.abs(d[p + 2] - tb) <= FILL_TOLERANCE;
-    const mask = new Uint8Array(W * H);
-    const stack = [sx, sy];
-    while (stack.length) {
-      const y = stack.pop();
-      let x = stack.pop();
-      let i = y * W + x;
-      while (x >= 0 && !mask[i] && like(i * 4)) { x--; i--; }
-      x++; i++;
-      let up = false, down = false;
-      while (x < W && !mask[i] && like(i * 4)) {
-        mask[i] = 1;
-        if (y > 0) {
-          const u = i - W;
-          if (!mask[u] && like(u * 4)) { if (!up) { stack.push(x, y - 1); up = true; } } else up = false;
-        }
-        if (y < H - 1) {
-          const n = i + W;
-          if (!mask[n] && like(n * 4)) { if (!down) { stack.push(x, y + 1); down = true; } } else down = false;
-        }
-        x++; i++;
-      }
-    }
-    // See-through fills mix with what's underneath.
-    const mix = (under, over) => Math.round(under + (over - under) * alpha);
-    const paint = i => { const p = i * 4; d[p] = mix(d[p], fr); d[p + 1] = mix(d[p + 1], fg); d[p + 2] = mix(d[p + 2], fb); d[p + 3] = 255; };
-    for (let y = 0; y < H; y++) {
-      for (let x = 0; x < W; x++) {
-        const i = y * W + x;
-        if (mask[i]) paint(i);
-        else if ((x > 0 && mask[i - 1]) || (x < W - 1 && mask[i + 1]) || (y > 0 && mask[i - W]) || (y < H - 1 && mask[i + W])) paint(i);
-      }
-    }
-    this.pctx.putImageData(image, 0, 0);
   }
 
   // Paints everything again from scratch, oldest first. Used after an undo, redo or clear.
   repaint() {
     this.wipePaper();
-    this.layers.clear();
     [...this.ops.values()].sort((a, b) => (a.id < b.id ? -1 : 1)).forEach(op => { op.drawn = 0; this.paint(op); });
     this.show();
   }
@@ -502,14 +379,26 @@ class SketchBoard extends HTMLElement {
     requestAnimationFrame(() => {
       this.frameRequested = false;
       const { width, height } = this.canvas;
-      this.ctx.drawImage(this.paper, 0, 0, width, height);
-      this.layers.forEach(layer => {
-        this.ctx.globalAlpha = layer.op.o ?? 1;
-        this.ctx.drawImage(layer.canvas, 0, 0, width, height);
+      const ctx = this.ctx;
+      const cfg = this.config;
+      const faded = this.under && cfg.underMode === 'faded';
+      if (faded) {
+        // The guide underneath shows through the white of your page (multiply keeps your lines on top).
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, width, height);
+        if (cfg.showUnder) { ctx.globalAlpha = cfg.showMine ? 0.3 : 0.85; ctx.drawImage(this.under, 0, 0, width, height); ctx.globalAlpha = 1; }
+        if (!cfg.showMine) return;
+        ctx.globalCompositeOperation = 'multiply';
+      }
+      if (cfg.showMine || faded) ctx.drawImage(this.paper, 0, 0, width, height);
+      this.painter.layers.forEach(layer => {
+        ctx.globalAlpha = layer.op.o ?? 1;
+        ctx.drawImage(layer.canvas, 0, 0, width, height);
       });
-      this.ctx.globalAlpha = this.preview?.o ?? 1;
-      if (this.preview) this.paintShape(this.ctx, this.preview, width, height);
-      this.ctx.globalAlpha = 1;
+      ctx.globalAlpha = this.preview?.o ?? 1;
+      if (this.preview) paintShape(ctx, this.preview, width, height);
+      ctx.globalAlpha = 1;
+      ctx.globalCompositeOperation = 'source-over';
     });
   }
 

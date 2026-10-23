@@ -955,3 +955,27 @@ sketch-board.do-mini .board__frame { box-shadow: none; border: 1.5px solid #ddd;
 
 /* Hand over host: a crown button on the other side from the remove button. */
 .kick.make-host { right: auto; left: 6px; display: grid; place-items: center; background: #fff8d6; }
+
+/* ----- pass-it-on drawing games (Animation, Complementary) ----- */
+.chain-top { display: flex; flex-direction: column; align-items: center; }
+.chain-top .note, .chain-top h2 { margin: 0; }
+.chain-toggles { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin: 10px 0; }
+.chain-toggles .btn { width: auto; padding: 0 16px; }
+.chain-show { display: flex; flex-direction: column; align-items: stretch; flex: 1; }
+frame-reel { display: block; max-width: 760px; width: 100%; margin: 8px auto; }
+.reel__frame { width: fit-content; margin: 0 auto; background: #fff; box-shadow: var(--shadow); overflow: hidden; }
+.reel__canvas { display: block; }
+.chain-credits { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px 10px; margin: 8px 0 14px; }
+.chain-credit { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px 2px 4px; border-radius: 12px; opacity: 0.25; transition: opacity 0.3s, transform 0.3s; }
+.chain-credit small { font-size: 14px; }
+.chain-credit--in { opacity: 1; }
+.chain-credit--now { background: var(--yellow); transform: scale(1.1); box-shadow: var(--shadow); }
+.chain-controls { display: flex; flex-direction: column; align-items: center; gap: 8px; margin-bottom: 12px; }
+.chain-controls .field { width: 100%; max-width: 320px; }
+.chain-dirs { display: flex; gap: 8px; }
+.chain-dirs .btn { width: auto; padding: 0 14px; }
+.chain-gallery { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 18px 14px; margin: 14px 0; }
+.chain-card { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 10px; background: #fff; box-shadow: var(--shadow); text-align: center; }
+.chain-card frame-reel { margin: 0; }
+.chain-card .reel__frame { box-shadow: none; border: 1.5px solid #ddd; }
+.chain-card .btn { width: auto; padding: 0 16px; }

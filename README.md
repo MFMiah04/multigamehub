@@ -18,6 +18,8 @@ Party games to play together on phones or computers. Make a character, then one 
 - **Avalon** (5–10 players): loyal knights versus hidden traitors. Approve teams, play Success or Fail cards on five quests, and watch out for the Assassin.
 - **Draw & Guess** (3–12 players): take turns drawing a word (pick one of three) while everyone races to type it. Letter hints appear over time and near misses are flagged as close.
 - **Draw Off** (3–12 players): everyone draws the same silly prompt at once, then votes for their favourite from an anonymous gallery.
+- **Animation** (2–12 players): everyone draws the first frame of an animation, then they're passed round and each player draws the next frame over a faded copy of the last. Played back frame by frame, then as a loop; the host sets the speed and direction (forwards, backwards, boomerang). Download any as a GIF.
+- **Complementary** (2–12 players): everyone starts a drawing, then they're passed round and each player adds to the picture. Played back step by step, with GIF downloads.
 - **Doodle Imposter** (3–12 players): take turns adding one line each to a drawing of the secret word. One player only gets a hint. Vote them out, then they get one guess to steal the win.
 - **Sketch Pad** (1–16 players): a shared drawing board for trying out the drawing tools.
 

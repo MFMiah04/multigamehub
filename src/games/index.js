@@ -13,7 +13,9 @@ import sketch from './sketch.js';
 import doodleImposter from './doodle-imposter.js';
 import drawGuess from './draw-guess.js';
 import drawOff from './draw-off.js';
+import animation from './animation.js';
+import complementary from './complementary.js';
 
 // To add a game: create a module with the same shape and list it here.
-export const gameList = [spyfall, imposter, fakinIt, herdMentality, oneWord, fakeAnswer, spectrum, wordSync, numberClimb, insider, avalon, drawGuess, drawOff, doodleImposter, sketch];
+export const gameList = [spyfall, imposter, fakinIt, herdMentality, oneWord, fakeAnswer, spectrum, wordSync, numberClimb, insider, avalon, drawGuess, drawOff, animation, complementary, doodleImposter, sketch];
 export const games = Object.fromEntries(gameList.map(g => [g.id, g]));
