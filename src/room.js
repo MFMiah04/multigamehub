@@ -2,7 +2,7 @@ import { ref, get, set, update, onValue, onDisconnect, serverTimestamp, runTrans
 import { db, serverNow } from './firebase.js';
 
 const CODE_LETTERS = 'ABCDEFGHJKLMNPQRSTUVWXYZ'; // no I or O, they look like 1 and 0
-const HOST_GRACE_MS = 15000;
+const HOST_GRACE_MS = 45000; // how long the host can be gone before someone stands in
 // Rooms with no activity for this long get cleaned up (see sweepStaleRooms and database.rules.json).
 export const STALE_MS = 30 * 60 * 1000;
 
@@ -106,6 +106,7 @@ export async function leaveRoom(room, uid) {
   if (others.length === 0) return update(ref(db), deleteRoomUpdates(room.code, room.token));
   const updates = { [`players/${uid}`]: null, [`reactions/${uid}`]: null };
   if (room.hostId === uid) updates.hostId = (others.find(p => p.online) || others[0]).id;
+  if (room.hostId === uid || room.hostWas === uid) updates.hostWas = null;
   return update(roomRef(room.code), updates);
 }
 
@@ -119,13 +120,41 @@ export function sortedPlayers(room) {
     .sort((a, b) => (a.joinedAt || 0) - (b.joinedAt || 0));
 }
 
-// If the host has been offline for a while, the longest-standing online player takes over.
+// If the host has been offline for a while (phones often drop off when the screen locks), the
+// longest-standing online player stands in. `hostWas` remembers who the real host was, and they get
+// it back automatically as soon as they reconnect.
+let claiming = '';
 export function claimHostIfNeeded(room, uid) {
+  const me = room.players?.[uid];
+  if (room.hostWas === uid && room.hostId !== uid && me && me.online !== false) {
+    const standIn = room.hostId;
+    const key = `back:${room.code}:${standIn}`;
+    if (claiming === key) return;
+    claiming = key;
+    runTransaction(roomRef(room.code, 'hostId'), current => (current === standIn ? uid : undefined))
+      .then(r => { if (r.committed) return update(roomRef(room.code), { hostWas: null }); })
+      .finally(() => { claiming = ''; });
+    return;
+  }
   const host = room.players?.[room.hostId];
   const hostGone = !host || (!host.online && serverNow() - (host.lastSeen || 0) > HOST_GRACE_MS);
   if (!hostGone) return;
   const next = sortedPlayers(room).find(p => p.online && p.id !== room.hostId);
   if (next?.id !== uid) return;
   const previous = room.hostId;
-  runTransaction(roomRef(room.code, 'hostId'), current => (current === previous ? uid : undefined));
+  const key = `take:${room.code}:${previous}`;
+  if (claiming === key) return;
+  claiming = key;
+  runTransaction(roomRef(room.code, 'hostId'), current => (current === previous ? uid : undefined))
+    .then(r => {
+      // Keep track of the original host (not a stand-in who also dropped off), if they're still in the room.
+      const original = room.hostWas || previous;
+      if (r.committed && room.players?.[original]) return update(roomRef(room.code), { hostWas: original });
+    })
+    .finally(() => { claiming = ''; });
+}
+
+// The host can hand the job to someone else. That's a real handover, so nobody gets it back automatically.
+export function passHost(room, uid) {
+  return update(roomRef(room.code), { hostId: uid, hostWas: null });
 }

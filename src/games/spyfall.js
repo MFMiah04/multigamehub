@@ -1,6 +1,6 @@
 import { html, nothing, button, timer, selectField, action } from '../ui.js';
 import { randomItem, shuffle } from '../room.js';
-import { minutes, counts, startVoting, isTimeUp, voteRequestBar, voteRequestsPassed, voteView, votedCount, tally, mostVoted, voteResults, toResults, endScreen, endTitle, sideResult, spotlight, revealButton, backToLobbyButton } from './common.js';
+import { minutes, counts, startVoting, isTimeUp, voteRequestBar, voteRequestsPassed, voteView, votedCount, tally, mostVoted, votingOver, voteResults, toResults, endScreen, endTitle, sideResult, spotlight, revealButton, backToLobbyButton } from './common.js';
 import locations from '../data/spyfall-locations.json';
 
 const enabledLocations = settings => locations.filter((_, i) => !settings.off?.[i]);
@@ -64,7 +64,7 @@ export default {
   tick(ctx, s) {
     const { phase } = ctx.room;
     if (phase === 'playing' && (isTimeUp(ctx) || voteRequestsPassed(ctx))) return startVoting(ctx, s.voteTime);
-    if (phase === 'voting' && (isTimeUp(ctx) || votedCount(ctx, ctx.inGame) === ctx.inGame.length)) return toResults(ctx);
+    if (phase === 'voting' && votingOver(ctx, ctx.inGame, Math.min(ctx.round.spyCount || 1, ctx.inGame.length - 1))) return toResults(ctx);
     return null;
   },
 

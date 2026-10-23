@@ -2,7 +2,7 @@ import { runTransaction } from 'firebase/database';
 import { html, nothing, button, timer, selectField, action, toast, avatar } from '../ui.js';
 import { roomRef, shuffle } from '../room.js';
 import {
-  isTimeUp, normalize, pickUnused, startVoting, voteRequestBar, voteRequestsPassed, voteView, votedCount,
+  isTimeUp, normalize, pickUnused, startVoting, voteRequestBar, voteRequestsPassed, voteView, votingOver,
   tally, mostVoted, voteResults, toResults, endTitle, sideResult, spotlight, backToLobbyButton,
 } from './common.js';
 import { cue } from '../sound.js';
@@ -78,7 +78,7 @@ export default {
       // Out of time: that line is skipped and it's the next person's go.
       if (ctx.now() > round.turnEndsAt + 1500) return { 'round/turn': (round.turn || 0) + 1, 'round/turnEndsAt': ctx.now() + s.turnTime * 1000 };
     }
-    if (phase === 'voting' && (isTimeUp(ctx) || votedCount(ctx, ctx.inGame) === ctx.inGame.length)) {
+    if (phase === 'voting' && votingOver(ctx, ctx.inGame)) {
       const top = mostVoted(tally(ctx, ctx.inGame, ctx.inGame), 1);
       const caught = top.length === 1 && top[0] === round.imposter;
       return { ...toResults(ctx), 'round/caught': caught, 'round/guessEndsAt': caught ? ctx.now() + GUESS_MS : null };

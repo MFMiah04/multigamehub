@@ -1,6 +1,6 @@
 import { html, nothing, button, timer, selectField, action, avatar } from '../ui.js';
 import { shuffle } from '../room.js';
-import { minutes, startVoting, isTimeUp, voteView, votedCount, tally, mostVoted, voteResults, toResults, endScreen, endTitle, sideResult, spotlight, pickUnused, backToLobbyButton } from './common.js';
+import { minutes, startVoting, isTimeUp, voteView, votedCount, tally, mostVoted, votingOver, voteResults, toResults, endScreen, endTitle, sideResult, spotlight, pickUnused, backToLobbyButton } from './common.js';
 import words from '../data/one-word-words.json';
 
 const suspectsOf = ctx => ctx.inGame.filter(p => p.id !== ctx.round.master);
@@ -47,7 +47,7 @@ export default {
   tick(ctx) {
     const { phase } = ctx.room;
     if (phase === 'questions' && isTimeUp(ctx)) return { phase: 'results', 'round/endsAt': null, 'round/timedOut': true };
-    if (phase === 'voting' && (isTimeUp(ctx) || votedCount(ctx, ctx.inGame) === ctx.inGame.length)) return toResults(ctx);
+    if (phase === 'voting' && votingOver(ctx, ctx.inGame)) return toResults(ctx);
     return null;
   },
 

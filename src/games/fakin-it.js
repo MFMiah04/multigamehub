@@ -1,6 +1,6 @@
 import { html, nothing, button, timer, selectField, action, progress, toast } from '../ui.js';
 import { shuffle } from '../room.js';
-import { minutes, counts, startVoting, isTimeUp, voteView, votedCount, tally, mostVoted, voteResults, toResults, endTitle, sideResult, spotlight, revealButton, backToLobbyButton } from './common.js';
+import { minutes, counts, startVoting, isTimeUp, voteView, votedCount, tally, mostVoted, votingOver, voteResults, toResults, endTitle, sideResult, spotlight, revealButton, backToLobbyButton } from './common.js';
 
 const overseerOf = (ctx, s) => (ctx.room.players[s.overseer] ? s.overseer : ctx.room.hostId);
 const maxFakers = count => Math.max(1, Math.floor(count / 2));
@@ -59,7 +59,7 @@ export default {
       const answered = players.filter(p => ctx.round.answers?.[p.id]).length;
       if (isTimeUp(ctx) || answered === players.length) return startVoting(ctx, s.voteTime);
     }
-    if (phase === 'voting' && (isTimeUp(ctx) || votedCount(ctx, players) === players.length)) return toResults(ctx);
+    if (phase === 'voting' && votingOver(ctx, players, Math.min(ctx.round.count || 1, players.length - 1))) return toResults(ctx);
     return null;
   },
 

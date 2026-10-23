@@ -1,5 +1,5 @@
 import { svg } from 'lit-html';
-import { html, nothing, button, avatar, timer, progress, action } from '../ui.js';
+import { html, nothing, button, avatar, timer, progress, action, toast } from '../ui.js';
 import { cue } from '../sound.js';
 
 export const minutes = (from, to) =>
@@ -240,44 +240,58 @@ export function myVotes(ctx) {
   return Object.keys(ctx.round.votes?.[ctx.uid] || {});
 }
 
-export function votedCount(ctx, voters) {
-  return voters.filter(p => ctx.round.votes?.[p.id]).length;
+// Who has finished voting: they've picked as many people as the vote asks for.
+export function votedCount(ctx, voters, need = 1) {
+  return voters.filter(p => Object.keys(ctx.round.votes?.[p.id] || {}).length >= need).length;
 }
 
+// Votes count as soon as you tap someone, so once everyone's in there's a short pause before the
+// results, in case someone wants to change their mind. Only the host's screen runs this.
+const SETTLE_MS = 3000;
+let settle = { key: '', since: 0 };
+export function votingOver(ctx, voters, need = 1) {
+  if (isTimeUp(ctx)) return true;
+  if (votedCount(ctx, voters, need) < voters.length) { settle = { key: '', since: 0 }; return false; }
+  const key = `${ctx.round.id}:${JSON.stringify(ctx.round.votes || {})}`;
+  if (key !== settle.key) settle = { key, since: Date.now() };
+  return Date.now() - settle.since >= SETTLE_MS;
+}
+
+// Tap someone and that's your vote, straight away. Tap someone else to switch, or tap them again to take it back.
+// When the vote is for more than one person (two spies, say), each tap adds or removes a pick.
 export function voteView(ctx, { candidates, voters, max, prompt, details }) {
   const canVote = voters.some(p => p.id === ctx.uid);
-  const submitted = myVotes(ctx);
-  const locked = submitted.length > 0;
-  ctx.local.picks ??= new Set(submitted);
-  const picks = ctx.local.picks;
+  const picks = myVotes(ctx);
+  const need = Math.min(max, candidates.filter(p => p.id !== ctx.uid).length);
 
-  const toggle = id => {
-    if (!canVote || locked || id === ctx.uid) return;
-    if (picks.has(id)) picks.delete(id);
-    else if (picks.size < max) picks.add(id);
-    else if (max === 1) { picks.clear(); picks.add(id); }
-    ctx.rerender();
+  const tap = id => {
+    if (!canVote || id === ctx.uid) return null;
+    let next;
+    if (picks.includes(id)) next = picks.filter(p => p !== id);
+    else if (max === 1) next = [id];
+    else if (picks.length < max) next = [...picks, id];
+    else return toast(`You've picked ${max}. Tap one of them to unpick it first.`);
+    return ctx.update({ [`round/votes/${ctx.uid}`]: next.length ? Object.fromEntries(next.map(p => [p, true])) : null });
   };
-  const submit = () => ctx.update({ [`round/votes/${ctx.uid}`]: Object.fromEntries([...picks].map(id => [id, true])) });
-  const change = () => ctx.update({ [`round/votes/${ctx.uid}`]: null });
+
+  const hint = !canVote ? "You're watching this vote."
+    : max === 1 ? (picks.length ? 'Voted! Tap someone else to change it.' : 'Tap who you want to vote for.')
+    : `Pick ${need}. Tap again to unpick.${picks.length ? ` (${picks.length} of ${need})` : ''}`;
 
   return html`
     ${timer(ctx.round.endsAt)}
     <h2 class="center">${prompt}</h2>
-    ${canVote ? html`<p class="note center">${locked ? 'Vote locked in. You can still change it.' : `Pick up to ${max}. Tap again to unpick.`}</p>` : html`<p class="note center">You're watching this vote.</p>`}
+    <p class="note center">${hint}</p>
     <div class="vote-grid">
       ${candidates.map(p => html`
-        <button class="vote-card wobble ${picks.has(p.id) ? 'vote-card--picked' : ''} ${p.id === ctx.uid ? 'vote-card--me' : ''}"
-          ?disabled=${!canVote || locked || p.id === ctx.uid} @click=${() => toggle(p.id)}>
+        <button class="vote-card wobble ${picks.includes(p.id) ? 'vote-card--picked' : ''} ${p.id === ctx.uid ? 'vote-card--me' : ''}"
+          ?disabled=${!canVote || p.id === ctx.uid} @click=${action(() => tap(p.id))}>
           ${avatar(p, 48)}
           <b>${p.name}${p.id === ctx.uid ? ' (you)' : ''}</b>
           ${details ? details(p) : nothing}
         </button>`)}
     </div>
-    ${progress(votedCount(ctx, voters), voters.length, 'have voted')}
-    ${canVote ? (locked
-      ? button('Change my vote', action(change), { kind: 'white' })
-      : button('Lock in vote', action(submit), { kind: 'yellow', disabled: picks.size === 0 })) : nothing}`;
+    ${progress(votedCount(ctx, voters, need), voters.length, 'have voted')}`;
 }
 
 export function tally(ctx, candidates, voters) {

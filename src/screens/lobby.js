@@ -2,7 +2,7 @@ import qrcode from 'qrcode-generator';
 import { unsafeHTML } from 'lit-html/directives/unsafe-html.js';
 import { repeat } from 'lit-html/directives/repeat.js';
 import { html, nothing, button, action, avatar, toast, confirmDialog } from '../ui.js';
-import { kickPlayer } from '../room.js';
+import { kickPlayer, passHost } from '../room.js';
 import { gameList } from '../games/index.js';
 import { showRules, noteName, creator, saveLook, homeState } from './home.js';
 import { cue } from '../sound.js';
@@ -44,6 +44,9 @@ function byPlayable(count) {
   return [...rated.filter(r => !r.problem), ...rated.filter(r => r.problem)];
 }
 
+// A little doodled crown for handing over host.
+const CROWN_ICON = html`<svg viewBox="0 0 24 16" width="16" height="11" aria-hidden="true"><path d="M2.5 14 L3.5 4 L8.5 9 L12 2 L15.5 9 L20.5 4 L21.5 14 Z" fill="#ffd04d" stroke="#222" stroke-width="2" stroke-linejoin="round" /></svg>`;
+
 // Whether the "change your look" panel is open. Kept outside ctx.local so picking a game doesn't close it.
 let editingLook = false;
 
@@ -74,6 +77,7 @@ export function lobbyView(ctx) {
   };
   const setSetting = changes => ctx.update(Object.fromEntries(Object.entries(changes).map(([k, v]) => [`settings/${game.id}/${k}`, v])));
   const kick = async p => { if (await confirmDialog(`Remove ${p.name} from the room?`, 'Remove')) await kickPlayer(room, p.id); };
+  const makeHost = async p => { if (await confirmDialog(`Make ${p.name} the host? They'll pick the games and start them.`, 'Make host', 'yellow')) await passHost(room, p.id); };
 
   // A little two-note pop when someone new walks in.
   ctx.players.forEach(p => cue(`join:${ctx.room.code}:${p.id}`, 'join', { at: p.joinedAt, now: ctx.now(), late: 4000 }));
@@ -100,7 +104,8 @@ export function lobbyView(ctx) {
         <span>${p.name}${p.id === ctx.uid ? ' (you)' : ''}</span>
         ${p.id === room.hostId ? html`<small class="hl">host</small>` : nothing}
         ${p.online === false ? html`<small>away</small>` : nothing}
-        ${isHost && p.id !== ctx.uid ? html`<button class="kick" aria-label="Remove ${p.name}" @click=${action(() => kick(p))}>×</button>` : nothing}
+        ${isHost && p.id !== ctx.uid ? html`<button class="kick" aria-label="Remove ${p.name}" title="Remove from the room" @click=${action(() => kick(p))}>×</button>
+          <button class="kick make-host" aria-label="Make ${p.name} the host" title="Make host" @click=${action(() => makeHost(p))}>${CROWN_ICON}</button>` : nothing}
       </div>`)}
     </div>
     ${editingLook ? lookEditor(ctx) : nothing}

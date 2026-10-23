@@ -1,6 +1,6 @@
 import { html, nothing, button, timer, selectField, action, playerTag } from '../ui.js';
 import { randomItem, shuffle } from '../room.js';
-import { minutes, counts, startVoting, isTimeUp, voteRequestBar, voteRequestsPassed, voteView, votedCount, tally, mostVoted, voteResults, toResults, endTitle, sideResult, spotlight, revealButton, backToLobbyButton } from './common.js';
+import { minutes, counts, startVoting, isTimeUp, voteRequestBar, voteRequestsPassed, voteView, votedCount, tally, mostVoted, votingOver, voteResults, toResults, endTitle, sideResult, spotlight, revealButton, backToLobbyButton } from './common.js';
 import words from '../data/imposter-words.json';
 
 const maxImposters = count => Math.max(1, Math.floor((count - 1) / 2));
@@ -49,7 +49,7 @@ export default {
   tick(ctx, s) {
     const { phase } = ctx.room;
     if (phase === 'playing' && (isTimeUp(ctx) || voteRequestsPassed(ctx))) return startVoting(ctx, s.voteTime);
-    if (phase === 'voting' && (isTimeUp(ctx) || votedCount(ctx, ctx.inGame) === ctx.inGame.length)) return toResults(ctx);
+    if (phase === 'voting' && votingOver(ctx, ctx.inGame, Math.min(ctx.round.count || 1, ctx.inGame.length - 1))) return toResults(ctx);
     return null;
   },
 

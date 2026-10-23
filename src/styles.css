@@ -952,3 +952,6 @@ sketch-board.do-mini .board__frame { box-shadow: none; border: 1.5px solid #ddd;
 /* Note contents sit in the middle, so one-line names don't leave a gap at the bottom. */
 .sticky, .sticky__pick { justify-content: center; }
 .sticky__pick { flex: 0 1 auto; }
+
+/* Hand over host: a crown button on the other side from the remove button. */
+.kick.make-host { right: auto; left: 6px; display: grid; place-items: center; background: #fff8d6; }
