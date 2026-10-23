@@ -109,7 +109,7 @@ export default {
     const { phase } = ctx.room;
     if (phase === 'draw') return drawing(ctx, s);
     if (phase === 'voting') {
-      return html`${turnStrip(ctx, { showTurn: false })}${board(ctx, { canDraw: false })}
+      return html`${turnStrip(ctx, { showTurn: false })}${board(ctx, { canDraw: false, maxHeight: 0.26 })}
         ${voteView(ctx, { candidates: ctx.inGame, voters: ctx.inGame, max: 1, prompt: 'Who was faking it?' })}`;
     }
     return results(ctx);
@@ -117,11 +117,11 @@ export default {
 };
 
 // The shared drawing. Everyone uses just a pencil in their own colour; only the current artist can draw.
-const board = (ctx, { canDraw, onStroke }) => html`<sketch-board room=${ctx.room.code} uid=${ctx.uid}
+const board = (ctx, { canDraw, onStroke, maxHeight }) => html`<sketch-board room=${ctx.room.code} uid=${ctx.uid}
   .config=${{
     tools: ['pen'], colors: false, sizes: false, opacity: false, undo: false, clear: false, stats: false,
     color: ctx.round.colors?.[ctx.uid] || '#222222', size: LINE_SIZE,
-    canDraw, oneStroke: true, turnKey: ctx.round.turn || 0,
+    canDraw, oneStroke: true, turnKey: ctx.round.turn || 0, ...(maxHeight ? { maxHeight } : {}),
   }}
   @strokeend=${onStroke || nothing}></sketch-board>`;
 

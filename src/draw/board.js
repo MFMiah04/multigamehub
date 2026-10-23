@@ -28,13 +28,14 @@ import { PAPER_W, PAPER_H, Painter, paintShape, encode, decode, hexToRgb, rgbToH
 //     'faded'  a see-through guide behind your drawing (the last frame of an animation)
 //     'base'   part of the picture you're adding to, so fills and the eyedropper see it too
 //   showUnder / showMine: hide either, to compare (default true).
+//   maxHeight: the tallest the canvas may be, as a fraction of the screen's height (default 0.72).
 // When you finish a line, shape or fill the board fires a `strokeend` event.
 
 const SEND_MS = 40;
 const COLORS = ['#222222', '#ffffff', '#d23c5f', '#f28c28', '#f2c94c', '#3fae5b', '#3b82c4', '#8e5bd1', '#8b5a3c', '#f7a8c4'];
 const SIZES = [0.006, 0.014, 0.03, 0.06]; // as a fraction of the board's width
 const ERASER = '#ffffff';
-const DEFAULTS = { tools: null, colors: true, sizes: true, opacity: true, undo: true, clear: true, stats: true, canDraw: true, oneStroke: false, under: null, underMode: 'faded', showUnder: true, showMine: true };
+const DEFAULTS = { tools: null, colors: true, sizes: true, opacity: true, undo: true, clear: true, stats: true, canDraw: true, oneStroke: false, maxHeight: 0.72, under: null, underMode: 'faded', showUnder: true, showMine: true };
 
 // Hue (0-360), saturation and value (0-1) to and from #rrggbb, for the custom colour panel.
 function hsvToHex(h, sat, val) {
@@ -348,7 +349,7 @@ class SketchBoard extends HTMLElement {
   // Matches the screen canvas to its box (and the screen's pixel density).
   fit() {
     const room = this.clientWidth - this.sideWidth();
-    const tallest = Math.max(240, window.innerHeight * 0.72);
+    const tallest = Math.max(160, window.innerHeight * this.config.maxHeight);
     const width = Math.max(120, Math.floor(Math.min(room, tallest * PAPER_W / PAPER_H)));
     const height = Math.round(width * PAPER_H / PAPER_W);
     this.canvas.style.width = `${width}px`;
