@@ -22,11 +22,11 @@ const features = word => {
   const w = words[word] || {};
   return [w.alive ? 'alive' : 'not alive', SHAPES[w.shape], SIZES[w.size]].filter(Boolean);
 };
-// Only the features every word in the list shares, so the later word list never contradicts them.
+// Only the features the real word shares with every word in the list, so the list never contradicts them.
 const sharedFeatures = list => features(list[0]).filter(f => list.every(i => features(i).includes(f)));
 
-// For the hint that gets better: decoys that are as alike as possible (same alive-ness, shape and
-// size), so the list can't be narrowed down without watching the drawing.
+// For the hint that gets better: a few words as alike as possible to the real one (same alive-ness,
+// shape and size). The real word isn't among them, so the imposter has to work it out from the drawing.
 function lookalikes(word) {
   const w = words[word];
   const others = shuffle(words.map((_, i) => i).filter(i => i !== word && words[i].alive === w.alive));
@@ -38,14 +38,13 @@ function lookalikes(word) {
     : same('shape').length >= DECOYS ? [...exact, ...same('shape').filter(i => !exact.includes(i))]
     : same('size').length >= DECOYS ? [...exact, ...same('size').filter(i => !exact.includes(i))]
     : [...exact, ...same('shape'), ...same('size'), ...others].filter((i, n, list) => list.indexOf(i) === n);
-  return shuffle([word, ...pool.slice(0, DECOYS)]);
+  return shuffle(pool.slice(0, DECOYS));
 }
 
-// The real word hidden among a few others from the same category, in a random order.
+// A few other words from the same category (not the real word itself).
 function wordList(word) {
   const { category } = words[word];
-  const others = shuffle(words.map((w, i) => i).filter(i => i !== word && words[i].category === category)).slice(0, DECOYS);
-  return shuffle([word, ...others]);
+  return shuffle(words.map((w, i) => i).filter(i => i !== word && words[i].category === category)).slice(0, DECOYS);
 }
 
 const wordOf = round => words[round.word]?.word || '';
@@ -63,7 +62,7 @@ export default {
   players: '3–12',
   blurb: 'Take turns adding one line to a drawing of the secret word. One of you is faking it.',
   rules: [
-    "Everyone sees the secret word except the imposter. By default they get a few clues about what it's like (alive? what shape? how big?), then a short list of possible words from the second lap.",
+    "Everyone sees the secret word except the imposter. By default they get a few clues about what it's like (alive? what shape? how big?), then a few similar words from the second lap.",
     'Take turns adding one line each to the same drawing. Lift your pen and your turn is over.',
     'Prove you know the word, but not so clearly that the imposter can work it out. Two laps, then vote.',
     "If the imposter isn't caught, they win. If they are, they get one guess at the word to steal the win.",
@@ -84,7 +83,7 @@ export default {
     return html`
       ${selectField('Laps of the table', s.laps, [[1, '1 lap'], [2, '2 laps'], [3, '3 laps']], v => set({ laps: +v }), disabled)}
       ${selectField('Time for each line', s.turnTime, [[15, '15 seconds'], [20, '20 seconds'], [30, '30 seconds'], [45, '45 seconds'], [60, '1 min']], v => set({ turnTime: +v }), disabled)}
-      ${selectField("Imposter's hint", s.hint, [['growing', 'Gets better: what it\'s like, then a word list'], ['list', `A list of ${DECOYS + 1} words, one is right`], ['features', 'What it\'s like (alive? shape? size?)'], ['category', 'The category (like "Animal")'], ['none', 'No hint']], v => set({ hint: v }), disabled)}
+      ${selectField("Imposter's hint", s.hint, [['growing', 'Gets better: what it\'s like, then a word list'], ['list', `${DECOYS} words from the same category`], ['features', 'What it\'s like (alive? shape? size?)'], ['category', 'The category (like "Animal")'], ['none', 'No hint']], v => set({ hint: v }), disabled)}
       ${selectField('Time to vote', s.voteTime, [[60, '1 min'], [90, '1½ min'], [120, '2 min']], v => set({ voteTime: +v }), disabled)}`;
   },
 
@@ -154,10 +153,10 @@ function secretCard(ctx) {
   return html`<button class="secret secret--slim wobble ${local.show ? '' : 'secret--hidden'} ${imposter ? 'secret--spy' : ''} ${roomy ? 'secret--list' : ''}"
     @click=${() => { local.show = !local.show; ctx.rerender(); }}>
     ${!local.show ? html`<b>Tap to see your word</b>`
-      : list ? html`<small>You're the imposter! The word is one of these:</small>
+      : list ? html`<small>You're the imposter! It's something like these (but none of them):</small>
         <span class="di-choices">${round.choices.map(i => html`<span class="di-choice">${words[i]?.word}</span>`)}</span>`
       : imposter && (round.hint === 'growing' || round.hint === 'features') ? html`<small>You're the imposter!${round.hint === 'growing' ? ' More help after this lap.' : ''} It's…</small>
-        <span class="di-choices">${(round.hint === 'growing' && round.choices ? sharedFeatures(round.choices) : features(round.word)).map(f => html`<span class="di-choice">${f}</span>`)}</span>`
+        <span class="di-choices">${(round.hint === 'growing' && round.choices ? sharedFeatures([round.word, ...round.choices]) : features(round.word)).map(f => html`<span class="di-choice">${f}</span>`)}</span>`
       : imposter ? html`<small>You're the imposter!</small><b>${round.hint === 'none' ? 'No hint' : `Hint: ${category}`}</b>`
       : html`<small>The secret word is</small><b>${wordOf(round)}</b>`}
   </button>`;
@@ -231,10 +230,7 @@ function results(ctx) {
   const guessPart = !round.caught ? nothing
     : !guessed
       ? (isImposter
-        ? round.choices ? html`<div class="question wobble"><small>You've been caught! One guess to steal the win</small>Which one was the secret word?</div>
-          ${timer(round.guessEndsAt, 15)}
-          <div class="di-guess-list">${round.choices.map(i => button(words[i]?.word, action(() => ctx.update({ 'round/guess': words[i]?.word })), { kind: 'white' }))}</div>`
-        : html`<div class="question wobble"><small>You've been caught! One guess to steal the win</small>What was the secret word?</div>
+        ? html`<div class="question wobble"><small>You've been caught! One guess to steal the win</small>What was the secret word?</div>
           ${timer(round.guessEndsAt, 15)}
           <label class="field"><span>Your guess</span>
             <input id="di-guess" class="wobble" maxlength="40" autocomplete="off" placeholder="The secret word"
