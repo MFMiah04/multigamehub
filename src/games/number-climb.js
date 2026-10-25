@@ -7,21 +7,25 @@ import { backToLobbyButton, endScreen, endTitle, sideResult } from './common.js'
 import { cue } from '../sound.js';
 
 const COUNTDOWN_MS = 3500;
+// After any card is played, nobody can play for a moment, so two taps at once can't knock each other out.
+const COOLDOWN_MS = 1000;
 // At least one life: losing your last one ends the game. (Older rooms may have 0 saved from before.)
 const livesOf = s => Math.min(5, Math.max(1, s.lives ?? 3));
 const maxCards = playerCount => Math.max(2, Math.min(10, Math.floor(100 / Math.max(playerCount, 1))));
 const handOf = (round, id) => round.hands?.[id] || [];
 const cardsLeft = round => Object.values(round.hands || {}).reduce((n, hand) => n + (hand?.length || 0), 0);
 
-// Plays your lowest card. Runs as a transaction so that if two people tap at once,
-// the database decides who was really first and everyone sees the same pile.
-function playLowest(ctx) {
+// Plays the card you tapped (your lowest). Runs as a transaction so that if two people tap at once,
+// the database decides who was really first and everyone sees the same pile. A tap that lands during
+// the cooldown, or after the tapped card was already thrown away, does nothing.
+function playLowest(ctx, card) {
   return runTransaction(roomRef(ctx.room.code, 'round'), round => {
-    if (!round || round.result || ctx.now() < round.startsAt) return undefined;
+    const now = ctx.now();
+    if (!round || round.result || now < round.startsAt || now < (round.playedAt || 0) + COOLDOWN_MS) return undefined;
     const hand = handOf(round, ctx.uid);
-    if (!hand.length) return undefined;
-    const card = Math.min(...hand);
+    if (!hand.length || Math.min(...hand) !== card) return undefined;
     round.hands[ctx.uid] = hand.filter(n => n !== card);
+    round.playedAt = now;
     const log = round.log || [];
     log.push({ n: card, by: ctx.uid, type: 'play' });
 
@@ -56,6 +60,7 @@ export default {
     'Everyone gets secret number cards between 1 and 100.',
     'Together, play every card onto the pile in order from lowest to highest. Anyone can play at any time.',
     'No talking about your numbers! You just have to feel when it\'s your turn.',
+    'After each card there\'s a one-second pause before anyone can play the next.',
     'If a card is played while someone still has a lower one, the group loses a life and those lower cards are thrown away. Play all the cards to win.',
   ],
   art: html`<svg class="art" viewBox="0 0 64 56" aria-hidden="true"><g fill="none" stroke="#222" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round">
@@ -133,6 +138,11 @@ function playing(ctx) {
   const mistake = round.lastMistake;
   const showMistake = mistake && plays.at(-1)?.n === mistake.card;
   const count = Math.min(3, Math.max(1, Math.ceil((countdown - 500) / 1000)));
+  // The short pause after each card: a bar drains on the pile and your card is greyed out until it ends.
+  // Negative delays start the animations part-way, so a redraw mid-pause stays in step with the clock.
+  const sincePlay = ctx.now() - (round.playedAt || 0);
+  const waiting = top && sincePlay < COOLDOWN_MS;
+  const waitStyle = `animation-delay: ${-Math.max(0, sincePlay)}ms`;
   if (counting) cue(`nc:${round.startsAt}:count:${count}`, 'tock');
   else cue(`nc:${round.startsAt}:go`, 'pop');
   if (plays.length) cue(`nc:${round.startsAt}:play:${plays.length}`, showMistake ? 'buzz' : 'pop');
@@ -140,11 +150,12 @@ function playing(ctx) {
   return html`
     ${keyed(round.mistakes || 0, html`<div class="${round.mistakes ? 'nc-shake' : ''}">
       ${hearts(round.lives, round.startLives)}
-      <div class="nc-pile wobble ${counting ? 'nc-pile--count' : ''} ${showMistake ? 'nc-pile--oops' : ''}">
+      <div class="nc-pile wobble ${waiting ? 'nc-pile--wait' : ''} ${counting ? 'nc-pile--count' : ''} ${showMistake ? 'nc-pile--oops' : ''}">
         ${counting
           ? keyed(`count${count}`, html`<small>Get ready…</small><b>${count}</b>`)
           : top
-            ? keyed(`card${plays.length}`, html`<small>Last card</small><b class="nc-slam">${top.n}</b><small>${topPlayer ? `played by ${topPlayer.name}` : ''}</small>`)
+            ? keyed(`card${plays.length}`, html`<small>Last card</small><b class="nc-slam">${top.n}</b><small>${topPlayer ? `played by ${topPlayer.name}` : ''}</small>
+              ${waiting ? html`<span class="nc-cooldown" style=${waitStyle}></span>` : nothing}`)
             : html`<small>Go!</small><b>?</b><small>Who has the lowest card?</small>`}
       </div>
     </div>`)}
@@ -167,7 +178,8 @@ function playing(ctx) {
       ? html`<p class="note center">Your cards</p>
         <div class="nc-hand">
           ${mine.map((n, i) => i === 0
-            ? html`<button class="nc-card nc-card--next wobble" ?disabled=${counting} aria-label="Play ${n}" @click=${action(() => playLowest(ctx))}>${n}<small>tap to play</small></button>`
+            ? keyed(`next${plays.length}`, html`<button class="nc-card nc-card--next wobble ${waiting ? 'nc-card--wait' : ''}" style=${waiting ? waitStyle : ''}
+                ?disabled=${counting} aria-label="Play ${n}" @click=${action(() => playLowest(ctx, n))}>${n}<small>tap to play</small></button>`)
             : html`<span class="nc-card wobble">${n}</span>`)}
         </div>`
       : html`<p class="note center">You're out of cards. Willing the others on…</p>`}`;

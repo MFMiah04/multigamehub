@@ -483,6 +483,12 @@ details.field summary { cursor: pointer; text-decoration: underline wavy; text-u
 .nc-pile b { font-size: 72px; line-height: 84px; }
 .nc-pile small { color: var(--ink-soft); font-size: 16px; line-height: 22px; }
 .nc-pile--count { background: var(--yellow); }
+/* The pause after each card: a bar drains along the bottom of the pile, and the next card can't be tapped. */
+.nc-pile { position: relative; overflow: hidden; }
+.nc-cooldown { position: absolute; left: 0; right: 0; bottom: 0; height: 12px; background: var(--orange); border-top: 2px solid #222; transform-origin: left; animation: nc-drain 1s linear both; }
+@keyframes nc-drain { from { transform: scaleX(1); } to { transform: scaleX(0); } }
+.nc-card--wait { animation: nc-wait 1s linear both; }
+@keyframes nc-wait { 0%, 99.9% { pointer-events: none; filter: grayscale(1); opacity: 0.5; } 100% { pointer-events: auto; filter: none; opacity: 1; } }
 .nc-pile--count b { animation: pop 0.4s; }
 .nc-oops { color: #d23c5f; font-weight: 700; line-height: var(--row); }
 .nc-others { display: flex; flex-wrap: wrap; justify-content: center; gap: 2px 8px; line-height: var(--row); }
