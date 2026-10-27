@@ -2,6 +2,7 @@ import { html, nothing, button, action, toast, confirmDialog, avatar } from '../
 import { PARTS, randomLook } from '../avatar.js';
 import { gameList } from '../games/index.js';
 import { randomPlaceholderName } from '../data/placeholder-names.js';
+import { installButton } from '../pwa.js';
 
 const NAME_KEY = 'mgh:name';
 const LOOK_KEY = 'mgh:look';
@@ -108,6 +109,7 @@ export function homeView({ onHost, onJoin, rerender, rejoin, onRejoin, onForget 
             ${button('Host a game', action(host))}
             ${button('Join with a code', () => { s.joining = true; rerender(); setTimeout(() => document.getElementById('code')?.focus()); }, { kind: 'white' })}
           </div>`}
+      ${installButton()}
 
       <h2 class="section-title">The rules</h2>
       <div class="notes">

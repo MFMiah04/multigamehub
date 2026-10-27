@@ -282,12 +282,12 @@ export function voteView(ctx, { candidates, voters, max, prompt, details }) {
     ${timer(ctx.round.endsAt)}
     <h2 class="center">${prompt}</h2>
     <p class="note center">${hint}</p>
-    <div class="vote-grid">
+    <div class="vote-grid ${details ? '' : 'vote-grid--compact'}">
       ${candidates.map(p => html`
         <button class="vote-card wobble ${picks.includes(p.id) ? 'vote-card--picked' : ''} ${p.id === ctx.uid ? 'vote-card--me' : ''}"
           ?disabled=${!canVote || p.id === ctx.uid} @click=${action(() => tap(p.id))}>
           ${avatar(p, 48)}
-          <b>${p.name}${p.id === ctx.uid ? ' (you)' : ''}</b>
+          <b>${p.id === ctx.uid ? (details ? `${p.name} (you)` : 'You') : p.name}</b>
           ${details ? details(p) : nothing}
         </button>`)}
     </div>

@@ -152,6 +152,7 @@ export function cue(key, name, { at, now, late = 1500, args = [] } = {}) {
   if (cued.has(key)) return;
   cued.add(key);
   if (at !== undefined && now !== undefined && now - at > late) return;
+  if (name === 'ding') navigator.vibrate?.(60);
   play(name, ...args);
 }
 

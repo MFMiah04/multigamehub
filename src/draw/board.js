@@ -162,16 +162,25 @@ class SketchBoard extends HTMLElement {
 
   // On wide screens the tools and colours sit in columns either side of the canvas.
   // Only when the board is wide enough that the canvas still gets most of the room.
+  // On narrow screens with more than one kind of control, they fold into tabs instead (board--compact).
   sideWidth() {
     const sides = [...this.querySelectorAll('.board__side')].filter(el => !el.hidden);
     const wide = sides.length > 0 && this.clientWidth >= 640;
     this.classList.toggle('board--wide', wide);
+    this.classList.toggle('board--compact', !wide && this.clientWidth < 560 && this.tabCount > 1);
     return wide ? sides.reduce((sum, el) => sum + el.offsetWidth + 12, 0) : 0;
   }
 
   build() {
     this.innerHTML = `
       <div class="board__frame wobble"><canvas class="board__canvas"></canvas></div>
+      <div class="board__tabs">
+        <button class="board__tab" data-tab="tools" aria-label="Tools"><span class="board__tab-tool"></span>Tools</button>
+        <button class="board__tab" data-tab="colors" aria-label="Colours"><span class="board__tab-color"></span>Colour</button>
+        <button class="board__tab" data-tab="sizes" aria-label="Size and opacity"><span class="board__tab-size"><i></i></span>Size</button>
+        <button class="board__tool" data-act="undo" aria-label="Undo" title="Undo">${UNDO_ICON}</button>
+        <button class="board__tool" data-act="redo" aria-label="Redo" title="Redo">${REDO_ICON}</button>
+      </div>
       <div class="board__side board__side--tools">
         <div class="board__group board__group--tools">${TOOLS.map(([id, label, svg]) => `<button class="board__tool" data-tool="${id}" aria-label="${label}" title="${label}">${svg}</button>`).join('')}</div>
         <div class="board__group board__group--actions">
@@ -212,8 +221,13 @@ class SketchBoard extends HTMLElement {
       this.alpha = +opacity.value / 100;
       this.querySelector('.board__opacity small').textContent = `${opacity.value}%`;
     });
-    this.querySelector('[data-act="undo"]').addEventListener('click', () => this.undo());
-    this.querySelector('[data-act="redo"]').addEventListener('click', () => this.redo());
+    this.querySelectorAll('[data-act="undo"]').forEach(b => b.addEventListener('click', () => this.undo()));
+    this.querySelectorAll('[data-act="redo"]').forEach(b => b.addEventListener('click', () => this.redo()));
+    // On phones the tools, colours and sizes fold into three tabs; tapping one opens its row (one at a time).
+    this.querySelectorAll('[data-tab]').forEach(b => b.addEventListener('click', () => {
+      this.dataset.open = this.dataset.open === b.dataset.tab ? '' : b.dataset.tab;
+      this.querySelectorAll('[data-tab]').forEach(t => t.classList.toggle('is-on', t.dataset.tab === this.dataset.open));
+    }));
     this.querySelector('[data-act="clear"]').addEventListener('click', () => remove(ref(db, this.base)));
     this.querySelector('.board__custom').addEventListener('click', () => (this.querySelector('.board__picker').hidden ? this.openPicker() : this.closePicker()));
     this.querySelector('.board__picker-done').addEventListener('click', () => this.closePicker());
@@ -232,7 +246,7 @@ class SketchBoard extends HTMLElement {
     const cfg = this.config;
     const tools = cfg.tools || TOOLS.map(t => t[0]);
     this.querySelectorAll('[data-tool]').forEach(b => { b.hidden = !tools.includes(b.dataset.tool); });
-    const show = (sel, on) => { const el = this.querySelector(sel); if (el) el.hidden = !on; };
+    const show = (sel, on) => this.querySelectorAll(sel).forEach(el => { el.hidden = !on; });
     show('.board__group--tools', tools.length > 1);
     show('[data-act="undo"]', cfg.undo);
     show('[data-act="redo"]', cfg.undo);
@@ -247,6 +261,10 @@ class SketchBoard extends HTMLElement {
     const colorsShown = (cfg.colors && !cfg.color) || (cfg.sizes && !cfg.size) || cfg.opacity;
     show('.board__side--tools', toolsShown);
     show('.board__side--colors', colorsShown);
+    show('[data-tab="tools"]', tools.length > 1 || cfg.clear);
+    show('[data-tab="colors"]', cfg.colors && !cfg.color);
+    show('[data-tab="sizes"]', (cfg.sizes && !cfg.size) || cfg.opacity);
+    this.tabCount = [...this.querySelectorAll('[data-tab]')].filter(t => !t.hidden).length;
     this.classList.toggle('board--bare', !toolsShown && !colorsShown);
     this.classList.toggle('board--locked', !this.canDrawNow());
     this.markTools();
@@ -331,8 +349,12 @@ class SketchBoard extends HTMLElement {
     this.querySelector('.board__custom').classList.toggle('is-on', this.color === this.custom && !COLORS.includes(this.color) && this.tool !== 'eraser');
     this.querySelectorAll('[data-size]').forEach(b => b.classList.toggle('is-on', +b.dataset.size === this.size));
     const undoable = this.ownVisible().length > 0;
-    this.querySelector('[data-act="undo"]').disabled = !undoable;
-    this.querySelector('[data-act="redo"]').disabled = !this.redoStack.length;
+    this.querySelectorAll('[data-act="undo"]').forEach(b => { b.disabled = !undoable; });
+    this.querySelectorAll('[data-act="redo"]').forEach(b => { b.disabled = !this.redoStack.length; });
+    // The folded tabs show what's picked right now.
+    this.querySelector('.board__tab-tool').innerHTML = TOOLS.find(t => t[0] === this.tool)?.[2] || '';
+    this.querySelector('.board__tab-color').style.setProperty('--c', this.tool === 'eraser' ? '#ffffff' : this.color);
+    this.querySelector('.board__tab-size i').style.setProperty('--d', `${4 + SIZES.indexOf(this.size) * 5}px`);
     this.setCursor();
   }
 

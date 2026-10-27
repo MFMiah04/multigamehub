@@ -9,6 +9,7 @@ import { games } from './games/index.js';
 import { backToLobby } from './games/common.js';
 import { homeView, homeState } from './screens/home.js';
 import { lobbyView, copyCode, copyInviteLink } from './screens/lobby.js';
+import { startApp, keepAwake } from './pwa.js';
 import './styles.css';
 
 const app = document.getElementById('app');
@@ -150,6 +151,7 @@ function runAutomaticUpdates(ctx) {
 
 function rerender() {
   if (state.loading) return;
+  keepAwake(!!state.room);
   if (!state.room) {
     render(homeView({
       rerender,
@@ -221,6 +223,7 @@ function tickSoon() {
   setTimeout(() => { if (state.room) rerender(); tickSoon(); }, wait);
 }
 tickSoon();
+startApp(rerender);
 // Re-measure the clock now and then; phones can drift or change networks.
 setInterval(() => { if (state.room) syncClock(state.uid); }, 3 * 60 * 1000);
 

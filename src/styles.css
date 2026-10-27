@@ -333,6 +333,13 @@ details.field summary { cursor: pointer; text-decoration: underline wavy; text-u
 
 .vote-grid { display: grid; grid-template-columns: 1fr 1fr; gap: var(--row) 12px; margin: 14px 0; }
 @media (min-width: 900px) { .vote-grid { grid-template-columns: repeat(4, 1fr); } }
+/* Just people to pick (no answers to read): smaller cards, three to a row on phones, so everyone fits on screen. */
+@media (max-width: 899px) {
+  .vote-grid--compact { grid-template-columns: repeat(3, 1fr); gap: 12px 10px; }
+  .vote-grid--compact .vote-card { height: calc(var(--row) * 3); padding: 2px 4px; }
+  .vote-grid--compact .vote-card svg { width: 38px; height: 38px; }
+  .vote-grid--compact .vote-card b { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 16px; }
+}
 .vote-card {
   display: flex;
   flex-direction: column;
@@ -966,6 +973,33 @@ sketch-board.do-mini .board__frame { box-shadow: none; border: 1.5px solid #ddd;
 .board--wide .board__opacity { flex-direction: column; gap: 4px; }
 .board--wide .board__opacity input { writing-mode: vertical-lr; direction: rtl; width: 24px; height: 140px; }
 @media (max-width: 420px) { .board__opacity input { width: 84px; } }
+
+/* Feels like an app: no grey flash on taps, no pull-to-refresh bounce, and buttons don't select as text. */
+html { -webkit-tap-highlight-color: transparent; overscroll-behavior-y: none; }
+button { -webkit-user-select: none; user-select: none; touch-action: manipulation; }
+.get-app { display: inline-flex; align-items: center; gap: 6px; align-self: center; margin-top: 12px; font-size: 16px; }
+
+/* Folded toolbar for phones: three tabs plus undo/redo, and only the open tab's row underneath. */
+.board__tabs { display: none; grid-area: tabs; justify-content: center; align-items: center; gap: 6px; }
+sketch-board.board--compact { grid-template-areas: "canvas" "tabs" "tools" "colors" "stats"; gap: 8px; }
+.board--compact .board__tabs { display: flex; }
+.board__tab { display: inline-flex; align-items: center; gap: 5px; height: 36px; padding: 0 10px 0 6px; border: 2px solid var(--ink); border-radius: 10px 8px 11px 7px; background: #fff; font: inherit; font-size: 15px; transition: transform 0.12s; }
+.board__tab.is-on { background: var(--yellow); }
+.board__tab-tool { display: grid; place-items: center; width: 22px; height: 22px; }
+.board__tab-tool svg { width: 20px; height: 20px; }
+.board__tab-color { width: 20px; height: 20px; border: 2px solid var(--ink); border-radius: 50%; background: var(--c); }
+.board__tab-size { display: grid; place-items: center; width: 22px; height: 22px; }
+.board__tab-size i { display: block; width: var(--d); height: var(--d); max-width: 18px; max-height: 18px; border-radius: 50%; background: var(--ink); }
+.board__tabs .board__tool { width: 36px; height: 36px; }
+.board__tabs [data-act="undo"] { margin-left: 6px; }
+.board--compact .board__side .board__group, .board--compact .board__side [data-act] { display: none; }
+.board--compact[data-open="tools"] .board__group--tools:not([hidden]),
+.board--compact[data-open="tools"] .board__group--actions:not([hidden]),
+.board--compact[data-open="colors"] .board__group--colors:not([hidden]),
+.board--compact[data-open="sizes"] .board__group--sizes:not([hidden]) { display: flex; }
+.board--compact[data-open="tools"] .board__side [data-act="clear"]:not([hidden]) { display: inline; }
+.board--compact .board__side--tools { flex-direction: row; flex-wrap: wrap; justify-content: center; }
+@media (hover: hover) { .board__tab:hover { transform: scale(1.06) rotate(-2deg); } }
 
 /* Note contents sit in the middle, so one-line names don't leave a gap at the bottom. */
 .sticky, .sticky__pick { justify-content: center; }
