@@ -195,10 +195,17 @@ details.field summary { cursor: pointer; text-decoration: underline wavy; text-u
 .creator { display: flex; align-items: flex-start; justify-content: center; gap: 12px; height: calc(var(--row) * 4); }
 /* The character spans the same three line gaps as the arrows. */
 .creator__figure { display: grid; place-items: center; width: 80px; height: calc(var(--row) * 3 - 4px); margin-top: calc(var(--line-y) + 2px); overflow: hidden; }
+
 /* Each arrow sits centred between two ruled lines, in three consecutive line gaps. */
 .creator__arrows { display: flex; flex-direction: column; gap: 4px; align-self: flex-start; margin-top: calc(var(--line-y) + 2px); }
 .arrow { display: grid; place-items: center; width: 32px; height: calc(var(--row) - 4px); padding: 0; background: #fff; box-shadow: 2px 2px 0 rgba(0, 0, 0, 0.13); }
 .arrow svg { width: 15px; height: 15px; }
+/* The dice sits on the end, level with the eyes. */
+.creator__arrows--dice { margin-top: calc(var(--line-y) + 2px + var(--row)); }
+.arrow.creator__dice svg { width: 19px; height: 19px; transform: rotate(-8deg); }
+.arrow.creator__swatch svg { width: 24px; height: 15px; }
+.creator__colour { width: 16px; height: 16px; border: 2px solid var(--ink); border-radius: 50%; background: var(--c); }
+@media (max-width: 380px) { .creator { gap: 7px; } .creator .arrow { width: 29px; } }
 .arrow:active { transform: translate(1px, 1px); box-shadow: none; }
 
 /* ---------- sticky notes (games) ---------- */

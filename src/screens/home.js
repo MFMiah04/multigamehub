@@ -1,5 +1,5 @@
 import { html, nothing, button, action, toast, confirmDialog, avatar } from '../ui.js';
-import { PARTS, randomLook } from '../avatar.js';
+import { PARTS, COLOURS, PATTERNS, randomLook, lookOf } from '../avatar.js';
 import { gameList } from '../games/index.js';
 import { randomPlaceholderName } from '../data/placeholder-names.js';
 import { installButton } from '../pwa.js';
@@ -11,7 +11,7 @@ const PLACEHOLDER_NAME = randomPlaceholderName();
 function savedLook() {
   try {
     const look = JSON.parse(localStorage.getItem(LOOK_KEY));
-    if (look && ['e', 'm', 'b'].every(k => Number.isInteger(look[k]))) return look;
+    if (look && ['e', 'm', 'b'].every(k => Number.isInteger(look[k]))) return lookOf({ look });
   } catch { /* fall through to a random character */ }
   return randomLook();
 }
@@ -46,9 +46,16 @@ export function showRules(game) {
     <ol class="rules">${game.rules.map(r => html`<li>${r}</li>`)}</ol>`, 'Got it', 'yellow', false);
 }
 
-const arrow = (dir, part, label, onClick) => html`<button class="arrow wobble" aria-label="${dir < 0 ? 'Previous' : 'Next'} ${label}" title=${label} @click=${() => onClick(part, dir)}>
-  <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d=${dir < 0 ? 'M15 5 L8 12 L15 19' : 'M9 5 L16 12 L9 19'} fill="none" stroke="#222" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" /></svg>
+// Arrow paths for each direction: left/right change the face, up/down change pattern and colour.
+const ARROWS = { left: 'M15 5 L8 12 L15 19', right: 'M9 5 L16 12 L9 19', up: 'M5 15 L12 8 L19 15', down: 'M5 9 L12 16 L19 9' };
+const arrow = (dir, part, label, onClick) => html`<button class="arrow wobble" aria-label="${dir === 'left' || dir === 'up' ? 'Previous' : 'Next'} ${label}" title=${label}
+  @click=${() => onClick(part, dir === 'left' || dir === 'up' ? -1 : 1)}>
+  <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d=${ARROWS[dir]} fill="none" stroke="#222" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" /></svg>
 </button>`;
+
+// A doodled dice showing five.
+const DICE = html`<svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><rect x="2.5" y="2.5" width="19" height="19" rx="4.5" fill="#fff" stroke="#222" stroke-width="2.2" />
+  <g fill="#222"><circle cx="8" cy="8" r="1.8" /><circle cx="16" cy="8" r="1.8" /><circle cx="12" cy="12" r="1.8" /><circle cx="8" cy="16" r="1.8" /><circle cx="16" cy="16" r="1.8" /></g></svg>`;
 
 // Remembers your character on this device, for the home page and next time.
 export function saveLook(look) {
@@ -56,14 +63,29 @@ export function saveLook(look) {
   try { localStorage.setItem(LOOK_KEY, JSON.stringify(look)); } catch { /* not saved */ }
 }
 
-// The arrows-either-side character creator, used on the home page and in the lobby.
-export function creator(look, onChange) {
+// The character creator, used on the home page and in the lobby. Every control is one ruled line tall.
+// Either side of the face, the arrows change what's level with them: hat, eyes, mouth. The outer
+// columns flip through patterns (left) and colours (right); the dice on the end shuffles everything.
+export function creator(current, onChange) {
+  const look = lookOf({ look: current });
   const cycle = (part, dir) => onChange({ ...look, [part]: (look[part] + dir + PARTS[part]) % PARTS[part] });
-  const parts = [['e', 'eyes'], ['m', 'mouth'], ['b', 'colour']];
+  const face = [['h', 'hat'], ['e', 'eyes'], ['m', 'mouth']];
+  const pattern = PATTERNS[look.p];
+  const column = (part, label, middle) => html`<div class="creator__arrows">
+    ${arrow('up', part, label, cycle)}
+    <button class="arrow wobble creator__swatch" aria-label="Next ${label}" title=${label} @click=${() => cycle(part, 1)}>${middle}</button>
+    ${arrow('down', part, label, cycle)}
+  </div>`;
   return html`<section class="creator" aria-label="Your character">
-    <div class="creator__arrows">${parts.map(([p, label]) => arrow(-1, p, label, cycle))}</div>
+    ${column('p', 'pattern', html`<svg viewBox="0 0 30 18" width="26" height="16" aria-hidden="true"><rect x="1" y="1" width="28" height="16" rx="4" fill=${COLOURS[look.b]} />
+      ${pattern ? html`<rect x="1" y="1" width="28" height="16" rx="4" fill="url(#pat-${pattern})" />` : ''}<rect x="1" y="1" width="28" height="16" rx="4" fill="none" stroke="#222" stroke-width="1.6" /></svg>`)}
+    <div class="creator__arrows">${face.map(([p, label]) => arrow('left', p, label, cycle))}</div>
     <div class="creator__figure">${avatar({ look }, 74)}</div>
-    <div class="creator__arrows">${parts.map(([p, label]) => arrow(1, p, label, cycle))}</div>
+    <div class="creator__arrows">${face.map(([p, label]) => arrow('right', p, label, cycle))}</div>
+    ${column('b', 'colour', html`<span class="creator__colour" style="--c: ${COLOURS[look.b]}"></span>`)}
+    <div class="creator__arrows creator__arrows--dice">
+      <button class="arrow wobble creator__dice" aria-label="Surprise me" title="Surprise me" @click=${() => onChange(randomLook())}>${DICE}</button>
+    </div>
   </section>`;
 }
 
