@@ -57,11 +57,30 @@ export const MOUTHS = [
   svg`<path d="M18 26 h12" /><path d="M22 26.5 v4 q2 2.4 4 0 v-4" fill="#ff8fab" stroke-width="1.8" />`,
   svg`<path d="M17.5 25.5 q6.5 5.5 13 0" /><path d="M19.6 27 l1.3 3 l1.3 -2.2 M28.4 27 l-1.3 3 l-1.3 -2.2" fill="#fff" stroke-width="1.5" />`,
   svg`<path d="M17.5 25.5 q6.5 5 13 0" /><path d="M21.5 27.5 h5 v3 h-5 z M24 27.5 v3" fill="#fff" stroke-width="1.5" />`,
-  svg`<path d="M20 29 q4 2.5 8 0" />`,
+  // 11 to 15 are facial hair, drawn from FACIAL_HAIR below.
+  svg``, svg``, svg``, svg``, svg``,
 ];
-// A moustache drawn over the mouth. Mouth 11 wears one, and keeps it through reactions.
-const MOUSTACHE = svg`<path d="M24 24.5 C21 22, 16.5 22.5, 15.5 26 C18.5 25, 21 26.5, 24 25.5 C27 26.5, 29.5 25, 32.5 26 C31.5 22.5, 27 22, 24 24.5 Z" fill="#5a3b2a" stroke-width="1.6" />`;
-const MOUSTACHE_MOUTHS = new Set([11]);
+
+// Facial hair, picked from the mouth row. Some hide the mouth (it's under the moustache), some keep
+// a smile showing. It stays on through reactions: the reaction's mouth shows just below the moustache.
+const moustache = (fill, big = false) => svg`<path d=${big
+  ? 'M24 23.5 C20.5 20.5, 14 21, 12.5 26.5 C16 24.5, 20 27, 24 25 C28 27, 32 24.5, 35.5 26.5 C34 21, 27.5 20.5, 24 23.5 Z'
+  : 'M24 24.5 C21 22, 16.5 22.5, 15.5 26 C18.5 25, 21 26.5, 24 25.5 C27 26.5, 29.5 25, 32.5 26 C31.5 22.5, 27 22, 24 24.5 Z'} fill=${fill} stroke-width="1.6" />`;
+const STUBBLE = [[14, 27], [15.5, 30.5], [17.5, 33.5], [20.5, 35.5], [24, 36.5], [27.5, 35.5], [30.5, 33.5], [32.5, 30.5], [34, 27], [19, 32], [24, 33.5], [29, 32], [16.5, 28.5], [31.5, 28.5]];
+const FACIAL_HAIR = {
+  11: { front: moustache('#5a3b2a') },
+  12: { back: svg`${STUBBLE.map(([x, y]) => svg`<circle cx=${x} cy=${y} r="0.75" fill="#5a4a40" stroke="none" />`)}`, mouth: 0 },
+  13: { back: svg`<path d="M20.5 31.5 Q24 39 27.5 31.5 Q24 33.5 20.5 31.5 Z" fill="#6b4a33" stroke-width="1.6" />`, mouth: 0 },
+  14: {
+    back: svg`<path d="M9.5 21 C10 34, 15.5 42.5, 24 43.5 C32.5 42.5, 38 34, 38.5 21 C36.5 26.5, 33.5 30, 30 30.5 C27 32, 21 32, 18 30.5 C14.5 30, 11.5 26.5, 9.5 21 Z" fill="#6b4a33" stroke-width="1.8" />`,
+    front: moustache('#5a3b2a'),
+  },
+  15: {
+    back: svg`<path d="M9 19.5 C8 35, 13 49, 24 53 C35 49, 40 35, 39 19.5 C37 26.5, 33.5 30.5, 30 31 C27 32.5, 21 32.5, 18 31 C14.5 30.5, 11 26.5, 9 19.5 Z" fill="#f6f6f2" stroke-width="1.8" />
+      <path d="M17 38 q2 4 0 7 M24 41 q2 4 0 8 M31 38 q-2 4 0 7" stroke="#c9c9c2" stroke-width="1.4" />`,
+    front: moustache('#f6f6f2', true),
+  },
+};
 
 // Hats and other things on top. Drawn after the head; kept within the frame above it.
 export const HATS = [
@@ -122,8 +141,10 @@ export function avatar(player, size = 40, mood = null) {
   const feel = MOODS[mood] || {};
   const wornEyes = ACCESSORY_EYES.has(look.e % EYES.length);
   const eyes = feel.e !== undefined && !wornEyes ? feel.e : look.e;
-  const mouth = feel.m ?? look.m;
-  const moustache = MOUSTACHE_MOUTHS.has(look.m % MOUTHS.length);
+  const hair = FACIAL_HAIR[look.m % MOUTHS.length];
+  // With facial hair the mouth is the hair's own (or none, under a moustache) unless a reaction shows one.
+  const mouth = hair ? (feel.m ?? hair.mouth) : (feel.m ?? look.m);
+  const lowered = hair?.front && feel.m !== undefined; // a reaction under a moustache sits a little lower
   const color = COLOURS[look.b % COLOURS.length];
   const pattern = PATTERNS[look.p % PATTERNS.length];
   const hat = HATS[look.h % HATS.length];
@@ -133,8 +154,9 @@ export function avatar(player, size = 40, mood = null) {
       ${pattern ? svg`<path d=${BODY} fill="url(#pat-${pattern})" stroke="none" />` : ''}
       <path d=${HEAD} fill=${color} />
       ${EYES[eyes % EYES.length]}
-      ${MOUTHS[mouth % MOUTHS.length]}
-      ${moustache ? MOUSTACHE : ''}
+      ${hair?.back || ''}
+      ${mouth === undefined ? '' : lowered ? svg`<g transform="translate(0 3)">${MOUTHS[mouth]}</g>` : MOUTHS[mouth % MOUTHS.length]}
+      ${hair?.front || ''}
       ${wornEyes && mood === 'shock' ? svg`${BROWS}${SWEAT}` : ''}
       ${wornEyes && mood === 'sad' ? TEAR : ''}
       ${hat || ''}
