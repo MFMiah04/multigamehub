@@ -126,8 +126,9 @@ export default {
     const { phase } = ctx.room;
     if (phase === 'draw') return drawing(ctx, s);
     if (phase === 'voting') {
-      return html`${turnStrip(ctx, { showTurn: false })}${board(ctx, { canDraw: false, maxHeight: 0.26 })}
-        ${voteView(ctx, { candidates: ctx.inGame, voters: ctx.inGame, max: 1, prompt: 'Who was faking it?' })}`;
+      // Each card wears its player's pen colour, so you can match people to their lines without a separate strip.
+      return html`${board(ctx, { canDraw: false, maxHeight: 0.3 })}
+        ${voteView(ctx, { candidates: ctx.inGame, voters: ctx.inGame, max: 1, prompt: 'Who was faking it?', ink: p => ctx.round.colors?.[p.id] || '#222' })}`;
     }
     return results(ctx);
   },

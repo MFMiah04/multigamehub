@@ -338,6 +338,7 @@ details.field summary { cursor: pointer; text-decoration: underline wavy; text-u
   .vote-grid--compact { grid-template-columns: repeat(3, 1fr); gap: 12px 10px; }
   .vote-grid--compact .vote-card { height: calc(var(--row) * 3); padding: 2px 4px; }
   .vote-grid--compact .vote-card svg { width: 38px; height: 38px; }
+  .vote-grid--compact .vote-card__ring svg { width: 32px; height: 32px; }
   .vote-grid--compact .vote-card b { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 16px; }
 }
 .vote-card {
@@ -356,6 +357,9 @@ details.field summary { cursor: pointer; text-decoration: underline wavy; text-u
   transition: transform 0.1s;
 }
 .vote-card b { font-size: 19px; }
+.vote-card__ring { display: grid; place-items: center; padding: 1px; border: 4px solid var(--ink); border-radius: 50%; background: #fff; }
+.vote-card__ring .avatar { display: block; }
+.vote-card b.vote-card__inked { padding: 0 8px; border-radius: 8px; background: var(--ink); color: #fff; }
 .vote-card .answer { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 .vote-card--picked { background: var(--yellow); transform: rotate(-2deg) scale(1.03); }
 .vote-card--me { opacity: 0.5; }

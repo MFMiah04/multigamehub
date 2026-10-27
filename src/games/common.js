@@ -259,7 +259,8 @@ export function votingOver(ctx, voters, need = 1) {
 
 // Tap someone and that's your vote, straight away. Tap someone else to switch, or tap them again to take it back.
 // When the vote is for more than one person (two spies, say), each tap adds or removes a pick.
-export function voteView(ctx, { candidates, voters, max, prompt, details }) {
+// ink: optional colour per player (e.g. their pen in a drawing game), shown as a ring and name tag on their card.
+export function voteView(ctx, { candidates, voters, max, prompt, details, ink }) {
   const canVote = voters.some(p => p.id === ctx.uid);
   const picks = myVotes(ctx);
   const need = Math.min(max, candidates.filter(p => p.id !== ctx.uid).length);
@@ -285,9 +286,9 @@ export function voteView(ctx, { candidates, voters, max, prompt, details }) {
     <div class="vote-grid ${details ? '' : 'vote-grid--compact'}">
       ${candidates.map(p => html`
         <button class="vote-card wobble ${picks.includes(p.id) ? 'vote-card--picked' : ''} ${p.id === ctx.uid ? 'vote-card--me' : ''}"
-          ?disabled=${!canVote || p.id === ctx.uid} @click=${action(() => tap(p.id))}>
-          ${avatar(p, 48)}
-          <b>${p.id === ctx.uid ? (details ? `${p.name} (you)` : 'You') : p.name}</b>
+          style=${ink ? `--ink: ${ink(p)}` : ''} ?disabled=${!canVote || p.id === ctx.uid} @click=${action(() => tap(p.id))}>
+          ${ink ? html`<span class="vote-card__ring">${avatar(p, 40)}</span>` : avatar(p, 48)}
+          <b class=${ink ? 'vote-card__inked' : ''}>${p.id === ctx.uid ? (details ? `${p.name} (you)` : 'You') : p.name}</b>
           ${details ? details(p) : nothing}
         </button>`)}
     </div>
