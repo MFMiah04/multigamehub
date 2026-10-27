@@ -197,7 +197,7 @@ function roomHeader(ctx, inLobby) {
     if (await confirmDialog('End the game for everyone and go back to the lobby?', 'End game')) await backToLobby(ctx);
   };
   return html`<header class="room-header">
-    <button class="room-header__code" @click=${ctx.copyCode} title="Copy room code">${inLobby ? 'Lobby' : ctx.game.name} · <b>${ctx.room.code}</b></button>
+    <button class="room-header__code" @click=${ctx.copyCode} title="Copy room code"><span class="room-header__name">${inLobby ? 'Lobby' : ctx.game.name}</span>&nbsp;·&nbsp;<b>${ctx.room.code}</b></button>
     <span class="room-header__actions">
       ${soundControl(ctx.rerender)}
       ${!inLobby && ctx.isHost ? html`<button class="link" @click=${action(endGame)}>End game</button>` : nothing}

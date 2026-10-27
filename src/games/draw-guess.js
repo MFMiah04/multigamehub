@@ -164,9 +164,12 @@ function wordHint(ctx, s) {
   const letters = (round.hintOrder || []).length;
   const shown = Math.min(s.hints, Math.max(0, letters - 1), Math.floor(progress * (s.hints + 1)));
   const open = new Set((round.hintOrder || []).slice(0, shown));
-  return html`<span class="dg-blanks" aria-label="${letters} letters">
-    ${[...word].map((ch, i) => (ch === ' ' ? html`<span class="dg-gap"></span>` : html`<span class="dg-letter">${open.has(i) ? ch : ''}</span>`))}
-    <small>${word.split(' ').map(w => w.length).join(' ')}</small>
+  // Each word in its own group, so a phrase only ever breaks between words.
+  let at = 0;
+  const parts = word.split(' ').map(part => { const start = at; at += part.length + 1; return { part, start }; });
+  return html`<span class="dg-blanks" style="--n: ${Math.max(...parts.map(p => p.part.length))}" aria-label="${letters} letters">
+    ${parts.map(({ part, start }) => html`<span class="dg-word">${[...part].map((ch, i) => html`<span class="dg-letter">${open.has(start + i) ? ch : ''}</span>`)}</span>`)}
+    <small>${parts.map(p => p.part.length).join(' ')}</small>
   </span>`;
 }
 
@@ -193,6 +196,26 @@ function wordBar(ctx, s) {
 }
 
 let lastChatCount = 0;
+
+// When you tap the guess box on a phone, the on-screen keyboard covers half the screen. Scroll so the
+// word, the drawing and the box all fit in what's left (or at least the box, if the drawing is too tall),
+// and keep it that way while the keyboard opens and closes.
+function keepDrawingInView(e) {
+  const input = e.target;
+  const vv = window.visualViewport;
+  const place = () => {
+    const bar = document.querySelector('.dg-bar');
+    if (!bar || document.activeElement !== input) return;
+    const visible = vv ? vv.height : window.innerHeight;
+    const top = bar.getBoundingClientRect().top + window.scrollY - 6;
+    const needed = input.getBoundingClientRect().bottom + window.scrollY - visible + 6;
+    window.scrollTo({ top: needed <= top ? top : needed });
+  };
+  [0, 150, 400].forEach(ms => setTimeout(place, ms));
+  if (!vv) return;
+  vv.addEventListener('resize', place);
+  input.addEventListener('blur', () => vv.removeEventListener('resize', place), { once: true });
+}
 function chat(ctx) {
   const { round } = ctx;
   const me = ctx.uid;
@@ -226,9 +249,12 @@ function chat(ctx) {
     return ctx.update({ [path]: { u: me, t: text, k: isClose(squash(text), squash(word)) ? 'close' : 'guess' } });
   };
 
-  // Keep the newest message in view, but only scroll when something new arrives.
+  // Keep the newest message in view, but only scroll when something new arrives. (On phones the list
+  // runs newest-first, just under the box you type in.)
   const scroll = el => {
-    if (el && messages.length !== lastChatCount) { el.scrollTop = el.scrollHeight; lastChatCount = messages.length; }
+    if (!el || messages.length === lastChatCount) return;
+    lastChatCount = messages.length;
+    el.scrollTop = getComputedStyle(el).flexDirection === 'column-reverse' ? 0 : el.scrollHeight;
   };
   const latest = messages.at(-1);
   if (latest) cue(`dg:${round.no}:${messages.length}`, latest.k === 'correct' ? 'ding' : latest.k === 'close' ? 'pop' : 'tap');
@@ -243,7 +269,8 @@ function chat(ctx) {
       }) : html`<p class="dg-msg dg-msg--empty">${me === drawer ? 'Guesses will appear here.' : 'Type your guesses below.'}</p>`}
     </div>
     ${canType ? html`<input id="dg-guess" class="dg-chat__input" maxlength="60" autocomplete="off" enterkeyhint="send"
-        placeholder=${iGuessed ? 'Chat with the others who got it' : 'Type your guess'} @keydown=${e => e.key === 'Enter' && action(send)()}>` : nothing}
+        placeholder=${iGuessed ? 'Chat with the others who got it' : 'Type your guess'} @keydown=${e => e.key === 'Enter' && action(send)()}
+        @focus=${keepDrawingInView}>` : nothing}
   </div>`;
 }
 
