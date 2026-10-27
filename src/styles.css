@@ -203,7 +203,7 @@ details.field summary { cursor: pointer; text-decoration: underline wavy; text-u
 /* The dice sits on the end, level with the eyes. */
 .creator__arrows--dice { margin-top: calc(var(--line-y) + 2px + var(--row)); }
 .arrow.creator__dice svg { width: 19px; height: 19px; transform: rotate(-8deg); }
-.arrow.creator__swatch svg { width: 24px; height: 15px; }
+.arrow.creator__swatch svg { width: 22px; height: 18px; }
 .creator__colour { width: 16px; height: 16px; border: 2px solid var(--ink); border-radius: 50%; background: var(--c); }
 @media (max-width: 380px) { .creator { gap: 7px; } .creator .arrow { width: 29px; } }
 .arrow:active { transform: translate(1px, 1px); box-shadow: none; }

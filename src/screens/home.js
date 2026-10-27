@@ -1,4 +1,5 @@
 import { html, nothing, button, action, toast, confirmDialog, avatar } from '../ui.js';
+import { svg } from 'lit-html';
 import { PARTS, COLOURS, PATTERNS, randomLook, lookOf } from '../avatar.js';
 import { gameList } from '../games/index.js';
 import { randomPlaceholderName } from '../data/placeholder-names.js';
@@ -53,6 +54,15 @@ const arrow = (dir, part, label, onClick) => html`<button class="arrow wobble" a
   <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d=${ARROWS[dir]} fill="none" stroke="#222" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" /></svg>
 </button>`;
 
+// The pattern button shows just the pattern, in dark ink on white (drawn a few times over so the
+// faint body pattern reads, and shrunk so a few repeats fit), so it never looks like a colour button.
+// No pattern is a plain square with a line through it.
+const patternSwatch = pattern => html`<svg viewBox="0 0 22 18" width="22" height="18" aria-hidden="true">
+  <rect x="1" y="1" width="20" height="16" rx="4" fill="#fff" />
+  ${pattern ? svg`<svg x="2" y="2" width="18" height="14"><g transform="scale(${pattern === 'split' ? 0.375 : 0.65})">${[0, 1, 2].map(() => svg`<rect width="60" height="50" fill="url(#pat-${pattern})" />`)}</g></svg>`
+    : svg`<path d="M5 14 L17 4" stroke="#bbb" stroke-width="2" stroke-linecap="round" />`}
+  <rect x="1" y="1" width="20" height="16" rx="4" fill="none" stroke="#222" stroke-width="1.6" /></svg>`;
+
 // A doodled dice showing five.
 const DICE = html`<svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><rect x="2.5" y="2.5" width="19" height="19" rx="4.5" fill="#fff" stroke="#222" stroke-width="2.2" />
   <g fill="#222"><circle cx="8" cy="8" r="1.8" /><circle cx="16" cy="8" r="1.8" /><circle cx="12" cy="12" r="1.8" /><circle cx="8" cy="16" r="1.8" /><circle cx="16" cy="16" r="1.8" /></g></svg>`;
@@ -77,8 +87,7 @@ export function creator(current, onChange) {
     ${arrow('down', part, label, cycle)}
   </div>`;
   return html`<section class="creator" aria-label="Your character">
-    ${column('p', 'pattern', html`<svg viewBox="0 0 30 18" width="26" height="16" aria-hidden="true"><rect x="1" y="1" width="28" height="16" rx="4" fill=${COLOURS[look.b]} />
-      ${pattern ? html`<rect x="1" y="1" width="28" height="16" rx="4" fill="url(#pat-${pattern})" />` : ''}<rect x="1" y="1" width="28" height="16" rx="4" fill="none" stroke="#222" stroke-width="1.6" /></svg>`)}
+    ${column('p', 'pattern', patternSwatch(pattern))}
     <div class="creator__arrows">${face.map(([p, label]) => arrow('left', p, label, cycle))}</div>
     <div class="creator__figure">${avatar({ look }, 74)}</div>
     <div class="creator__arrows">${face.map(([p, label]) => arrow('right', p, label, cycle))}</div>
