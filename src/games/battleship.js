@@ -92,8 +92,8 @@ function ready(ctx, fleet) {
 }
 
 export default {
-  id: 'paper-fleet',
-  name: 'Paper Fleet',
+  id: 'battleship',
+  name: 'Battleship',
   color: 'cyan',
   players: '2',
   blurb: 'Hide your ships on the grid and sink the other fleet first.',

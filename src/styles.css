@@ -1052,7 +1052,7 @@ frame-reel { display: block; max-width: 760px; width: 100%; margin: 8px auto; }
 .di-guess-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 10px; margin: 8px 0 14px; }
 .di-guess-list .btn { width: 100%; }
 
-/* ----- Paper Fleet ----- */
+/* ----- Battleship ----- */
 .pf-status { margin: 2px 0 8px; font-size: 17px; line-height: 1.35; min-height: calc(2 * 1.35em); }
 .pf-board { display: block; width: var(--board); height: auto; }
 .pf-water { fill: #fff; stroke: #222; stroke-width: 0.9; }

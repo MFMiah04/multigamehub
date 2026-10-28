@@ -15,8 +15,8 @@ import drawGuess from './draw-guess.js';
 import drawOff from './draw-off.js';
 import animation from './animation.js';
 import complementary from './complementary.js';
-import paperFleet from './paper-fleet.js';
+import battleship from './battleship.js';
 
 // To add a game: create a module with the same shape and list it here.
-export const gameList = [spyfall, imposter, fakinIt, herdMentality, oneWord, fakeAnswer, spectrum, wordSync, numberClimb, insider, avalon, drawGuess, drawOff, animation, complementary, doodleImposter, sketch, paperFleet];
+export const gameList = [spyfall, imposter, fakinIt, herdMentality, oneWord, fakeAnswer, spectrum, wordSync, numberClimb, insider, avalon, drawGuess, drawOff, animation, complementary, doodleImposter, sketch, battleship];
 export const games = Object.fromEntries(gameList.map(g => [g.id, g]));
