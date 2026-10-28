@@ -3,17 +3,15 @@ import { html, svg } from 'lit-html';
 // A character is a look: { b: colour, p: pattern, h: hat, e: eyes, m: mouth }, each an index into the lists below.
 
 // Body colours. The first twelve are the original ones, so older characters keep their colour.
+// Round the rainbow, red to pink, with grey last, so the arrows move between similar colours.
 export const COLOURS = [
-  '#a0e7e5', '#ffaebc', '#ffe066', '#b4f8c8', '#c3b1e1', '#ffc48c', '#9ad0f5', '#f7a8d8',
-  '#d4e79e', '#f5b7a1', '#b8c0ff', '#ffd6a5', '#7fd6b4', '#e9a0a0', '#f4d35e', '#8fb3e8',
-  '#d9b8f0', '#d0d0d0',
+  '#e9a0a0', '#f5b7a1', '#ffc48c', '#ffd6a5', '#f4d35e', '#ffe066', '#d4e79e', '#b4f8c8',
+  '#7fd6b4', '#a0e7e5', '#9ad0f5', '#8fb3e8', '#b8c0ff', '#c3b1e1', '#d9b8f0', '#f7a8d8',
+  '#ffaebc', '#d0d0d0',
 ];
 
 // Patterns over the body colour. Each is defined once in index.html (#pat-*).
 export const PATTERNS = [null, 'stripes', 'hstripes', 'dots', 'zigzag', 'check', 'stars', 'hearts', 'waves', 'spots', 'split'];
-
-// Before patterns were a separate choice, each colour came with its own. Characters from then keep it.
-const OLD_PATTERNS = [null, 'stripes', 'dots', 'zigzag', null, 'hstripes', 'dots', 'check', 'stripes', null, 'zigzag', 'check'];
 
 const dot = (x, y, r = 2.4) => svg`<circle cx=${x} cy=${y} r=${r} fill="#222" stroke="none" />`;
 const star = (x, y, r) => {
@@ -117,7 +115,7 @@ export function lookOf(player) {
   const look = player?.look || { e: 0, m: 0, b: player?.color ?? 0 };
   return {
     b: look.b ?? 0,
-    p: look.p ?? Math.max(0, PATTERNS.indexOf(OLD_PATTERNS[look.b % OLD_PATTERNS.length] ?? null)),
+    p: look.p ?? 0,
     h: look.h ?? 0,
     e: look.e ?? 0,
     m: look.m ?? 0,
