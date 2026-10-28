@@ -1053,41 +1053,54 @@ frame-reel { display: block; max-width: 760px; width: 100%; margin: 8px auto; }
 .di-guess-list .btn { width: 100%; }
 
 /* ----- Paper Fleet ----- */
-.pf-status { min-height: var(--row); margin: 4px 0 8px; font-size: 18px; line-height: 1.3; }
-.pf-board { display: block; width: 100%; height: auto; touch-action: manipulation; }
+.pf-status { margin: 2px 0 8px; font-size: 17px; line-height: 1.35; min-height: calc(2 * 1.35em); }
+.pf-board { display: block; width: var(--board); height: auto; }
 .pf-water { fill: #fff; stroke: #222; stroke-width: 0.9; }
-.pf-cell { fill: transparent; stroke: #9db7d6; stroke-width: 0.35; }
-.pf-cell--open { cursor: crosshair; }
-.pf-board--aim .pf-cell--open:hover { fill: #fff3b0; }
-.pf-ship { fill: #c9d3de; stroke: #222; stroke-width: 0.9; }
-.pf-ship--picked { fill: #ffe066; stroke-dasharray: 2 1.2; }
-.pf-ship--sunk { fill: #f2b8b0; }
-.pf-ship--revealed { fill: none; stroke-dasharray: 1.6 1.2; }
+.pf-grid { fill: none; stroke: #9db7d6; stroke-width: 0.35; }
+.pf-label { font-size: 5.2px; fill: #6b7c90; text-anchor: middle; font-family: inherit; }
+.pf-board--aim { cursor: crosshair; }
+.pf-hull { fill: #c9d3de; stroke: #222; stroke-width: 0.8; stroke-linejoin: round; }
+.pf-hull--sub { fill: #aab6c3; }
+.pf-detail { fill: #aab6c3; stroke: #222; stroke-width: 0.55; }
+.pf-line { fill: none; stroke: #222; stroke-width: 0.55; stroke-linecap: round; }
+.pf-runway { stroke-dasharray: 2 1.6; }
+.pf-ship--sunk .pf-hull, .pf-ship--sunk .pf-detail, .pf-tally__ship--sunk .pf-hull, .pf-tally__ship--sunk .pf-detail { fill: #f2b8b0; }
+.pf-ship--lifted { opacity: 0.25; }
+.pf-ship--preview { opacity: 0.7; }
+.pf-ship--bad { opacity: 0.7; }
+.pf-ship--bad .pf-hull, .pf-ship--bad .pf-detail { fill: #f08a7e; }
+.pf-ship--nope .pf-hull { animation: pf-nope 0.45s; }
+@keyframes pf-nope { 30%, 70% { fill: #f08a7e; } }
 .pf-miss { fill: none; stroke: #4a8fd8; stroke-width: 0.9; }
 .pf-hit { fill: none; stroke: #e05a4f; stroke-width: 1.5; stroke-linecap: round; }
 .pf-last { fill: none; stroke: #222; stroke-width: 0.6; stroke-dasharray: 1.2 1; animation: pf-blink 1s ease-in-out 2; }
 @keyframes pf-blink { 50% { opacity: 0; } }
-.pf-solo { width: min(100%, 420px, calc(100dvh - 260px)); margin: 0 auto; }
-.pf-actions { display: flex; gap: 12px; justify-content: center; margin-top: 14px; }
-.pf-actions .btn { flex: 0 1 160px; }
+.pf-one { display: block; overflow: visible; }
 
-.pf-boards { display: flex; gap: 24px; justify-content: center; align-items: flex-start; }
-.pf-side { flex: 1 1 0; max-width: 420px; min-width: 0; }
-.pf-side__title { display: flex; align-items: center; justify-content: center; gap: 6px; margin: 0 0 4px; font-size: 17px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.pf-side--active .pf-board { filter: drop-shadow(3px 3px 0 #ffe066); }
-.pf-tally { display: flex; flex-wrap: wrap; gap: 5px; justify-content: center; margin-top: 6px; }
-.pf-tally__ship { width: calc(var(--len) * 9px); height: 9px; border: 1.6px solid #222; border-radius: 6px; background: #c9d3de; }
-.pf-tally__ship--sunk { background: #f2b8b0; opacity: 0.6; background-image: linear-gradient(to bottom right, transparent 45%, #e05a4f 45% 55%, transparent 55%); }
+/* Placing: just your grid, with the ships waiting in a dock underneath. */
+.pf-place { --board: min(calc(100vw - 32px), calc(100dvh - 330px), 440px); --cell: calc(var(--board) * 10 / (var(--n) * 10 + 9));
+  display: flex; flex-direction: column; align-items: center; }
+.pf-place .pf-status { min-height: 0; }
+.pf-board--place { touch-action: none; cursor: grab; }
+.pf-dock { display: flex; flex-wrap: wrap; gap: 10px 14px; justify-content: center; align-content: flex-start; width: var(--board);
+  margin-top: 12px; min-height: calc(var(--cell) * 2 + 10px); }
+.pf-dock__ship, .pf-dock__slot { width: calc(var(--len) * var(--cell)); height: var(--cell); }
+.pf-dock__ship { touch-action: none; cursor: grab; }
+.pf-dock__ship svg { width: 100%; height: 100%; }
+.pf-dock__ship--lifted { opacity: 0.25; }
+.pf-dock__slot { border: 1.5px dashed #c3ccd6; border-radius: 999px; box-sizing: border-box; }
+.pf-ghost { position: fixed; z-index: 50; pointer-events: none; opacity: 0.85; filter: drop-shadow(2px 3px 0 rgba(0, 0, 0, 0.15)); }
+.pf-actions { display: flex; gap: 12px; justify-content: center; width: var(--board); margin-top: 12px; }
+.pf-actions .btn { flex: 1 1 0; max-width: 180px; margin: 0; }
 
-/* Phones: the board that matters this turn is big, the other sits small beside its tally. */
-@media (max-width: 699px) {
-  .pf-boards:not(.pf-boards--end) { flex-direction: column; align-items: center; gap: 10px; }
-  .pf-boards--end { gap: 12px; }
-  .pf-boards--defend { flex-direction: column-reverse; }
-  .pf-boards:not(.pf-boards--end) .pf-side { width: 100%; max-width: min(100%, calc(100dvh - 330px)); }
-  .pf-boards:not(.pf-boards--end) .pf-side:not(.pf-side--active) { display: grid; grid-template-columns: 130px 1fr; grid-template-rows: auto 1fr; column-gap: 12px; max-width: 100%; }
-  .pf-side:not(.pf-side--active) .pf-side__title { grid-column: 2; justify-content: flex-start; font-size: 15px; }
-  .pf-side:not(.pf-side--active) .pf-board { grid-column: 1; grid-row: 1 / 3; }
-  .pf-side:not(.pf-side--active) .pf-tally { grid-column: 2; justify-content: flex-start; align-self: start; }
-  .pf-boards--end .pf-side__title { font-size: 15px; }
-}
+/* The battle: their grid on top, yours below, each fleet stacked on the right. Nothing moves. */
+.pf-play { --board: min(calc((100vw - 46px) / 1.27), calc((100dvh - 210px) / 2), 380px); --tally: calc(var(--board) * 0.05); display: flex; flex-direction: column; align-items: center; gap: 8px; }
+.pf-row { display: flex; gap: 12px; align-items: flex-start; }
+.pf-row__board { width: var(--board); }
+.pf-row__title { display: flex; align-items: center; gap: 6px; height: 24px; margin: 0; font-size: 16px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pf-row--active .pf-board { filter: drop-shadow(3px 3px 0 #ffe066); }
+.pf-tally { display: flex; flex-direction: column; gap: calc(var(--tally) * 0.8); width: calc(var(--tally) * 5 + 2px); padding-top: calc(24px + var(--board) * 8 / (var(--n) * 10 + 9)); }
+.pf-tally__ship { position: relative; display: block; width: calc(var(--len) * var(--tally)); height: var(--tally); }
+.pf-tally__ship svg { width: 100%; height: 100%; }
+.pf-tally__ship--sunk { opacity: 0.75; }
+.pf-tally__ship--sunk::after { content: ''; position: absolute; left: -3px; right: -3px; top: 50%; border-top: 2px solid #e05a4f; transform: rotate(-8deg); }
