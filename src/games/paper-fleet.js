@@ -152,7 +152,7 @@ const bridge = (x, w) => svg`<rect class="pf-detail" x=${x} y="-2" width=${w} he
 const plane = x => svg`<path class="pf-line" d="M${x} -0.8 h4 M${x + 2.6} -2.6 v3.6 M${x + 0.4} -1.8 v2" />`;
 const ART = {
   carrier: () => svg`<path class="pf-hull" d="M-4.6 -4 H${bowAt(5) - 4} L${bowAt(5) - 0.4} -1.8 V1.8 L${bowAt(5) - 4} 4 H-4.6 Z" />
-    <path class="pf-line pf-runway" d="M-2 1.2 H${bowAt(5) - 3}" /><path class="pf-line" d="M4 3 L22 -0.6" />
+    <path class="pf-line pf-runway" d="M-2 1.2 H${bowAt(5) - 3}" />
     <rect class="pf-detail" x="20" y="-3.8" width="8" height="2.4" rx="0.6" />${plane(4)}${plane(31)}`,
   battleship: () => svg`${hull(4)}${turret(1, -1)}${bridge(7, 9)}<rect class="pf-detail" x="9" y="-1.2" width="5" height="2.4" rx="0.6" />
     <circle class="pf-detail" cx="19" cy="0" r="1.4" />${turret(23.5)}${turret(29)}`,
