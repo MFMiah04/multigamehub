@@ -1051,3 +1051,43 @@ frame-reel { display: block; max-width: 760px; width: 100%; margin: 8px auto; }
 .di-choice { padding: 0 10px; border: 2px solid var(--ink); border-radius: 14px; background: #fff; font-size: 17px; font-weight: 700; line-height: 26px; }
 .di-guess-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 10px; margin: 8px 0 14px; }
 .di-guess-list .btn { width: 100%; }
+
+/* ----- Paper Fleet ----- */
+.pf-status { min-height: var(--row); margin: 4px 0 8px; font-size: 18px; line-height: 1.3; }
+.pf-board { display: block; width: 100%; height: auto; touch-action: manipulation; }
+.pf-water { fill: #fff; stroke: #222; stroke-width: 0.9; }
+.pf-cell { fill: transparent; stroke: #9db7d6; stroke-width: 0.35; }
+.pf-cell--open { cursor: crosshair; }
+.pf-board--aim .pf-cell--open:hover { fill: #fff3b0; }
+.pf-ship { fill: #c9d3de; stroke: #222; stroke-width: 0.9; }
+.pf-ship--picked { fill: #ffe066; stroke-dasharray: 2 1.2; }
+.pf-ship--sunk { fill: #f2b8b0; }
+.pf-ship--revealed { fill: none; stroke-dasharray: 1.6 1.2; }
+.pf-miss { fill: none; stroke: #4a8fd8; stroke-width: 0.9; }
+.pf-hit { fill: none; stroke: #e05a4f; stroke-width: 1.5; stroke-linecap: round; }
+.pf-last { fill: none; stroke: #222; stroke-width: 0.6; stroke-dasharray: 1.2 1; animation: pf-blink 1s ease-in-out 2; }
+@keyframes pf-blink { 50% { opacity: 0; } }
+.pf-solo { width: min(100%, 420px, calc(100dvh - 260px)); margin: 0 auto; }
+.pf-actions { display: flex; gap: 12px; justify-content: center; margin-top: 14px; }
+.pf-actions .btn { flex: 0 1 160px; }
+
+.pf-boards { display: flex; gap: 24px; justify-content: center; align-items: flex-start; }
+.pf-side { flex: 1 1 0; max-width: 420px; min-width: 0; }
+.pf-side__title { display: flex; align-items: center; justify-content: center; gap: 6px; margin: 0 0 4px; font-size: 17px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pf-side--active .pf-board { filter: drop-shadow(3px 3px 0 #ffe066); }
+.pf-tally { display: flex; flex-wrap: wrap; gap: 5px; justify-content: center; margin-top: 6px; }
+.pf-tally__ship { width: calc(var(--len) * 9px); height: 9px; border: 1.6px solid #222; border-radius: 6px; background: #c9d3de; }
+.pf-tally__ship--sunk { background: #f2b8b0; opacity: 0.6; background-image: linear-gradient(to bottom right, transparent 45%, #e05a4f 45% 55%, transparent 55%); }
+
+/* Phones: the board that matters this turn is big, the other sits small beside its tally. */
+@media (max-width: 699px) {
+  .pf-boards:not(.pf-boards--end) { flex-direction: column; align-items: center; gap: 10px; }
+  .pf-boards--end { gap: 12px; }
+  .pf-boards--defend { flex-direction: column-reverse; }
+  .pf-boards:not(.pf-boards--end) .pf-side { width: 100%; max-width: min(100%, calc(100dvh - 330px)); }
+  .pf-boards:not(.pf-boards--end) .pf-side:not(.pf-side--active) { display: grid; grid-template-columns: 130px 1fr; grid-template-rows: auto 1fr; column-gap: 12px; max-width: 100%; }
+  .pf-side:not(.pf-side--active) .pf-side__title { grid-column: 2; justify-content: flex-start; font-size: 15px; }
+  .pf-side:not(.pf-side--active) .pf-board { grid-column: 1; grid-row: 1 / 3; }
+  .pf-side:not(.pf-side--active) .pf-tally { grid-column: 2; justify-content: flex-start; align-self: start; }
+  .pf-boards--end .pf-side__title { font-size: 15px; }
+}

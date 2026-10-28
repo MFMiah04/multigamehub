@@ -37,7 +37,7 @@ function qrSvg(text) {
 // Games you can play with this many people come first; the rest are greyed out at the end.
 function byPlayable(count) {
   const rated = gameList.map(game => {
-    const [min, max] = (game.players.match(/\d+/g) || []).map(Number);
+    const [min, max = min] = (game.players.match(/\d+/g) || []).map(Number); // "2" means exactly 2
     const problem = count < min ? `needs ${min - count} more` : max && count > max ? `${max} players max` : null;
     return { game, problem };
   });
