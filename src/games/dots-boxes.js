@@ -7,7 +7,7 @@ import { cue } from '../sound.js';
 
 const GAP = 10; // board units between dots
 // Each player's pen, in turn order.
-const INKS = ['#e05a4f', '#4a8fd8', '#3fae6a', '#d99a1e'];
+const INKS = ['#e05a4f', '#4a8fd8', '#3fae6a', '#d99a1e', '#9b5fd0', '#1fa5a5', '#e0609f', '#8a5a3c'];
 
 // Lines are "h_x_y" (from dot x,y to the right) and "v_x_y" (from dot x,y downwards).
 // A box is named by its top-left dot, and is closed when all four of its sides are drawn.
@@ -54,7 +54,7 @@ export default {
   name: 'Dots and Boxes',
   twoLines: true,
   color: 'peach',
-  players: '2–4',
+  players: '2–8',
   blurb: 'Take turns joining dots. Close a box to claim it.',
   rules: [
     'Take turns drawing a line between two dots next to each other.',
@@ -72,14 +72,14 @@ export default {
   defaults: () => ({ n: 5 }),
 
   settingsView(ctx, s, set) {
-    return selectField('Board', s.n, [[3, '3 × 3 boxes (quick)'], [4, '4 × 4 boxes'], [5, '5 × 5 boxes'], [6, '6 × 6 boxes'], [7, '7 × 7 boxes (long)']], v => set({ n: +v }), !ctx.isHost);
+    return selectField('Board', s.n, [[3, '3 × 3 boxes (quick)'], [4, '4 × 4 boxes'], [5, '5 × 5 boxes'], [6, '6 × 6 boxes'], [7, '7 × 7 boxes'], [8, '8 × 8 boxes (long)']], v => set({ n: +v }), !ctx.isHost);
   },
 
-  canStart: ctx => (ctx.players.length < 2 ? 'Need 1 more to play' : ctx.players.length > 4 ? '4 players max' : null),
+  canStart: ctx => (ctx.players.length < 2 ? 'Need 1 more to play' : ctx.players.length > 8 ? '8 players max' : null),
 
   start(ctx, s) {
     const order = ctx.players.map(p => p.id);
-    return { phase: 'play', round: { n: Math.min(7, Math.max(3, s.n || 5)), order, turn: order[Math.floor(Math.random() * order.length)] } };
+    return { phase: 'play', round: { n: Math.min(8, Math.max(3, s.n || 5)), order, turn: order[Math.floor(Math.random() * order.length)] } };
   },
 
   // If it's someone's turn and they've left, skip them. If only one player is left, the game ends.
