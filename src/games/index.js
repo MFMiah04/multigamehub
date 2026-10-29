@@ -17,7 +17,8 @@ import animation from './animation.js';
 import complementary from './complementary.js';
 import battleship from './battleship.js';
 import dotsBoxes from './dots-boxes.js';
+import chainPop from './chain-pop.js';
 
 // To add a game: create a module with the same shape and list it here.
-export const gameList = [spyfall, imposter, fakinIt, herdMentality, oneWord, fakeAnswer, spectrum, wordSync, numberClimb, insider, avalon, drawGuess, drawOff, animation, complementary, doodleImposter, sketch, battleship, dotsBoxes];
+export const gameList = [spyfall, imposter, fakinIt, herdMentality, oneWord, fakeAnswer, spectrum, wordSync, numberClimb, insider, avalon, drawGuess, drawOff, animation, complementary, doodleImposter, sketch, battleship, dotsBoxes, chainPop];
 export const games = Object.fromEntries(gameList.map(g => [g.id, g]));

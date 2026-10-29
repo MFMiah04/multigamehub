@@ -1122,3 +1122,22 @@ frame-reel { display: block; max-width: 760px; width: 100%; margin: 8px auto; }
 .db-line--ghost { opacity: 0.35; }
 .db-line--last { animation: pf-blink 0.8s ease-in-out 2; }
 .db-box { opacity: 0.28; }
+
+/* ----- Chain Pop ----- */
+.cr { --board: min(calc(100vw - 32px), calc((100dvh - 230px) * var(--ratio)), 480px); display: flex; flex-direction: column; align-items: center; }
+.cr-board { display: block; width: var(--board); height: auto; touch-action: manipulation; }
+.cr-board--mine { cursor: pointer; }
+.cr-paper { fill: #fff; stroke: #222; stroke-width: 0.8; }
+.cr-grid { fill: none; stroke: #9db7d6; stroke-width: 0.35; }
+.cr-dot { stroke: #222; stroke-width: 0.55; }
+/* Every square turns slowly; one about to pop spins faster and shakes. Each has its own speed, direction and wobble. */
+.cr-spin { transform-origin: inherit; animation: cr-spin var(--slow) linear infinite var(--spin-dir); animation-delay: var(--delay); }
+.cr-cell--hot { animation: var(--shake) var(--shake-time) linear infinite; animation-delay: var(--delay); }
+.cr-cell--hot .cr-spin { animation-duration: var(--fast); }
+@keyframes cr-spin { to { transform: rotate(360deg); } }
+@keyframes cr-shake1 { 0%, 100% { transform: translate(0, 0); } 11% { transform: translate(0.45px, -0.2px); } 29% { transform: translate(-0.3px, 0.5px); } 38% { transform: translate(0.15px, 0.35px); } 57% { transform: translate(-0.5px, -0.35px); } 71% { transform: translate(0.4px, 0.15px); } 86% { transform: translate(-0.1px, -0.5px); } }
+@keyframes cr-shake2 { 0%, 100% { transform: translate(0, 0); } 17% { transform: translate(-0.4px, -0.4px); } 26% { transform: translate(0.5px, 0.1px); } 48% { transform: translate(0.05px, 0.55px); } 63% { transform: translate(-0.45px, 0.2px); } 79% { transform: translate(0.3px, -0.45px); } 91% { transform: translate(-0.15px, 0.25px); } }
+@keyframes cr-shake3 { 0%, 100% { transform: translate(0, 0); } 9% { transform: translate(0.2px, 0.5px); } 31% { transform: translate(-0.55px, 0.05px); } 44% { transform: translate(0.35px, -0.4px); } 52% { transform: translate(0.5px, 0.3px); } 74% { transform: translate(-0.25px, -0.5px); } 88% { transform: translate(-0.4px, 0.35px); } }
+.cr-fly { animation: cr-fly var(--t) ease-in forwards; }
+@keyframes cr-fly { to { transform: translate(calc(var(--dx) * 1px), calc(var(--dy) * 1px)); } }
+@media (prefers-reduced-motion: reduce) { .cr-spin, .cr-cell--hot { animation: none; } }
