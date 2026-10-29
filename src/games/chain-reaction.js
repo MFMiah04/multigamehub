@@ -83,8 +83,8 @@ function drop(ctx, at) {
 }
 
 export default {
-  id: 'chain-pop',
-  name: 'Chain Pop',
+  id: 'chain-reaction',
+  name: 'Chain Reaction',
   color: 'lilac',
   players: '2–8',
   blurb: 'Fill squares until they pop, and take over everything around them.',
