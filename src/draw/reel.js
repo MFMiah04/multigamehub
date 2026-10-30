@@ -56,11 +56,15 @@ class FrameReel extends HTMLElement {
     const key = `${this.mode}:${this.frames.join(',')}`;
     if (key === this.loadedKey) return;
     this.loadedKey = key;
+    // A different drawing: show blank paper until it's loaded, never the last one's frames.
+    this.images = [];
+    this.shown = undefined;
     const images = this.mode === 'stack'
       ? await renderLayers(this.code, this.frames, { snapshots: true })
       : await Promise.all(this.frames.map(f => renderLayers(this.code, [f])));
     if (this.loadedKey !== key) return;
     this.images = images;
+    this.shown = undefined; // draw the new first frame even if the old one was also at frame 1
     this.dispatchEvent(new CustomEvent('reelready', { bubbles: true }));
   }
 
