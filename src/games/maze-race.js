@@ -1,13 +1,14 @@
+import { runTransaction } from 'firebase/database';
 import { html, nothing, button, selectField, timer, avatar, toast } from '../ui.js';
 import { svg } from 'lit-html';
 import { repeat } from 'lit-html/directives/repeat.js';
+import { roomRef } from '../room.js';
 import { cue } from '../sound.js';
-import { CELL, xy, at, inkOf, scores, status, finish } from './grid-kit.js';
+import { CELL, xy, at, inkOf, scores, status, turnLine, nextTurn, ring, finish } from './grid-kit.js';
 
-// Maze Race: everyone starts round the edge and races for the middle square. Each round, everyone
-// secretly picks one thing: a step, or a wall (a line two squares long between squares). Then it
-// all happens at once. A wall can never cut anyone off from the middle completely.
-const SHOW_MS = 1400;
+// Maze Race: everyone starts round the edge and races for the middle square. On your turn, either
+// take a step or put up a wall (a line two squares long between squares). A wall can never cut
+// anyone off from the middle completely.
 const sizeFor = players => (players <= 4 ? 9 : 11);
 
 // Walls sit where grid lines cross: "h_x_y" lies along line y, across columns x-1 and x;
@@ -49,19 +50,40 @@ const allCanReach = (walls, n, from) => { const far = distances(walls, n); retur
 // Whether a new wall is allowed on top of the ones already there.
 const wallOk = (w, walls, n, from) => !walls.some(o => clash(o, w)) && allCanReach([...walls, w], n, from);
 
-const standing = ctx => ctx.round.order.filter(id => ctx.room.players[id]);
+const standing = (ctx, round = ctx.round) => round.order.filter(id => ctx.room.players[id]);
+
+// Your turn: a step (to a square) or a wall. A transaction, so turns can't cross.
+function act(ctx, { m, w }) {
+  return runTransaction(roomRef(ctx.room.code, 'round'), round => {
+    if (!round || round.done || round.turn !== ctx.uid) return undefined;
+    const { n } = round;
+    const walls = round.walls || [];
+    if (w !== undefined) {
+      if (!wallOk(w, walls, n, standing(ctx, round).map(id => round.pos[id]))) return undefined;
+      round.walls = [...walls, w];
+    } else {
+      if (!steps(round.pos[ctx.uid], n, blockedSet(walls, n)).includes(m)) return undefined;
+      round.pos = { ...round.pos, [ctx.uid]: m };
+    }
+    round.last = { by: ctx.uid, ...(w !== undefined ? { w } : { m }), n: (round.last?.n || 0) + 1 };
+    if (round.pos[ctx.uid] === (n * n - 1) / 2) { round.done = true; round.winners = [ctx.uid]; return round; }
+    round.turn = nextTurn(ctx, round.order, round.order.indexOf(ctx.uid));
+    round.endsAt = ctx.now() + round.secs * 1000;
+    return round;
+  });
+}
 
 export default {
   id: 'maze-race',
   name: 'Maze Race',
   color: 'gold',
   players: '2–8',
-  blurb: 'Race to the middle. Each round, step or drop a wall in someone\'s way. Everyone at once.',
+  blurb: 'Race to the middle. On your turn, take a step or put a wall in someone\'s way.',
   rules: [
     'Everyone starts on the edge. First to reach the star in the middle wins.',
-    'Each round, everyone secretly picks one thing: a step to a square next to them, or a wall. Then it all happens at once.',
-    'A wall is a line two squares long between squares. Nobody can walk through it. Walls go up before anyone steps, so you can block someone\'s step.',
-    'A wall can\'t cut anyone off from the middle completely, and can\'t cross another wall. If it would, it doesn\'t go up and you keep it.',
+    'On your turn, either take one step to a square next to you, or put up a wall.',
+    'A wall is a line two squares long between squares. Nobody can walk through it. Put as many up as you like.',
+    'A wall can\'t cross another wall, and can\'t cut anyone off from the middle completely.',
   ],
   art: html`<svg class="art" viewBox="0 0 64 56" aria-hidden="true"><g stroke="#222" stroke-width="2" stroke-linecap="round" fill="none">
     <path d="M6 6 h52 v44 h-52 z" stroke-width="1.4" stroke="#9db7d6" />
@@ -70,8 +92,8 @@ export default {
     <circle cx="11" cy="45" r="3.6" fill="#e05a4f" /><circle cx="53" cy="11" r="3.6" fill="#4a8fd8" />
   </g></svg>`,
 
-  defaults: () => ({ secs: 15 }),
-  settingsView: (ctx, s, set) => selectField('Time to plan each round', s.secs, [[10, '10 seconds'], [15, '15 seconds'], [20, '20 seconds']], v => set({ secs: +v }), !ctx.isHost),
+  defaults: () => ({ secs: 30 }),
+  settingsView: (ctx, s, set) => selectField('Time for each turn', s.secs, [[15, '15 seconds'], [30, '30 seconds'], [60, '1 minute']], v => set({ secs: +v }), !ctx.isHost),
   canStart: ctx => (ctx.players.length < 2 ? 'Need 1 more to play' : ctx.players.length > 8 ? '8 players max' : null),
 
   start(ctx, s) {
@@ -85,45 +107,20 @@ export default {
     for (let y = n - 1; y > 0; y--) edge.push(y * n);
     const offset = Math.floor(Math.random() * edge.length);
     const pos = Object.fromEntries(order.map((id, k) => [id, edge[(offset + Math.floor((k * edge.length) / order.length)) % edge.length]]));
-    return {
-      phase: 'play',
-      round: { n, order, secs: s.secs || 15, pos, no: 1, stage: 'plan', endsAt: ctx.now() + (s.secs || 15) * 1000 },
-    };
+    const secs = s.secs || 30;
+    return { phase: 'play', round: { n, order, secs, pos, turn: order[Math.floor(Math.random() * order.length)], endsAt: ctx.now() + secs * 1000 } };
   },
 
-  // When everyone's locked in (or time's up): walls go up first, in a random order, skipping any
-  // that clash or would trap someone; then everyone steps.
+  // Skip anyone who's left, or who runs out of time. If only one player is left, they win.
   tick(ctx) {
     const { round } = ctx;
     if (round.done) return null;
-    const now = ctx.now();
-    const ids = standing(ctx);
-    const { n } = round;
-    if (round.stage === 'plan') {
-      const plans = round.plans || {};
-      if (now < round.endsAt && !ids.every(id => plans[id]?.ready)) return null;
-      const walls = [...(round.walls || [])];
-      const built = [];
-      const from = ids.map(id => round.pos[id]);
-      ids.filter(id => plans[id]?.w).sort(() => Math.random() - 0.5).forEach(id => {
-        if (wallOk(plans[id].w, walls, n, from)) { walls.push(plans[id].w); built.push({ by: id, w: plans[id].w }); }
-      });
-      const blocked = blockedSet(walls, n);
-      const pos = { ...round.pos };
-      const stepped = [];
-      ids.forEach(id => {
-        const to = plans[id]?.m;
-        if (to === undefined || to === pos[id]) return;
-        if (steps(round.pos[id], n, blocked).includes(to)) { pos[id] = to; stepped.push(id); }
-      });
-      const goal = (n * n - 1) / 2;
-      const winners = ids.filter(id => pos[id] === goal);
-      return { 'round/stage': 'show', 'round/plans': null, 'round/walls': walls, 'round/pos': pos, 'round/built': built,
-        'round/stepped': stepped, 'round/showUntil': now + SHOW_MS, ...(winners.length ? { 'round/winners': winners } : {}) };
+    const here = standing(ctx);
+    if (here.length < 2) return { 'round/done': true, 'round/winners': here };
+    if (!ctx.room.players[round.turn] || ctx.now() >= round.endsAt) {
+      return { 'round/turn': nextTurn(ctx, round.order, round.order.indexOf(round.turn)), 'round/endsAt': ctx.now() + round.secs * 1000 };
     }
-    if (now < round.showUntil) return null;
-    if (round.winners?.length || ids.length < 2) return { 'round/done': true, 'round/winners': round.winners?.length ? round.winners : ids };
-    return { 'round/stage': 'plan', 'round/no': round.no + 1, 'round/built': null, 'round/stepped': null, 'round/endsAt': now + round.secs * 1000 };
+    return null;
   },
 
   view(ctx) {
@@ -146,59 +143,58 @@ function wallPath(w) {
 
 function field(ctx, live) {
   const { round, local } = ctx;
-  const { n, order } = round;
+  const { n, order, last } = round;
   const me = ctx.uid;
   const walls = round.walls || [];
-  const playing = order.includes(me) && ctx.room.players[me];
-  const planning = live && playing && round.stage === 'plan';
-  const ready = !!round.plans?.[me]?.ready;
+  const myTurn = live && round.turn === me;
   const mine = round.pos[me];
-  if (local.no !== round.no) Object.assign(local, { no: round.no, m: undefined, w: undefined, mode: 'step' });
-  const save = () => ctx.update({ [`round/plans/${me}`]: { ...(local.m !== undefined ? { m: local.m } : {}), ...(local.w ? { w: local.w } : {}), ready: false } }).catch(() => {});
+  // Forget a half-made choice once the turn moves on.
+  if (local.n !== (last?.n || 0)) Object.assign(local, { n: last?.n || 0, w: undefined, mode: local.mode || 'step' });
   const blocked = blockedSet(walls, n);
   const from = standing(ctx).map(id => round.pos[id]);
-  const far = distances(walls, n); // steps to the middle, shown next to everyone's name
+  const go = choice => { local.w = undefined; local.hover = null; act(ctx, choice).catch(() => toast("That didn't go through. Try again?")); };
 
+  const point = e => {
+    const el = e.currentTarget, r = el.getBoundingClientRect(), vb = el.viewBox.baseVal;
+    return [(vb.x + ((e.clientX - r.left) / r.width) * vb.width) / CELL, (vb.y + ((e.clientY - r.top) / r.height) * vb.height) / CELL];
+  };
   // On a computer, the wall you'd place follows the mouse (grey if it can go there, red if not).
   const hover = e => {
-    if (!planning || ready || local.mode !== 'wall' || e.pointerType === 'touch') return;
-    const el = e.currentTarget, r = el.getBoundingClientRect(), vb = el.viewBox.baseVal;
-    const w = wallNear((vb.x + ((e.clientX - r.left) / r.width) * vb.width) / CELL, (vb.y + ((e.clientY - r.top) / r.height) * vb.height) / CELL, n);
+    if (!myTurn || local.mode !== 'wall' || e.pointerType === 'touch') return;
+    const w = wallNear(...point(e), n);
     if (w !== local.hover) { local.hover = w; ctx.rerender(); }
   };
   const unhover = () => { if (local.hover) { local.hover = null; ctx.rerender(); } };
-
+  // A step happens straight away. A wall needs a second tap (or the button) to go up, so a slip of
+  // the finger doesn't waste your turn; with a mouse, the hover shows it first, so one click does it.
   const tap = e => {
-    if (!planning || ready) return;
-    const el = e.currentTarget, r = el.getBoundingClientRect(), vb = el.viewBox.baseVal;
-    const px = (vb.x + ((e.clientX - r.left) / r.width) * vb.width) / CELL;
-    const py = (vb.y + ((e.clientY - r.top) / r.height) * vb.height) / CELL;
+    if (!myTurn) return;
+    const [px, py] = point(e);
     if (local.mode === 'wall') {
       const w = wallNear(px, py, n);
       if (!wallOk(w, walls, n, from)) return toast(walls.some(o => clash(o, w)) ? 'That crosses another wall.' : 'That would cut someone off from the middle.');
-      Object.assign(local, { w, m: undefined });
-    } else {
-      const i = at(Math.floor(px), Math.floor(py), n, n);
-      if (i < 0 || !steps(mine, n, blocked).includes(i)) return toast('Step to a square next to you (not through a wall).');
-      Object.assign(local, { m: i, w: undefined });
+      if (local.w === w || (e.pointerType === 'mouse' && local.hover === w)) return go({ w });
+      local.w = w;
+      return ctx.rerender();
     }
-    save();
-    ctx.rerender();
+    const i = at(Math.floor(px), Math.floor(py), n, n);
+    if (i < 0 || !steps(mine, n, blocked).includes(i)) return toast('Step to a glowing square (not through a wall).');
+    go({ m: i });
   };
 
   const goal = (n * n - 1) / 2;
   const [gx, gy] = xy(goal, n).map(v => v * CELL + 5);
   const lines = [];
   for (let i = 1; i < n; i++) lines.push(`M${i * CELL} 0 V${n * CELL} M0 ${i * CELL} H${n * CELL}`);
-  const built = new Set((round.built || []).map(b => b.w));
-  const options = planning && !ready && local.mode === 'step' ? steps(mine, n, blocked) : [];
+  const options = myTurn && local.mode === 'step' ? steps(mine, n, blocked) : [];
   const layers = svg`
     <path class="mr-star" d="M${gx} ${gy - 4} l1.2 2.4 2.7 0.4 -1.9 1.9 0.4 2.6 -2.4 -1.3 -2.4 1.3 0.4 -2.6 -1.9 -1.9 2.7 -0.4 z" />
-    ${options.map(i => { const [x, y] = xy(i, n); return svg`<rect class="mr-option ${local.m === i ? 'mr-option--on' : ''}" x=${x * CELL + 1} y=${y * CELL + 1} width=${CELL - 2} height=${CELL - 2} rx="2" />`; })}
-    ${walls.map(w => svg`<path class="mr-wall ${built.has(w) ? 'mr-wall--new' : ''}" d=${wallPath(w)} />`)}
-    ${planning && !ready && local.mode === 'wall' && local.hover && local.hover !== local.w
+    ${options.map(i => { const [x, y] = xy(i, n); return svg`<rect class="mr-option" x=${x * CELL + 1} y=${y * CELL + 1} width=${CELL - 2} height=${CELL - 2} rx="2" />`; })}
+    ${last?.m !== undefined ? ring(last.m, n, order.indexOf(last.by)) : nothing}
+    ${walls.map(w => svg`<path class="mr-wall ${w === last?.w ? 'mr-wall--new' : ''}" d=${wallPath(w)} />`)}
+    ${myTurn && local.mode === 'wall' && local.hover && local.hover !== local.w
       ? svg`<path class="mr-wall mr-wall--hover ${wallOk(local.hover, walls, n, from) ? '' : 'mr-wall--bad'}" d=${wallPath(local.hover)} />` : nothing}
-    ${planning && !ready && local.w ? svg`<path class="mr-wall mr-wall--plan" d=${wallPath(local.w)} />` : nothing}
+    ${myTurn && local.w ? svg`<path class="mr-wall mr-wall--plan" d=${wallPath(local.w)} />` : nothing}
     ${repeat(order.filter(id => ctx.room.players[id]), id => id, id => {
       const [x, y] = xy(round.pos[id], n).map(v => v * CELL + 5);
       const k = order.indexOf(id);
@@ -211,35 +207,30 @@ function field(ctx, live) {
       </g>`;
     })}`;
 
-  if (round.stage === 'show' && live) cue(`mr:${round.id}:${round.no}:show`, (round.built || []).length ? 'buzz' : 'pop');
-  else if (planning) cue(`mr:${round.id}:${round.no}:plan`, 'ding');
+  if (last) cue(`mr:${round.id}:${last.n}`, last.w ? 'buzz' : 'pop');
+  if (myTurn) cue(`mr:${round.id}:turn:${last?.n || 0}`, 'ding');
 
-  const lockedIn = standing(ctx).filter(id => round.plans?.[id]?.ready).length;
   const name = id => (id === me ? 'You' : ctx.room.players[id]?.name || 'Someone');
-  const news = round.stage === 'show' && live
-    ? ((round.built || []).length ? `${(round.built || []).map(b => name(b.by)).join(', ')} put up ${(round.built || []).length === 1 ? 'a wall' : 'walls'}!` : 'Everyone moves…')
-    : `Round ${round.no}`;
-  const line = !playing || !live ? ''
-    : round.stage === 'show' ? 'Here we go…'
-      : ready ? `Locked in. Waiting for ${standing(ctx).length - lockedIn} more…`
-        : html`<span class="turn-line turn-line--mine"><b>Your move!</b> ${local.mode === 'wall' ? 'Tap a line between squares.' : 'Tap a glowing square.'}</span>`;
+  const turnPlayer = ctx.room.players[round.turn];
+  const news = !last ? `${myTurn ? 'You go' : `${turnPlayer?.name || 'Someone'} goes`} first.` : `${name(last.by)} ${last.w ? 'put up a wall!' : 'took a step.'}`;
+  const hint = local.mode === 'wall' ? (local.w ? 'Tap it again (or Place wall) to put it up.' : 'Tap a line between squares.') : 'Tap a glowing square to step.';
+  const line = !live || !order.includes(me) ? '' : turnLine(myTurn, { mine: hint, waiting: `Waiting for ${turnPlayer?.name || 'the next player'}…` });
 
   return html`<div class="cr mr" style="--ratio: 1">
-    ${scores(ctx, order, { value: i => `${far.get(round.pos[order[i]]) ?? '?'} to go` })}
+    ${scores(ctx, order, { turn: live ? round.turn : null, value: () => '' })}
     ${live ? status(news, line) : nothing}
-    ${live && round.stage === 'plan' ? timer(round.endsAt, 5) : nothing}
-    <svg class="cr-board mr-board ${planning && !ready ? 'cr-board--mine turn-glow' : ''}" viewBox="-1 -1 ${n * CELL + 2} ${n * CELL + 2}" role="img" aria-label="The maze" @click=${tap} @pointermove=${hover} @pointerleave=${unhover}>
+    ${live ? timer(round.endsAt, 5) : nothing}
+    <svg class="cr-board mr-board ${myTurn ? 'cr-board--mine turn-glow' : ''}" viewBox="-1 -1 ${n * CELL + 2} ${n * CELL + 2}" role="img" aria-label="The maze" @click=${tap} @pointermove=${hover} @pointerleave=${unhover}>
       <rect class="cr-paper" x="0" y="0" width=${n * CELL} height=${n * CELL} rx="1" />
       <path class="cr-grid" d=${lines.join(' ')} />
       ${layers}
     </svg>
-    ${planning ? html`<div class="sb-controls">
+    ${myTurn ? html`<div class="sb-controls">
       <div class="sb-throws">
-        <button class="bg-fuse wobble ${local.mode === 'step' ? 'bg-fuse--on' : ''}" ?disabled=${ready} @click=${() => { local.mode = 'step'; ctx.rerender(); }}>Step</button>
-        <button class="bg-fuse wobble ${local.mode === 'wall' ? 'bg-fuse--on' : ''}" ?disabled=${ready} @click=${() => { local.mode = 'wall'; ctx.rerender(); }}>Wall</button>
+        <button class="bg-fuse wobble ${local.mode === 'step' ? 'bg-fuse--on' : ''}" @click=${() => { Object.assign(local, { mode: 'step', w: undefined }); ctx.rerender(); }}>Step</button>
+        <button class="bg-fuse wobble ${local.mode === 'wall' ? 'bg-fuse--on' : ''}" @click=${() => { local.mode = 'wall'; ctx.rerender(); }}>Wall</button>
       </div>
-      ${ready ? button('Change my move', () => ctx.update({ [`round/plans/${me}/ready`]: false }), { kind: 'white', small: true })
-        : button(local.m === undefined && !local.w ? 'Stay put' : 'Lock it in', () => ctx.update({ [`round/plans/${me}`]: { ...(local.m !== undefined ? { m: local.m } : {}), ...(local.w ? { w: local.w } : {}), ready: true } }), { kind: 'mint' })}
+      ${local.w ? button('Place wall', () => go({ w: local.w }), { kind: 'mint' }) : nothing}
     </div>` : nothing}
   </div>`;
 }
