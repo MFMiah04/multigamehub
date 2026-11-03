@@ -8,7 +8,7 @@ import { CELL, xy, around, inkOf, nextTurn, scores, status, turnLine, grid, ring
 // Stack Wars: grow your stacks, march them at other players' stacks, and topple tall ones over everything nearby.
 const TOPPLE = 5; // a stack this tall falls over
 const START = 3;
-const sizeFor = players => (players <= 2 ? 6 : 7);
+const sizeFor = players => (players <= 2 ? 6 : players <= 4 ? 7 : 9);
 const turnsFor = players => 12 * players; // after this many turns in all, the most counters wins
 
 // Squares are "-0" for empty or owner + height, two characters each.
@@ -71,7 +71,7 @@ export default {
   id: 'stack-wars',
   name: 'Stack Wars',
   color: 'coral',
-  players: '2–4',
+  players: '2–8',
   blurb: 'Grow stacks, march them into battle, and topple the tall ones.',
   rules: [
     'Everyone starts with one stack of counters. On your turn, tap one of your stacks, then either tap it again to add a counter, or tap a square next to it to move all but one counter there.',
@@ -87,14 +87,15 @@ export default {
 
   defaults: () => ({}),
   settingsView: ctx => html`<p class="note">${sizeFor(ctx.players.length)} × ${sizeFor(ctx.players.length)} board, ${turnsFor(ctx.players.length) / Math.max(1, ctx.players.length)} turns each at most.</p>`,
-  canStart: ctx => (ctx.players.length < 2 ? 'Need 1 more to play' : ctx.players.length > 4 ? '4 players max' : null),
+  canStart: ctx => (ctx.players.length < 2 ? 'Need 1 more to play' : ctx.players.length > 8 ? '8 players max' : null),
 
   start(ctx) {
     const order = ctx.players.map(p => p.id);
     const n = sizeFor(order.length);
     const cells = Array.from({ length: n * n }, () => ({ o: -1, h: 0 }));
-    // Corners, opposite each other first.
-    [0, n * n - 1, n - 1, n * (n - 1)].slice(0, order.length).forEach((i, p) => { cells[i] = { o: p, h: START }; });
+    // Corners (opposite each other first), then the middle of each edge.
+    const mid = (n - 1) / 2;
+    [0, n * n - 1, n - 1, n * (n - 1), mid, n * (n - 1) + mid, mid * n, mid * n + n - 1].slice(0, order.length).forEach((i, p) => { cells[i] = { o: p, h: START }; });
     return { phase: 'play', round: { n, order, board: encode(cells), turn: order[Math.floor(Math.random() * order.length)] } };
   },
 

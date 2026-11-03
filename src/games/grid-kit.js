@@ -2,7 +2,7 @@ import { html, nothing, button, action, avatar } from '../ui.js';
 import { svg } from 'lit-html';
 import { backToLobbyButton, endScreen, endTitle, turnLine } from './common.js';
 
-// Shared bits for the grid battle games (Flip Grab, Gravity Drop, Stack Wars, Bomb Grid, Land Rush,
+// Shared bits for the grid battle games (Flip Grab, Gravity Drop, Stack Wars, Land Rush,
 // Snowball Fight): player inks, the score row, a tappable grid, turn order and the end screen.
 
 export const CELL = 10; // board units per square

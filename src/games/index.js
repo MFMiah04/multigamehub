@@ -21,10 +21,9 @@ import chainReaction from './chain-reaction.js';
 import flipGrab from './flip-grab.js';
 import gravityDrop from './gravity-drop.js';
 import stackWars from './stack-wars.js';
-import bombGrid from './bomb-grid.js';
 import landRush from './land-rush.js';
 import snowballFight from './snowball-fight.js';
 
 // To add a game: create a module with the same shape and list it here.
-export const gameList = [spyfall, imposter, fakinIt, herdMentality, oneWord, fakeAnswer, spectrum, wordSync, numberClimb, insider, avalon, drawGuess, drawOff, animation, complementary, doodleImposter, sketch, battleship, dotsBoxes, chainReaction, snowballFight, landRush, bombGrid, stackWars, flipGrab, gravityDrop];
+export const gameList = [spyfall, imposter, fakinIt, herdMentality, oneWord, fakeAnswer, spectrum, wordSync, numberClimb, insider, avalon, drawGuess, drawOff, animation, complementary, doodleImposter, sketch, battleship, dotsBoxes, chainReaction, snowballFight, landRush, stackWars, flipGrab, gravityDrop];
 export const games = Object.fromEntries(gameList.map(g => [g.id, g]));
