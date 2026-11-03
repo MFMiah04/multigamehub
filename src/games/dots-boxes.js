@@ -40,6 +40,7 @@ function draw(ctx, line) {
   return runTransaction(roomRef(ctx.room.code, 'round'), round => {
     if (!round || round.done || round.turn !== ctx.uid || round.lines?.[line]) return undefined;
     round.lines = { ...round.lines, [line]: ctx.uid };
+    round.log = [...(round.log || []), line]; // the order lines were drawn, to show what's new
     const closed = boxesBeside(line, round.n).filter(([x, y]) => sidesOf(x, y).every(s => round.lines[s]));
     closed.forEach(([x, y]) => { round.boxes = { ...round.boxes, [`${x}_${y}`]: ctx.uid }; });
     round.last = { line, by: ctx.uid, boxes: closed.length, n: Object.keys(round.lines).length };
@@ -109,7 +110,7 @@ function scores(ctx, { turn } = {}) {
 }
 
 // The board. `pick` makes it tappable: a tap draws the free line nearest to it.
-function board(ctx, { pick, hover, onHover } = {}) {
+function board(ctx, { pick, hover, onHover, recent = [] } = {}) {
   const { round } = ctx;
   const n = round.n;
   const span = n * GAP;
@@ -151,9 +152,18 @@ function board(ctx, { pick, hover, onHover } = {}) {
     })}
     ${pick ? all.filter(l => !lines[l]).map(l => svg`<path class="db-guide" d=${path(l)} />`) : nothing}
     ${hover && !lines[hover] ? svg`<path class="db-line db-line--ghost" d=${path(hover)} stroke=${inkOf(round, ctx.uid)} />` : nothing}
+    ${recent.map(l => svg`<path class="db-halo" d=${path(l)} stroke=${inkOf(round, lines[l])} />`)}
     ${Object.entries(lines).map(([l, id]) => svg`<path class="db-line ${l === last ? 'db-line--last' : ''}" d=${path(l)} stroke=${inkOf(round, id)} />`)}
     ${[...Array(n + 1).keys()].map(y => [...Array(n + 1).keys()].map(x => svg`<circle class="db-dot" cx=${x * GAP} cy=${y * GAP} r="1.1" />`))}
   </svg>`;
+}
+
+// Lines other players drew since your last one, so you can see what changed while you waited.
+function sinceMyTurn(ctx) {
+  const { round } = ctx;
+  const log = round.log || (round.last ? [round.last.line] : []);
+  const mine = log.map(l => round.lines?.[l] === ctx.uid).lastIndexOf(true);
+  return log.slice(mine + 1).filter(l => round.lines?.[l] && round.lines[l] !== ctx.uid);
 }
 
 function playing(ctx) {
@@ -167,19 +177,21 @@ function playing(ctx) {
   if (last) cue(`db:${round.id}:${last.n}`, last.boxes ? 'score' : 'pop');
   if (myTurn) cue(`db:${round.id}:turn:${last?.n || 0}`, 'ding');
 
+  const recent = sinceMyTurn(ctx);
   const news = !last ? `${myTurn ? 'You go' : `${turnPlayer?.name || 'Someone'} goes`} first.`
     : last.boxes ? `${last.by === ctx.uid ? 'You' : lastBy?.name || 'Someone'} closed ${last.boxes === 2 ? 'two boxes' : 'a box'} and ${last.by === ctx.uid ? 'go' : 'goes'} again!`
-      : `${myTurn ? 'Your turn.' : `${turnPlayer?.name || 'Someone'}'s turn.`}`;
+      : recent.length ? `${new Set(recent.map(l => round.lines[l])).size > 1 ? 'The others' : ctx.room.players[round.lines[recent.at(-1)]]?.name || 'Someone'} drew ${recent.length === 1 ? 'the glowing line' : `the ${recent.length} glowing lines`}.`
+        : `${myTurn ? 'Your turn.' : `${turnPlayer?.name || 'Someone'}'s turn.`}`;
   const hint = playing ? turnLine(myTurn, { mine: 'Tap between two dots.', waiting: `Waiting for ${turnPlayer?.name || 'the next player'}…` }) : '';
 
   return html`<div class="db" style="--n: ${round.n}">
     ${scores(ctx, { turn: round.turn })}
     <p class="db-status center"><b>${news}</b><br>${hint}</p>
-    ${board(ctx, myTurn ? {
+    ${board(ctx, { recent, ...(myTurn ? {
       pick: line => { local.hover = null; draw(ctx, line).catch(() => toast("That line didn't go through. Try again?")); },
       hover: local.hover,
       onHover: line => { if (line !== local.hover) { local.hover = line; ctx.rerender(); } },
-    } : {})}
+    } : {}) })}
   </div>`;
 }
 

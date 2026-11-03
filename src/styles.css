@@ -1073,7 +1073,7 @@ frame-reel { display: block; max-width: 760px; width: 100%; margin: 8px auto; }
 @keyframes pf-nope { 30%, 70% { fill: #f08a7e; } }
 .pf-miss { fill: none; stroke: #4a8fd8; stroke-width: 0.9; }
 .pf-hit { fill: none; stroke: #e05a4f; stroke-width: 1.5; stroke-linecap: round; }
-.pf-last { fill: none; stroke: #222; stroke-width: 0.6; stroke-dasharray: 1.2 1; animation: pf-blink 1s ease-in-out 2; }
+.pf-last { fill: #ffe066; fill-opacity: 0.75; stroke: #222; stroke-width: 0.7; stroke-dasharray: 1.4 0.9; animation: pf-blink 0.6s ease-in-out 3; }
 @keyframes pf-blink { 50% { opacity: 0; } }
 .pf-one { display: block; overflow: visible; }
 
@@ -1151,3 +1151,8 @@ frame-reel { display: block; max-width: 760px; width: 100%; margin: 8px auto; }
 .turn-glow { animation: turn-glow 1.6s ease-in-out infinite; }
 @keyframes turn-glow { 0%, 100% { filter: drop-shadow(0 0 0 #ffd04d); } 50% { filter: drop-shadow(0 0 5px #ffc933) drop-shadow(0 0 2px #ffc933); } }
 @media (prefers-reduced-motion: reduce) { .turn-line--mine, .turn-glow { animation: none; } .turn-glow { filter: drop-shadow(0 0 4px #ffc933); } }
+
+/* What the other players just did. */
+.db-halo { stroke-width: 3.4; stroke-linecap: round; opacity: 0.3; }
+.cr-taken { opacity: 0.16; }
+.cr-played { fill: none; stroke-width: 1; stroke-dasharray: 1.6 1; animation: pf-blink 0.6s ease-in-out 3; }

@@ -201,8 +201,8 @@ function board({ size, ships = [], shots = {}, hits = new Set(), onCell, onDown,
     ${[...Array(size).keys()].map(i => svg`<text class="pf-label" x=${i * CELL + 5} y="-2.6">${i + 1}</text>
       <text class="pf-label" x="-4" y=${i * CELL + 6.8}>${LETTERS[i]}</text>`)}
     <svg x="0" y="0" width=${span} height=${span} viewBox="0 0 ${span} ${span}">${ships.map(({ ship, cls: c = '' }) => svg`<g class="pf-ship ${c}">${shipArt(ship)}</g>`)}</svg>
+    ${last ? svg`<rect class="pf-last" x=${last.x * CELL + 0.6} y=${last.y * CELL + 0.6} width=${CELL - 1.2} height=${CELL - 1.2} rx="1.5" />` : nothing}
     ${Object.keys(shots).map(k => { const [x, y] = k.split('_').map(Number); return hits.has(k) ? CROSS(x, y) : SPLASH(x, y); })}
-    ${last ? svg`<rect class="pf-last" x=${last.x * CELL + 0.5} y=${last.y * CELL + 0.5} width=${CELL - 1} height=${CELL - 1} rx="2" />` : nothing}
   </svg>`;
 }
 
@@ -343,9 +343,11 @@ function battle(ctx) {
   if (last) cue(`pf:${round.order}:${last.by}:${last.n}`, last.sank ? 'score' : last.hit ? 'buzz' : 'pop');
   if (myTurn) cue(`pf:${round.order}:turn:${Object.keys(myShots).length}`, 'ding');
 
+  // The last shot, with its square named like the real game ("B7"), and highlighted on the board until the next one.
+  const at = last ? `${LETTERS[last.y]}${last.x + 1}` : '';
   const news = !last ? (myTurn ? 'You go first.' : `${name} goes first.`)
-    : last.by === ctx.uid ? (last.sank ? `You sank their ${last.sank}!` : last.hit ? 'Hit!' : 'Miss.')
-      : (last.sank ? `${name} sank your ${last.sank}!` : last.hit ? `${name} hit you!` : `${name} missed.`);
+    : last.by === ctx.uid ? `You fired at ${at}: ${last.sank ? `you sank their ${last.sank}!` : last.hit ? 'hit!' : 'miss.'}`
+      : `${name} fired at ${at}: ${last.sank ? `they sank your ${last.sank}!` : last.hit ? 'hit!' : 'miss.'}`;
 
   // Their grid on top, yours underneath, like the real thing. Neither moves during the game.
   return html`<div class="pf-play" style="--n: ${size}">

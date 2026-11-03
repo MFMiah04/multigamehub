@@ -137,7 +137,7 @@ const rand = (i, salt) => { const v = Math.sin(i * 12.9898 + salt * 78.233) * 43
 const SPOTS = { 1: [[0, 0]], 2: [[-1.75, 0], [1.75, 0]], 3: [[0, -1.9], [-1.7, 1.05], [1.7, 1.05]] };
 const spots = n => SPOTS[n] || Array.from({ length: n }, (_, k) => [2.2 * Math.cos((k * 2 * Math.PI) / n), 2.2 * Math.sin((k * 2 * Math.PI) / n)]);
 
-function board(ctx, { cells, flying = nothing, onTap, key }) {
+function board(ctx, { cells, flying = nothing, onTap, key, marks = nothing }) {
   const { round } = ctx;
   const { w, h } = round;
   const lines = [];
@@ -152,6 +152,7 @@ function board(ctx, { cells, flying = nothing, onTap, key }) {
   return html`<svg class="cr-board ${onTap ? 'cr-board--mine turn-glow' : ''}" viewBox="-1 -1 ${w * CELL + 2} ${h * CELL + 2}" role="img" aria-label="The board"
     style="--ratio: ${w / h}" @click=${onTap ? tap : null}>
     <rect class="cr-paper" x="0" y="0" width=${w * CELL} height=${h * CELL} rx="1" />
+    ${marks}
     <path class="cr-grid" d=${lines.join(' ')} />
     ${cells.map((c, i) => {
       const cx = (i % w) * CELL + 5, cy = Math.floor(i / w) * CELL + 5;
@@ -219,6 +220,17 @@ function playing(ctx) {
   if (myTurn) cue(`cr:${round.move?.n || 0}:turn`, 'ding');
 
   const busy = now < (round.busyUntil || 0);
+  // The last move, until the next one: the square it was played on is ringed, and squares it took
+  // from other players are shaded in the mover's ink.
+  let marks = nothing;
+  if (move && round.prev) {
+    const ink = INKS[move.p % INKS.length];
+    const before = decode(round.prev);
+    const taken = busy ? [] : decode(round.board).map((c, i) => i).filter(i => decode(round.board)[i].o === move.p && before[i].n && before[i].o !== move.p);
+    const box = i => [(i % round.w) * CELL, Math.floor(i / round.w) * CELL];
+    marks = svg`${taken.map(i => { const [x, y] = box(i); return svg`<rect class="cr-taken" x=${x} y=${y} width=${CELL} height=${CELL} fill=${ink} />`; })}
+      ${(() => { const [x, y] = box(move.at); return svg`<rect class="cr-played" x=${x + 0.6} y=${y + 0.6} width=${CELL - 1.2} height=${CELL - 1.2} rx="1.5" stroke=${ink} />`; })()}`;
+  }
   const mover = move && ctx.room.players[round.order[move.p]];
   const moverName = mover ? (mover.id === ctx.uid ? 'You' : mover.name) : 'Someone';
   const news = busy && chain >= 2 ? `${moverName} set off a chain!` : chain >= 3 ? `A ${chain}-pop chain from ${moverName}!` : myTurn ? 'Your turn.' : `${turnPlayer?.name || 'Someone'}'s turn.`;
@@ -234,7 +246,7 @@ function playing(ctx) {
   return html`<div class="cr" style="--ratio: ${round.w / round.h}">
     ${scores(ctx, cells)}
     <p class="db-status center"><b>${news}</b><br>${hint}</p>
-    ${board(ctx, { cells, flying, key, onTap: myTurn && !busy ? tap : null })}
+    ${board(ctx, { cells, flying, key, marks, onTap: myTurn && !busy ? tap : null })}
   </div>`;
 }
 
