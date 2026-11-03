@@ -1211,3 +1211,11 @@ frame-reel { display: block; max-width: 760px; width: 100%; margin: 8px auto; }
 .mr-wall--plan { stroke: #d99a1e; stroke-dasharray: 1.6 1; }
 .mr-wall--hover { stroke: #222; opacity: 0.3; }
 .mr-wall--bad { stroke: #e05a4f; opacity: 0.55; }
+
+/* ----- Sumo Ring ----- */
+.sumo-floor { fill: #fbf6ea; stroke: #222; stroke-width: 0.8; }
+.sumo-ring { fill: #f4e6c8; stroke: #b88d4f; stroke-width: 1.8; stroke-dasharray: 3 1.4; transition: r 0.8s ease; }
+.sumo-was { fill: none; stroke: #b88d4f; stroke-width: 0.5; stroke-dasharray: 1 1.4; opacity: 0.6; }
+.sumo-aim { fill: none; stroke: #e05a4f; stroke-width: 1; stroke-linecap: round; stroke-linejoin: round; }
+.sumo-brace { fill: none; stroke: #222; stroke-width: 0.8; stroke-dasharray: 1.4 1; }
+.sumo-player--out { opacity: 0.25; transition: opacity 0.4s; }
