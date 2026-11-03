@@ -1,5 +1,5 @@
 import { runTransaction } from 'firebase/database';
-import { html, nothing, button, action, avatar, toast } from '../ui.js';
+import { html, nothing, button, selectField, action, avatar, toast } from '../ui.js';
 import { svg } from 'lit-html';
 import { keyed } from 'lit-html/directives/keyed.js';
 import { roomRef } from '../room.js';
@@ -101,15 +101,22 @@ export default {
     <path d="M32 18 v-5 M24 22 l-3 -3 M40 22 l3 -3 M32 41 v5" stroke-width="2" />
   </g></svg>`,
 
-  defaults: () => ({}),
+  defaults: () => ({ size: 'auto' }),
 
-  settingsView: ctx => html`<p class="note">The board gets bigger with more players: ${sizeFor(ctx.players.length).join(' × ')} squares for ${ctx.players.length}.</p>`,
+  // Any square board from 5 to 10. "Best for" picks the size that suits how many are playing.
+  settingsView(ctx, s, set) {
+    const n = ctx.players.length;
+    const best = sizeFor(n)[0];
+    const options = [['auto', `Best for ${n} player${n === 1 ? '' : 's'} (${best} × ${best})`],
+      ...[5, 6, 7, 8, 9, 10].map(k => [k, `${k} × ${k}${k === best ? ' (recommended)' : ''}`])];
+    return selectField('Board', s.size ?? 'auto', options, v => set({ size: v === 'auto' ? 'auto' : +v }), !ctx.isHost);
+  },
 
   canStart: ctx => (ctx.players.length < 2 ? 'Need 1 more to play' : ctx.players.length > 8 ? '8 players max' : null),
 
-  start(ctx) {
+  start(ctx, s) {
     const order = ctx.players.map(p => p.id);
-    const [w, h] = sizeFor(order.length);
+    const [w, h] = s.size >= 5 && s.size <= 10 ? [s.size, s.size] : sizeFor(order.length);
     return { phase: 'play', round: { w, h, order, board: '-0'.repeat(w * h), turn: order[Math.floor(Math.random() * order.length)] } };
   },
 
