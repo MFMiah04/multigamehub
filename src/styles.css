@@ -1209,3 +1209,5 @@ frame-reel { display: block; max-width: 760px; width: 100%; margin: 8px auto; }
 .mr-wall { stroke: #222; stroke-width: 1.6; stroke-linecap: round; }
 .mr-wall--new { animation: pf-blink 0.6s ease-in-out 3; }
 .mr-wall--plan { stroke: #d99a1e; stroke-dasharray: 1.6 1; }
+.mr-wall--hover { stroke: #222; opacity: 0.3; }
+.mr-wall--bad { stroke: #e05a4f; opacity: 0.55; }
