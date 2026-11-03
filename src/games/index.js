@@ -20,8 +20,10 @@ import dotsBoxes from './dots-boxes.js';
 import chainReaction from './chain-reaction.js';
 import flipGrab from './flip-grab.js';
 import connect4 from './connect-4.js';
+import snakesLadders from './snakes-ladders.js';
+import mazeRace from './maze-race.js';
 import snowballFight from './snowball-fight.js';
 
 // To add a game: create a module with the same shape and list it here.
-export const gameList = [spyfall, imposter, fakinIt, herdMentality, oneWord, fakeAnswer, spectrum, wordSync, numberClimb, insider, avalon, drawGuess, drawOff, animation, complementary, doodleImposter, sketch, battleship, dotsBoxes, chainReaction, snowballFight, flipGrab, connect4];
+export const gameList = [spyfall, imposter, fakinIt, herdMentality, oneWord, fakeAnswer, spectrum, wordSync, numberClimb, insider, avalon, drawGuess, drawOff, animation, complementary, doodleImposter, sketch, battleship, dotsBoxes, chainReaction, snowballFight, snakesLadders, mazeRace, flipGrab, connect4];
 export const games = Object.fromEntries(gameList.map(g => [g.id, g]));

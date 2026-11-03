@@ -1189,3 +1189,23 @@ frame-reel { display: block; max-width: 760px; width: 100%; margin: 8px auto; }
 .sb-reach { fill: #4a8fd8; fill-opacity: 0.07; stroke: #4a8fd8; stroke-width: 0.4; stroke-dasharray: 1.6 1.1; }
 .sb-route { stroke: #222; stroke-width: 0.5; stroke-dasharray: 1 1; }
 .sb-aim-end { fill: #4a8fd8; }
+
+/* ----- Snakes and Ladders ----- */
+.sl-num { font-size: 2.6px; fill: #9aa3ad; font-family: inherit; }
+.sl-tint { fill: #f3f6fa; }
+.sl-ladder path { fill: none; stroke: #a0703c; stroke-width: 0.9; stroke-linecap: round; }
+.sl-snake__outline { fill: none; stroke: #222; stroke-width: 2.6; stroke-linecap: round; stroke-linejoin: round; }
+.sl-snake__body { fill: none; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+.sl-token { transition: transform 0.4s; }
+.sl-token--moving { animation: sl-move 1.9s ease-in-out forwards; }
+@keyframes sl-move { 0% { transform: translate(var(--x0), var(--y0)); } 45%, 60% { transform: translate(var(--x1), var(--y1)); } 100% { transform: translate(var(--x2), var(--y2)); } }
+.sl > .btn { margin-top: 10px; }
+
+/* ----- Maze Race ----- */
+.mr-board { touch-action: manipulation; }
+.mr-star { fill: #ffd04d; stroke: #222; stroke-width: 0.5; }
+.mr-option { fill: #ffe066; opacity: 0.35; }
+.mr-option--on { opacity: 0.85; }
+.mr-wall { stroke: #222; stroke-width: 1.6; stroke-linecap: round; }
+.mr-wall--new { animation: pf-blink 0.6s ease-in-out 3; }
+.mr-wall--plan { stroke: #d99a1e; stroke-dasharray: 1.6 1; }
