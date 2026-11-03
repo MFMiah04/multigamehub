@@ -43,7 +43,8 @@ export async function joinRoom(code, uid, name, look) {
   const snap = await get(roomRef(code));
   if (!snap.exists()) return "That room doesn't exist. Check the code?";
   const room = snap.val();
-  if (room.kicked?.[uid]) return 'The host removed you from this room.';
+  // Being removed is only for that moment: the link still works, so clear the note and come back in.
+  if (room.kicked?.[uid]) await set(roomRef(code, `kicked/${uid}`), null);
   const players = room.players || {};
   if (players[uid]) {
     await update(roomRef(code, `players/${uid}`), { name, look, online: true });

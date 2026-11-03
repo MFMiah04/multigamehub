@@ -7,10 +7,15 @@
         ".validate": "$code.matches(/^[A-Z]{4}$/)",
         "players": {
           "$uid": {
-            ".write": "auth != null && auth.uid === $uid && root.child('rooms').child($code).child('hostId').exists() && !root.child('rooms').child($code).child('kicked').child($uid).exists()",
+            ".write": "auth != null && auth.uid === $uid && root.child('rooms').child($code).child('hostId').exists()",
             "name": {
               ".validate": "newData.isString() && newData.val().length >= 2 && newData.val().length <= 16"
             }
+          }
+        },
+        "kicked": {
+          "$uid": {
+            ".write": "auth != null && auth.uid === $uid && !newData.exists()"
           }
         },
         "reactions": {
