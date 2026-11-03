@@ -7,7 +7,7 @@ import { xy, at, nextTurn, scores, status, turnLine, grid, dot, ring, finish, le
 
 // Flip Grab: place a dot to trap lines of other players' dots between two of yours, and they flip to you.
 const EIGHT = [[1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [1, -1], [-1, 1], [-1, -1]];
-const sizeFor = players => (players <= 2 ? 8 : players <= 4 ? 10 : 12);
+const sizeFor = players => (players <= 2 ? 8 : 10);
 
 // The dots a move would flip: in each direction, a run of other players' dots ended by one of yours.
 function flipsFor(board, n, i, p) {
@@ -55,7 +55,7 @@ export default {
   id: 'flip-grab',
   name: 'Flip Grab',
   color: 'mint',
-  players: '2–8',
+  players: '2–4',
   blurb: 'Trap other players\' dots between two of yours to flip them to your colour.',
   rules: [
     'Take turns placing a dot. If it traps a line of other players\' dots between it and another of your dots (in any direction, diagonals too), they all flip to your colour.',
@@ -70,7 +70,7 @@ export default {
 
   defaults: () => ({}),
   settingsView: ctx => html`<p class="note">${sizeFor(ctx.players.length)} × ${sizeFor(ctx.players.length)} board for ${ctx.players.length} players.</p>`,
-  canStart: ctx => (ctx.players.length < 2 ? 'Need 1 more to play' : ctx.players.length > 8 ? '8 players max' : null),
+  canStart: ctx => (ctx.players.length < 2 ? 'Need 1 more to play' : ctx.players.length > 4 ? '4 players max' : null),
 
   start(ctx) {
     const order = ctx.players.map(p => p.id);
@@ -78,16 +78,10 @@ export default {
     const cells = Array(n * n).fill('-');
     // A little mixed-up block of everyone's dots in the middle.
     const players = order.length;
-    if (players <= 4) {
-      const k = players <= 2 ? 2 : players === 3 ? 3 : 4;
-      const start = Math.floor((n - k) / 2);
-      for (let y = 0; y < k; y++) for (let x = 0; x < k; x++) {
-        cells[(start + y) * n + start + x] = String(players <= 2 ? (x + y) % 2 : (x + (players === 4 ? 2 : 1) * y) % players);
-      }
-    } else {
-      // Bigger groups: two dots each, dealt across a 4 × 4 block so neighbours are mixed up.
-      const start = (n - 4) / 2;
-      for (let k = 0; k < players * 2; k++) cells[(start + Math.floor(k / 4)) * n + start + (k % 4)] = String(k % players);
+    const k = players <= 2 ? 2 : players === 3 ? 3 : 4;
+    const start = Math.floor((n - k) / 2);
+    for (let y = 0; y < k; y++) for (let x = 0; x < k; x++) {
+      cells[(start + y) * n + start + x] = String(players <= 2 ? (x + y) % 2 : (x + (players === 4 ? 2 : 1) * y) % players);
     }
     return { phase: 'play', round: { n, order, board: cells.join(''), turn: order[Math.floor(Math.random() * order.length)] } };
   },

@@ -6,9 +6,9 @@ import { roomRef } from '../room.js';
 import { cue } from '../sound.js';
 import { CELL, xy, nextTurn, scores, status, turnLine, grid, dot, ring, finish } from './grid-kit.js';
 
-// Gravity Drop: drop counters into columns to get four in a row. Or, instead, pop one of your own
+// Connect 4: drop counters into columns to get four in a row. Or, instead, pop one of your own
 // counters out of the bottom row and let the whole column fall.
-const sizeFor = players => (players <= 2 ? [7, 6] : players <= 4 ? [8, 7] : players <= 6 ? [10, 8] : [12, 9]);
+const sizeFor = players => (players <= 2 ? [7, 6] : [8, 7]);
 const LINES = [[1, 0], [0, 1], [1, 1], [1, -1]];
 
 // The first four-in-a-row for player p, as its four squares, or null.
@@ -60,10 +60,10 @@ function move(ctx, c, pop) {
 }
 
 export default {
-  id: 'gravity-drop',
-  name: 'Gravity Drop',
+  id: 'connect-4',
+  name: 'Connect 4',
   color: 'yellow',
-  players: '2–8',
+  players: '2–4',
   blurb: 'Four in a row, but you can pop counters out of the bottom.',
   rules: [
     'Take turns dropping a counter into a column. Get four of yours in a row (across, down or diagonally) to win.',
@@ -78,7 +78,7 @@ export default {
 
   defaults: () => ({}),
   settingsView: ctx => html`<p class="note">${sizeFor(ctx.players.length).join(' × ')} board for ${ctx.players.length} players.</p>`,
-  canStart: ctx => (ctx.players.length < 2 ? 'Need 1 more to play' : ctx.players.length > 8 ? '8 players max' : null),
+  canStart: ctx => (ctx.players.length < 2 ? 'Need 1 more to play' : ctx.players.length > 4 ? '4 players max' : null),
 
   start(ctx) {
     const order = ctx.players.map(p => p.id);

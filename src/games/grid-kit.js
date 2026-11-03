@@ -2,7 +2,7 @@ import { html, nothing, button, action, avatar } from '../ui.js';
 import { svg } from 'lit-html';
 import { backToLobbyButton, endScreen, endTitle, turnLine } from './common.js';
 
-// Shared bits for the grid battle games (Flip Grab, Gravity Drop, Land Rush,
+// Shared bits for the grid battle games (Flip Grab, Connect 4,
 // Snowball Fight): player inks, the score row, a tappable grid, turn order and the end screen.
 
 export const CELL = 10; // board units per square
@@ -38,9 +38,7 @@ export const status = (news, line) => html`<p class="db-status center"><b>${news
 export { turnLine };
 
 // A w × h sheet of grid paper. `layers` is drawn on top; a tap anywhere calls onTap(square).
-// With press: true it reacts as soon as a finger lands (for fast games), instead of on a click,
-// which a slight slide or drag would cancel.
-export function grid({ w, h, layers, onTap, cls = '', press = false }) {
+export function grid({ w, h, layers, onTap, cls = '' }) {
   const lines = [];
   for (let i = 1; i < w; i++) lines.push(`M${i * CELL} 0 V${h * CELL}`);
   for (let i = 1; i < h; i++) lines.push(`M0 ${i * CELL} H${w * CELL}`);
@@ -52,7 +50,7 @@ export function grid({ w, h, layers, onTap, cls = '', press = false }) {
     if (i >= 0) onTap(i);
   };
   return html`<svg class="cr-board ${onTap ? 'cr-board--mine turn-glow' : ''} ${cls}" viewBox="-1 -1 ${w * CELL + 2} ${h * CELL + 2}" role="img" aria-label="The board"
-    @click=${onTap && !press ? tap : null} @pointerdown=${onTap && press ? e => { e.preventDefault(); tap(e); } : null}>
+    @click=${onTap ? tap : null}>
     <rect class="cr-paper" x="0" y="0" width=${w * CELL} height=${h * CELL} rx="1" />
     <path class="cr-grid" d=${lines.join(' ')} />
     ${layers}
