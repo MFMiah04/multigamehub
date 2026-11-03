@@ -87,7 +87,7 @@ export default {
     const body = html`<div class="cr" style="--ratio: 1">
       ${scores(ctx, order, { value: i => owned(cells, i) })}
       <p class="db-status center">${counting ? html`<b class="lr-count">Get ready… ${count}</b>` : over ? html`<b>Time's up!</b>` : html`<b class="lr-clock ${left <= 5 ? 'lr-clock--low' : ''}">${left}s</b><br>Tap, tap, tap!`}</p>
-      ${grid({ w: n, h: n, layers, onTap: playing ? tap : null, cls: 'lr-board' })}
+      ${grid({ w: n, h: n, layers, onTap: playing ? tap : null, cls: 'lr-board', press: true })}
     </div>`;
     if (!over) return body;
     return finish(ctx, order, { winners: leaders(order, i => owned(cells, i), id => ctx.room.players[id]), body });

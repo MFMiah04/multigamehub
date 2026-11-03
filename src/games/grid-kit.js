@@ -38,7 +38,9 @@ export const status = (news, line) => html`<p class="db-status center"><b>${news
 export { turnLine };
 
 // A w × h sheet of grid paper. `layers` is drawn on top; a tap anywhere calls onTap(square).
-export function grid({ w, h, layers, onTap, cls = '' }) {
+// With press: true it reacts as soon as a finger lands (for fast games), instead of on a click,
+// which a slight slide or drag would cancel.
+export function grid({ w, h, layers, onTap, cls = '', press = false }) {
   const lines = [];
   for (let i = 1; i < w; i++) lines.push(`M${i * CELL} 0 V${h * CELL}`);
   for (let i = 1; i < h; i++) lines.push(`M0 ${i * CELL} H${w * CELL}`);
@@ -50,7 +52,7 @@ export function grid({ w, h, layers, onTap, cls = '' }) {
     if (i >= 0) onTap(i);
   };
   return html`<svg class="cr-board ${onTap ? 'cr-board--mine turn-glow' : ''} ${cls}" viewBox="-1 -1 ${w * CELL + 2} ${h * CELL + 2}" role="img" aria-label="The board"
-    @click=${onTap ? tap : null}>
+    @click=${onTap && !press ? tap : null} @pointerdown=${onTap && press ? e => { e.preventDefault(); tap(e); } : null}>
     <rect class="cr-paper" x="0" y="0" width=${w * CELL} height=${h * CELL} rx="1" />
     <path class="cr-grid" d=${lines.join(' ')} />
     ${layers}

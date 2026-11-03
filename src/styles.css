@@ -1181,7 +1181,7 @@ frame-reel { display: block; max-width: 760px; width: 100%; margin: 8px auto; }
 .bg-fuse { display: inline-flex; align-items: center; gap: 4px; padding: 4px 10px; border: 2px solid #222; border-radius: 8px; background: #fff; font: inherit; font-size: 16px; cursor: pointer; }
 .bg-fuse--on { background: #ffe066; box-shadow: 2px 2px 0 #222; }
 .bg-fuse:disabled { opacity: 0.5; }
-.lr-board { touch-action: none; user-select: none; }
+.lr-board { touch-action: none; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
 .lr-square { animation: lr-in 0.2s ease-out; transform-box: fill-box; transform-origin: center; }
 @keyframes lr-in { from { transform: scale(0.4); } }
 .lr-strength { stroke: #222; stroke-width: 0.5; opacity: 0.5; }
@@ -1204,3 +1204,7 @@ frame-reel { display: block; max-width: 760px; width: 100%; margin: 8px auto; }
 .sb-splat { stroke: #4a8fd8; stroke-width: 0.6; stroke-linecap: round; opacity: 0; animation: sb-land 0.2s 1s forwards; }
 .sb-controls { display: flex; flex-direction: column; align-items: center; gap: 8px; }
 .sb-controls .btn { margin: 0; }
+.sb-field { touch-action: none; user-select: none; -webkit-user-select: none; }
+.sb-reach { fill: #4a8fd8; fill-opacity: 0.07; stroke: #4a8fd8; stroke-width: 0.4; stroke-dasharray: 1.6 1.1; }
+.sb-route { stroke: #222; stroke-width: 0.5; stroke-dasharray: 1 1; }
+.sb-aim-end { fill: #4a8fd8; }
