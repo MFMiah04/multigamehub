@@ -1166,11 +1166,6 @@ frame-reel { display: block; max-width: 760px; width: 100%; margin: 8px auto; }
 .gd-poppable { animation: pf-blink 0.8s ease-in-out infinite; }
 .gd-line { fill: none; stroke: #222; stroke-width: 1.4; stroke-linecap: round; stroke-dasharray: 2 1.4; }
 .gd-actions, .bg-fuses, .sb-throws { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin-top: 10px; }
-.sw-stack ellipse { stroke: #222; stroke-width: 0.45; }
-.sw-count { font-size: 3.6px; font-weight: 700; text-anchor: middle; fill: #222; font-family: inherit; }
-.sw-target { fill: #ffe066; opacity: 0.45; }
-.sw-pick { fill: none; stroke-width: 1.2; }
-.sw-fell { fill: #ffe066; fill-opacity: 0.5; stroke-dasharray: 1 1; }
 .bg-fuse { display: inline-flex; align-items: center; gap: 4px; padding: 4px 10px; border: 2px solid #222; border-radius: 8px; background: #fff; font: inherit; font-size: 16px; cursor: pointer; }
 .bg-fuse--on { background: #ffe066; box-shadow: 2px 2px 0 #222; }
 .bg-fuse:disabled { opacity: 0.5; }
