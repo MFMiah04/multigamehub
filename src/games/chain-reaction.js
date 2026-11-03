@@ -3,7 +3,7 @@ import { html, nothing, button, action, avatar, toast } from '../ui.js';
 import { svg } from 'lit-html';
 import { keyed } from 'lit-html/directives/keyed.js';
 import { roomRef } from '../room.js';
-import { backToLobbyButton, endScreen, endTitle } from './common.js';
+import { backToLobbyButton, endScreen, endTitle, turnLine } from './common.js';
 import { cue } from '../sound.js';
 
 const CELL = 10; // board units per square
@@ -149,7 +149,7 @@ function board(ctx, { cells, flying = nothing, onTap, key }) {
     const y = Math.floor((vb.y + ((e.clientY - r.top) / r.height) * vb.height) / CELL);
     if (x >= 0 && y >= 0 && x < w && y < h) onTap(y * w + x);
   };
-  return html`<svg class="cr-board ${onTap ? 'cr-board--mine' : ''}" viewBox="-1 -1 ${w * CELL + 2} ${h * CELL + 2}" role="img" aria-label="The board"
+  return html`<svg class="cr-board ${onTap ? 'cr-board--mine turn-glow' : ''}" viewBox="-1 -1 ${w * CELL + 2} ${h * CELL + 2}" role="img" aria-label="The board"
     style="--ratio: ${w / h}" @click=${onTap ? tap : null}>
     <rect class="cr-paper" x="0" y="0" width=${w * CELL} height=${h * CELL} rx="1" />
     <path class="cr-grid" d=${lines.join(' ')} />
@@ -222,7 +222,7 @@ function playing(ctx) {
   const mover = move && ctx.room.players[round.order[move.p]];
   const moverName = mover ? (mover.id === ctx.uid ? 'You' : mover.name) : 'Someone';
   const news = busy && chain >= 2 ? `${moverName} set off a chain!` : chain >= 3 ? `A ${chain}-pop chain from ${moverName}!` : myTurn ? 'Your turn.' : `${turnPlayer?.name || 'Someone'}'s turn.`;
-  const hint = myTurn ? 'Tap an empty square or one of yours.' : round.order.includes(ctx.uid) ? `Waiting for ${turnPlayer?.name || 'the next player'}…` : '';
+  const hint = round.order.includes(ctx.uid) ? turnLine(myTurn && !busy, { mine: 'Tap an empty square or one of yours.', waiting: myTurn ? 'Wait for the chain to finish…' : `Waiting for ${turnPlayer?.name || 'the next player'}…` }) : '';
 
   const me = round.order.indexOf(ctx.uid);
   const tap = i => {

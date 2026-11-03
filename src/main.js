@@ -6,7 +6,7 @@ import { db, signIn, serverNow, syncClock } from './firebase.js';
 import { roomRef, createRoom, joinRoom, leaveRoom, trackPresence, stopPresence, sortedPlayers, claimHostIfNeeded, touchRoom } from './room.js';
 import { html, nothing, toast, confirmDialog, action, avatar } from './ui.js';
 import { games } from './games/index.js';
-import { backToLobby } from './games/common.js';
+import { backToLobby, resetTurnTitle } from './games/common.js';
 import { homeView, homeState } from './screens/home.js';
 import { lobbyView, copyCode, copyInviteLink } from './screens/lobby.js';
 import { startApp, keepAwake } from './pwa.js';
@@ -151,6 +151,7 @@ function runAutomaticUpdates(ctx) {
 
 function rerender() {
   if (state.loading) return;
+  resetTurnTitle(); // a game sets it again if it's still your turn
   keepAwake(!!state.room);
   if (!state.room) {
     render(homeView({

@@ -393,3 +393,17 @@ export function backToLobbyButton(ctx, kind = 'white') {
     ? button('Back to the lobby', action(() => backToLobby(ctx)), { kind })
     : html`<p class="note center">The host will take everyone back to the lobby.</p>`;
 }
+
+// ----- whose turn -----
+
+const BASE_TITLE = document.title;
+export const resetTurnTitle = () => { document.title = BASE_TITLE; };
+
+// The line under a turn-based game's news. On your turn it's a big yellow "Your turn!" that pops in
+// (and the browser tab says so too, for when you're looking at something else); otherwise who you're waiting for.
+export function turnLine(myTurn, { mine, waiting }) {
+  if (myTurn) document.title = `Your turn! · ${BASE_TITLE}`;
+  return myTurn
+    ? html`<span class="turn-line turn-line--mine" role="status"><b>Your turn!</b> ${mine}</span>`
+    : html`<span class="turn-line" role="status">${waiting}</span>`;
+}

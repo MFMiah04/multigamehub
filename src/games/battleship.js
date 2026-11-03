@@ -2,7 +2,7 @@ import { runTransaction } from 'firebase/database';
 import { html, nothing, button, selectField, action, avatar, toast } from '../ui.js';
 import { svg } from 'lit-html';
 import { roomRef } from '../room.js';
-import { backToLobbyButton, endScreen, endTitle, sideResult } from './common.js';
+import { backToLobbyButton, endScreen, endTitle, sideResult, turnLine } from './common.js';
 import { cue } from '../sound.js';
 
 // The ships, and which go to sea on each size of grid.
@@ -349,11 +349,11 @@ function battle(ctx) {
 
   // Their grid on top, yours underneath, like the real thing. Neither moves during the game.
   return html`<div class="pf-play" style="--n: ${size}">
-    <p class="pf-status center"><b>${news}</b><br>${myTurn ? `Your turn: fire at ${name}'s grid.` : `Waiting for ${name} to fire…`}</p>
+    <p class="pf-status center"><b>${news}</b><br>${turnLine(myTurn, { mine: `Fire at ${name}'s grid.`, waiting: `Waiting for ${name} to fire…` })}</p>
     ${row({ title: html`${them ? avatar(them, 22) : nothing} ${name}'s waters`, active: myTurn, side: tally(size, atThem.sunk),
       grid: board({ size, ships: atThem.sunk.map(ship => ({ ship, cls: 'pf-ship--sunk' })), shots: myShots, hits: atThem.hit,
         onCell: myTurn ? (x, y) => fire(ctx, x, y).catch(() => toast("That shot didn't go through. Try again?")) : null,
-        last: last?.by === ctx.uid ? last : null, cls: myTurn ? 'pf-board--aim' : '', label: `${name}'s grid` }) })}
+        last: last?.by === ctx.uid ? last : null, cls: myTurn ? 'pf-board--aim turn-glow' : '', label: `${name}'s grid` }) })}
     ${row({ title: html`${avatar(ctx.me, 22)} Your fleet`, active: !myTurn, side: tally(size, atMe.sunk),
       grid: board({ size, ships: round.fleets[ctx.uid].map(ship => ({ ship, cls: atMe.sunk.includes(ship) ? 'pf-ship--sunk' : '' })),
         shots: theirShots, hits: atMe.hit, last: last?.by === themId ? last : null, label: 'Your grid' }) })}

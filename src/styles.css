@@ -1141,3 +1141,13 @@ frame-reel { display: block; max-width: 760px; width: 100%; margin: 8px auto; }
 .cr-fly { animation: cr-fly var(--t) ease-in forwards; }
 @keyframes cr-fly { to { transform: translate(calc(var(--dx) * 1px), calc(var(--dy) * 1px)); } }
 @media (prefers-reduced-motion: reduce) { .cr-spin, .cr-cell--hot { animation: none; } }
+
+/* ----- Whose turn ----- */
+.turn-line { display: inline-block; margin-top: 3px; padding: 0 10px; border: 2px solid transparent; }
+.turn-line--mine { background: #ffe066; border-color: #222; box-shadow: 2px 2px 0 #222; transform: rotate(-1.5deg); animation: turn-pop 0.5s cubic-bezier(.2, 1.6, .4, 1); }
+.turn-line--mine b { font-size: 1.15em; }
+@keyframes turn-pop { from { transform: rotate(-1.5deg) scale(0.6); opacity: 0; } }
+/* The board you play on glows while it's your turn. */
+.turn-glow { animation: turn-glow 1.6s ease-in-out infinite; }
+@keyframes turn-glow { 0%, 100% { filter: drop-shadow(0 0 0 #ffd04d); } 50% { filter: drop-shadow(0 0 5px #ffc933) drop-shadow(0 0 2px #ffc933); } }
+@media (prefers-reduced-motion: reduce) { .turn-line--mine, .turn-glow { animation: none; } .turn-glow { filter: drop-shadow(0 0 4px #ffc933); } }

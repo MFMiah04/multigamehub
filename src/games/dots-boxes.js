@@ -2,7 +2,7 @@ import { runTransaction } from 'firebase/database';
 import { html, nothing, button, selectField, action, avatar, toast } from '../ui.js';
 import { svg } from 'lit-html';
 import { roomRef } from '../room.js';
-import { backToLobbyButton, endScreen, endTitle } from './common.js';
+import { backToLobbyButton, endScreen, endTitle, turnLine } from './common.js';
 import { cue } from '../sound.js';
 
 const GAP = 10; // board units between dots
@@ -140,7 +140,7 @@ function board(ctx, { pick, hover, onHover } = {}) {
   };
 
   const last = round.last?.line;
-  return html`<svg class="db-board ${pick ? 'db-board--mine' : ''}" viewBox="${-5} ${-5} ${span + 10} ${span + 10}" role="img" aria-label="The board"
+  return html`<svg class="db-board ${pick ? 'db-board--mine turn-glow' : ''}" viewBox="${-5} ${-5} ${span + 10} ${span + 10}" role="img" aria-label="The board"
     @click=${pick ? e => { const line = nearest(e); if (line) pick(line); } : null}
     @pointermove=${onHover ? e => onHover(nearest(e)) : null} @pointerleave=${onHover ? () => onHover(null) : null}>
     ${Object.entries(round.boxes || {}).map(([b, id]) => {
@@ -170,7 +170,7 @@ function playing(ctx) {
   const news = !last ? `${myTurn ? 'You go' : `${turnPlayer?.name || 'Someone'} goes`} first.`
     : last.boxes ? `${last.by === ctx.uid ? 'You' : lastBy?.name || 'Someone'} closed ${last.boxes === 2 ? 'two boxes' : 'a box'} and ${last.by === ctx.uid ? 'go' : 'goes'} again!`
       : `${myTurn ? 'Your turn.' : `${turnPlayer?.name || 'Someone'}'s turn.`}`;
-  const hint = myTurn ? 'Tap between two dots to draw a line.' : playing ? `Waiting for ${turnPlayer?.name || 'the next player'}…` : '';
+  const hint = playing ? turnLine(myTurn, { mine: 'Tap between two dots.', waiting: `Waiting for ${turnPlayer?.name || 'the next player'}…` }) : '';
 
   return html`<div class="db" style="--n: ${round.n}">
     ${scores(ctx, { turn: round.turn })}
