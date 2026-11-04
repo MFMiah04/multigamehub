@@ -1198,10 +1198,12 @@ frame-reel { display: block; max-width: 760px; width: 100%; margin: 8px auto; }
 .sl-snake__body { fill: none; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
 .sl-token { transition: transform 0.4s; }
 .sl-token--walking { transition: none; }
-.sl-turn { fill: none; stroke: #6b7c90; stroke-width: 0.7; stroke-linecap: round; stroke-linejoin: miter; }
+.sl-turn { fill: none; stroke: #5d6e82; stroke-width: 0.75; stroke-linecap: round; stroke-linejoin: round; }
 .sl-box rect { fill: #ffe066; stroke: #222; stroke-width: 0.6; transform-box: fill-box; transform-origin: center; animation: sl-box-bob 2.4s ease-in-out infinite; }
 .sl-box text { font-size: 5.6px; font-weight: 700; text-anchor: middle; fill: #222; font-family: inherit; pointer-events: none; }
 @keyframes sl-box-bob { 50% { transform: rotate(-8deg); } }
+.sl-box--fading { animation: sl-fade 1.1s ease-in-out infinite; }
+@keyframes sl-fade { 50% { opacity: 0.2; } }
 .sl-pickable { fill: #ffe066; fill-opacity: 0.35; stroke: #222; stroke-width: 0.5; stroke-dasharray: 1 0.8; }
 .sl-pickable--on { fill-opacity: 0.8; }
 .sl-board--pick { cursor: pointer; }
@@ -1230,13 +1232,35 @@ frame-reel { display: block; max-width: 760px; width: 100%; margin: 8px auto; }
 .sl-shadow { position: absolute; left: 6px; right: 6px; bottom: -9px; height: 6px; border-radius: 50%; background: rgba(0, 0, 0, 0.16); }
 .sl-cube-wrap--roll .sl-shadow { animation: sl-shadow 0.75s cubic-bezier(.25, .7, .35, 1) var(--delay) both; }
 @keyframes sl-shadow { 0% { transform: scale(0.45); opacity: 0.4; } 55% { transform: scale(1.05); } 75% { transform: scale(0.85); } 100% { transform: scale(1); } }
-.sl-held { margin-left: 3px; font-size: 13px; color: #b8860b; letter-spacing: 1px; }
 .sl-items { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; align-items: stretch; margin-top: 8px; width: var(--board); }
-.sl-item { display: flex; flex-direction: column; align-items: center; gap: 4px; flex: 1 1 140px; max-width: 220px; padding: 6px 10px; background: #fff7cc; border: 2px solid #222; border-radius: 8px; box-shadow: 2px 2px 0 #222; text-align: center; line-height: 1.2; }
-.sl-item small { font-size: 13px; }
-.sl-item .btn { margin: 2px 0 0; }
-.sl-item--next { background: #fff; opacity: 0.7; box-shadow: none; }
-.sl-fx { width: 100%; margin: 0; text-align: center; }
+.sl-held { display: inline-block; width: 15px; height: 15px; margin-left: 2px; vertical-align: -2px; }
+.sl-held .sl-icon { width: 100%; height: 100%; }
+.sl-icon { display: block; width: 100%; height: 100%; }
+.sl-icon-num { font-size: 8px; font-weight: 700; fill: #222; stroke: none; font-family: inherit; }
+.sl-q { display: inline-block; padding: 0 5px; background: #ffe066; border: 1.5px solid #222; border-radius: 4px; }
+.sl-card { position: relative; display: flex; flex-direction: column; align-items: center; gap: 2px; flex: 1 1 140px; max-width: 200px; padding: 8px 10px 10px;
+  background: var(--c); border: 2px solid #222; border-radius: 10px; box-shadow: 3px 3px 0 #222; font: inherit; color: #222; text-align: center; line-height: 1.2;
+  transform: rotate(-1.5deg); animation: sl-card-in 0.45s cubic-bezier(.2, 1.6, .4, 1); }
+.sl-card:nth-child(2) { transform: rotate(1.5deg); }
+.sl-card__icon { width: 40px; height: 40px; padding: 4px; background: #fff; border: 2px solid #222; border-radius: 50%; }
+.sl-card b { font-size: 17px; }
+.sl-card small { font-size: 13px; }
+.sl-card__go { margin-top: 4px; padding: 0 8px; background: #fff; border: 1.5px solid #222; border-radius: 999px; font-size: 13px; font-weight: 700; }
+.sl-card--ready { cursor: pointer; animation: sl-card-in 0.45s cubic-bezier(.2, 1.6, .4, 1), sl-ready 1.3s ease-in-out 0.45s infinite; }
+.sl-card--next { opacity: 0.6; box-shadow: none; filter: saturate(0.6); }
+@keyframes sl-card-in { from { transform: scale(0.4) rotate(-12deg); opacity: 0; } }
+.sl-active { display: inline-flex; align-items: center; gap: 5px; padding: 2px 10px 2px 4px; background: var(--c); border: 1.5px solid #222; border-radius: 999px; font-size: 14px; }
+.sl-active .sl-icon { width: 20px; height: 20px; }
+.sl-got { position: fixed; left: 50%; top: 38%; z-index: 40; display: flex; align-items: center; gap: 10px; padding: 10px 18px 10px 10px; background: var(--c);
+  border: 2.5px solid #222; border-radius: 14px; box-shadow: 4px 4px 0 #222; font-size: 20px; transform: translate(-50%, -50%) rotate(-2deg);
+  animation: sl-got 2.1s ease-out both; pointer-events: none; }
+.sl-got .sl-icon { width: 46px; height: 46px; padding: 5px; background: #fff; border: 2px solid #222; border-radius: 50%; }
+@keyframes sl-got { 0% { transform: translate(-50%, -50%) scale(0.3) rotate(-14deg); opacity: 0; } 18% { transform: translate(-50%, -50%) scale(1.08) rotate(-2deg); opacity: 1; }
+  80% { transform: translate(-50%, -50%) scale(1) rotate(-2deg); opacity: 1; } 100% { transform: translate(-50%, -80%) scale(0.9) rotate(-2deg); opacity: 0; } }
+.sl-shuffled { animation: sl-shuffle-in 0.8s ease-out; }
+@keyframes sl-shuffle-in { 0% { opacity: 0; } 40% { opacity: 0.4; } 100% { opacity: 1; } }
+.sl-shuffle { margin: 4px 0 0; font-size: 14px; }
+.sl-shuffle--soon { color: #c0392b; animation: pf-blink 1.2s ease-in-out infinite; }
 .sl-targets { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin-top: 8px; }
 .sl-targets .btn { margin: 0; }
 .sl-roll { display: flex; align-items: center; justify-content: center; gap: 14px; min-height: 64px; margin-top: 8px; }
