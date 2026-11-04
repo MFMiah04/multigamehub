@@ -208,10 +208,9 @@ function boardView(ctx, live) {
   if (busy) { clearTimeout(local.anim); local.anim = setTimeout(ctx.rerender, 45); }
   if (!myTurn || busy) local.mode = null;
 
-  // The dice tumbles for a moment after each roll, then lands.
+  // The dice tumbles through the air for a moment after each roll, then lands.
   const isRoll = last?.kind === 'roll';
   const spinning = isRoll && now - last.t < SPIN_MS;
-  const faces = isRoll ? last.roll.map((r, i) => (spinning ? ((Math.floor((now - last.t) / 70) * 5 + last.n + i * 3) % 6) + 1 : r)) : [1];
 
   if (last) {
     cue(`sl:${round.id}:${last.n}`, last.kind === 'roll' || last.kind === 'boost' ? 'pop' : 'whoosh');
@@ -228,7 +227,7 @@ function boardView(ctx, live) {
   const mode = local.mode;
   const hint = mode?.pick === 'player' ? `Pick who to ${mode.power === 'swap' ? 'swap with' : 'push back'}.`
     : mode?.pick === 'link' ? (mode.from ? 'Now tap the square it should start on.' : 'Tap the head of a snake or the foot of a ladder.')
-      : `Tap Roll! (${left})`;
+      : `Tap the dice to roll${fx.double ? ' (two dice!)' : ''}. (${left})`;
   const line = !live || !round.order.includes(me) ? ''
     : turnLine(myTurn && !busy, { mine: hint, waiting: busy ? 'Moving…' : `Waiting for ${turnPlayer?.name || 'the next player'} to roll…` });
 
@@ -285,8 +284,7 @@ function boardView(ctx, live) {
       ${repeat(round.order.filter(id => ctx.room.players[id]), id => id, id => token(ctx, id, live))}
     </svg>
     <div class="sl-roll">
-      ${isRoll ? keyed(last.n, html`<span class="sl-dice">${faces.map(f => dieFace(f, spinning))}</span>`) : dieFace(1, false)}
-      ${myTurn && !mode ? button(busy ? 'Moving…' : fx.double ? 'Roll two dice!' : 'Roll!', () => rollFor(ctx, me).catch(() => toast("That didn't go through. Try again?")), { disabled: busy }) : nothing}
+      ${diceButton(ctx, { ready: myTurn && !busy && !mode, double: fx.double, last, isRoll, spinning })}
       ${mode ? button('Cancel', () => { local.mode = null; ctx.rerender(); }, { kind: 'white', small: true }) : nothing}
     </div>
     ${live && round.order.includes(me) ? html`<div class="sl-items">
@@ -351,14 +349,14 @@ function token(ctx, id, live) {
   </g>`;
 }
 
-// Curved arrows at the end of each row, showing where the path turns up.
+// Square-cornered U-turn arrows at the end of each row: out to the edge, up a row, and back the other way.
 function turnArrows() {
   return svg`${[...Array(9).keys()].map(row => {
     const right = row % 2 === 0;
-    const x = right ? 97.6 : 2.4;
-    const yFrom = (9 - row) * 10 + 6.5, yTo = (9 - row) * 10 - 3.5;
-    const bend = right ? 1.8 : -1.8;
-    return svg`<path class="sl-turn" d="M${x} ${yFrom} Q${x + bend} ${(yFrom + yTo) / 2} ${x} ${yTo} M${x - 1.2} ${yTo + 1.6} L${x} ${yTo} L${x + 1.2} ${yTo + 1.6}" />`;
+    const out = right ? 1 : -1;
+    const x0 = right ? 93.6 : 6.4, x1 = right ? 98.4 : 1.6;
+    const y0 = (9 - row) * 10 + 7.5, y1 = y0 - 10;
+    return svg`<path class="sl-turn" d="M${x0} ${y0} H${x1} V${y1} H${x0} M${x0 + 1.5 * out} ${y1 - 1.4} L${x0} ${y1} L${x0 + 1.5 * out} ${y1 + 1.4}" />`;
   })}`;
 }
 
@@ -368,12 +366,29 @@ function box(s) {
   return svg`<g class="sl-box"><rect x=${x - 3.6} y=${y - 3} width="7.2" height="7.2" rx="1.4" /><text x=${x} y=${y + 2.6}>?</text></g>`;
 }
 
-// A doodled dice showing a number, tumbling while it rolls.
+// A 3D dice: six faces on a cube. A roll tosses it up, spins it over and over, and lands it with
+// the rolled number facing out.
 const PIPS = { 1: [[12, 12]], 2: [[7, 7], [17, 17]], 3: [[7, 7], [12, 12], [17, 17]], 4: [[7, 7], [17, 7], [7, 17], [17, 17]],
   5: [[7, 7], [17, 7], [12, 12], [7, 17], [17, 17]], 6: [[7, 7], [17, 7], [7, 12], [17, 12], [7, 17], [17, 17]] };
-const dieFace = (n, spinning) => html`<svg class="sl-die ${spinning ? 'sl-die--spin' : ''}" viewBox="0 0 24 24" width="52" height="52" role="img" aria-label=${spinning ? 'Rolling' : `Rolled ${n}`}>
-  <rect x="1.5" y="1.5" width="21" height="21" rx="4.5" fill="#fff" stroke="#222" stroke-width="1.6" />
-  ${PIPS[n].map(([x, y]) => svg`<circle cx=${x} cy=${y} r="2" fill="#222" />`)}</svg>`;
+const FACING = { 1: [0, 0], 2: [-90, 0], 3: [0, -90], 4: [0, 90], 5: [90, 0], 6: [0, 180] }; // turns that bring each face to the front
+function cube(n, rolling, i) {
+  const [fx, fy] = FACING[n];
+  const style = `--fx: ${fx}deg; --fy: ${fy}deg; --sx: ${fx + 720 + i * 90}deg; --sy: ${fy - 540 + i * 180}deg; --delay: ${i * 90}ms`;
+  return html`<span class="sl-cube-wrap ${rolling ? 'sl-cube-wrap--roll' : ''}" style=${style}>
+    <span class="sl-cube">${[1, 2, 3, 4, 5, 6].map(f => html`<span class="sl-face sl-face--${f}"><svg viewBox="0 0 24 24" aria-hidden="true">
+      ${PIPS[f].map(([x, y]) => svg`<circle cx=${x} cy=${y} r="2.1" fill="#222" />`)}</svg></span>`)}</span>
+    <span class="sl-shadow"></span>
+  </span>`;
+}
+
+// The dice is the roll button: on your turn it bobs and glows, and tapping it rolls.
+function diceButton(ctx, { ready, double, last, isRoll, spinning }) {
+  const shown = ready ? Array(double ? 2 : 1).fill(isRoll ? last.roll[0] : 1) : isRoll ? last.roll : [1];
+  const label = ready ? 'Roll the dice' : spinning ? 'Rolling' : `Rolled ${shown.join(' and ')}`;
+  return keyed(isRoll && !ready ? last.n : `ready:${ready}:${shown.length}`, html`<button class="sl-dice ${ready ? 'sl-dice--ready' : ''}" ?disabled=${!ready}
+    aria-label=${label} @click=${() => rollFor(ctx, ctx.uid).catch(() => toast("That didn't go through. Try again?"))}>
+    ${shown.map((v, i) => cube(v, isRoll && !ready, i))}</button>`);
+}
 
 function ladder(a, b, fresh) {
   const [x1, y1] = centre(a);

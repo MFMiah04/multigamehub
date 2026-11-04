@@ -1198,7 +1198,7 @@ frame-reel { display: block; max-width: 760px; width: 100%; margin: 8px auto; }
 .sl-snake__body { fill: none; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
 .sl-token { transition: transform 0.4s; }
 .sl-token--walking { transition: none; }
-.sl-turn { fill: none; stroke: #7a8796; stroke-width: 0.6; stroke-linecap: round; stroke-linejoin: round; }
+.sl-turn { fill: none; stroke: #6b7c90; stroke-width: 0.7; stroke-linecap: round; stroke-linejoin: miter; }
 .sl-box rect { fill: #ffe066; stroke: #222; stroke-width: 0.6; transform-box: fill-box; transform-origin: center; animation: sl-box-bob 2.4s ease-in-out infinite; }
 .sl-box text { font-size: 5.6px; font-weight: 700; text-anchor: middle; fill: #222; font-family: inherit; pointer-events: none; }
 @keyframes sl-box-bob { 50% { transform: rotate(-8deg); } }
@@ -1206,7 +1206,30 @@ frame-reel { display: block; max-width: 760px; width: 100%; margin: 8px auto; }
 .sl-pickable--on { fill-opacity: 0.8; }
 .sl-board--pick { cursor: pointer; }
 .sl-fresh { animation: pf-blink 0.35s ease-in-out 2; }
-.sl-dice { display: inline-flex; gap: 8px; }
+.sl-dice { display: inline-flex; gap: 16px; padding: 8px 10px 12px; background: none; border: 0; border-radius: 12px; font: inherit; }
+.sl-dice:disabled { cursor: default; }
+.sl-dice--ready { cursor: pointer; animation: sl-ready 1.3s ease-in-out infinite; }
+@keyframes sl-ready { 0%, 100% { transform: translateY(0); filter: drop-shadow(0 0 0 #ffd04d); } 50% { transform: translateY(-4px); filter: drop-shadow(0 0 6px #ffc933); } }
+.sl-cube-wrap { position: relative; display: block; width: 44px; height: 44px; perspective: 260px; }
+.sl-cube { position: absolute; inset: 0; transform-style: preserve-3d; transform: translateY(0) rotateX(var(--fx)) rotateY(var(--fy)) rotateZ(0deg); }
+.sl-cube-wrap--roll .sl-cube { animation: sl-roll 0.75s cubic-bezier(.25, .7, .35, 1) var(--delay) both; }
+@keyframes sl-roll {
+  0% { transform: translateY(-38px) rotateX(var(--sx)) rotateY(var(--sy)) rotateZ(160deg); }
+  55% { transform: translateY(2px) rotateX(calc(var(--fx) + 40deg)) rotateY(calc(var(--fy) - 25deg)) rotateZ(-10deg); }
+  75% { transform: translateY(-7px) rotateX(calc(var(--fx) - 8deg)) rotateY(calc(var(--fy) + 6deg)) rotateZ(3deg); }
+  100% { transform: translateY(0) rotateX(var(--fx)) rotateY(var(--fy)) rotateZ(0deg); }
+}
+.sl-face { position: absolute; inset: 0; display: block; background: #fff; border: 2px solid #222; border-radius: 9px; backface-visibility: hidden; }
+.sl-face svg { display: block; width: 100%; height: 100%; }
+.sl-face--1 { transform: translateZ(22px); }
+.sl-face--6 { transform: rotateY(180deg) translateZ(22px); }
+.sl-face--3 { transform: rotateY(90deg) translateZ(22px); }
+.sl-face--4 { transform: rotateY(-90deg) translateZ(22px); }
+.sl-face--2 { transform: rotateX(90deg) translateZ(22px); }
+.sl-face--5 { transform: rotateX(-90deg) translateZ(22px); }
+.sl-shadow { position: absolute; left: 6px; right: 6px; bottom: -9px; height: 6px; border-radius: 50%; background: rgba(0, 0, 0, 0.16); }
+.sl-cube-wrap--roll .sl-shadow { animation: sl-shadow 0.75s cubic-bezier(.25, .7, .35, 1) var(--delay) both; }
+@keyframes sl-shadow { 0% { transform: scale(0.45); opacity: 0.4; } 55% { transform: scale(1.05); } 75% { transform: scale(0.85); } 100% { transform: scale(1); } }
 .sl-held { margin-left: 3px; font-size: 13px; color: #b8860b; letter-spacing: 1px; }
 .sl-items { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; align-items: stretch; margin-top: 8px; width: var(--board); }
 .sl-item { display: flex; flex-direction: column; align-items: center; gap: 4px; flex: 1 1 140px; max-width: 220px; padding: 6px 10px; background: #fff7cc; border: 2px solid #222; border-radius: 8px; box-shadow: 2px 2px 0 #222; text-align: center; line-height: 1.2; }
@@ -1218,9 +1241,6 @@ frame-reel { display: block; max-width: 760px; width: 100%; margin: 8px auto; }
 .sl-targets .btn { margin: 0; }
 .sl-roll { display: flex; align-items: center; justify-content: center; gap: 14px; min-height: 64px; margin-top: 8px; }
 .sl-roll .btn { margin: 0; }
-.sl-die { flex: none; filter: drop-shadow(2px 2px 0 rgba(0, 0, 0, 0.15)); }
-.sl-die--spin { animation: sl-tumble 0.75s ease-out; }
-@keyframes sl-tumble { 0% { transform: translateY(-14px) rotate(-200deg) scale(0.8); } 60% { transform: translateY(2px) rotate(15deg); } 100% { transform: none; } }
 
 /* ----- Maze Race ----- */
 .mr-board { touch-action: manipulation; }
