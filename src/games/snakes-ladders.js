@@ -10,7 +10,8 @@ import { inkOf, scores, status, turnLine, nextTurn, finish } from './grid-kit.js
 // Snakes and Ladders: take turns rolling and moving. Land on a ladder's foot to climb it, on a
 // snake's head to slide down. First to 100 wins.
 const TURN_MS = 12000; // time to roll before the dice roll themselves
-const MOVE_MS = 1900; // how long a move takes to show, before the next player can roll
+const SPIN_MS = 750; // the dice tumbles for this long before it lands
+const MOVE_MS = SPIN_MS + 1900; // a roll plus the move, before the next player can roll
 const LADDERS = { 3: 22, 8: 30, 28: 55, 46: 66, 58: 77, 71: 92, 80: 99 };
 const SNAKES = { 17: 7, 37: 19, 54: 34, 64: 41, 87: 57, 93: 73, 98: 79 };
 const jump = s => LADDERS[s] || SNAKES[s] || s;
@@ -97,12 +98,17 @@ function boardView(ctx, live) {
   const last = round.last;
   const now = ctx.now();
   const busy = now < (round.busyUntil || 0);
+  // The dice tumbles for a moment after each roll, then lands; the counter moves once it has.
+  const rolledAt = last ? round.busyUntil - MOVE_MS : 0;
+  const spinning = !!last && now - rolledAt < SPIN_MS;
+  const face = spinning ? ((Math.floor((now - rolledAt) / 70) * 5 + last.n) % 6) + 1 : last?.roll || 1;
+  if (spinning) { clearTimeout(local.spin); local.spin = setTimeout(ctx.rerender, 70); }
   const myTurn = live && round.turn === me && !round.done;
   const turnPlayer = ctx.room.players[round.turn];
   if (last) {
     cue(`sl:${round.id}:${last.n}`, 'pop');
-    if (LADDERS[last.land]) setTimeout(() => cue(`sl:${round.id}:${last.n}:up`, 'score'), 800);
-    if (SNAKES[last.land]) setTimeout(() => cue(`sl:${round.id}:${last.n}:down`, 'whoosh'), 800);
+    if (LADDERS[last.land]) setTimeout(() => cue(`sl:${round.id}:${last.n}:up`, 'score'), SPIN_MS + 800);
+    if (SNAKES[last.land]) setTimeout(() => cue(`sl:${round.id}:${last.n}:down`, 'whoosh'), SPIN_MS + 800);
   }
   if (myTurn && !busy) cue(`sl:${round.id}:turn:${last?.n || 0}`, 'ding');
   // Redraw when the move finishes, so the Roll button wakes up straight away.
@@ -110,6 +116,7 @@ function boardView(ctx, live) {
 
   const who = id => (id === me ? 'You' : ctx.room.players[id]?.name || 'Someone');
   const news = !last ? `${myTurn ? 'You go' : `${turnPlayer?.name || 'Someone'} goes`} first.`
+    : spinning ? `${who(last.by)} ${last.by === me ? 'are' : 'is'} rolling…`
     : `${who(last.by)} rolled ${last.roll}${LADDERS[last.land] ? ' and climbed a ladder!' : SNAKES[last.land] ? ' and slid down a snake!' : '.'}`;
   const left = Math.max(0, Math.ceil((round.endsAt - now) / 1000));
   const line = !live || !round.order.includes(me) ? ''
@@ -135,16 +142,26 @@ function boardView(ctx, live) {
       ${Object.entries(SNAKES).map(([a, b], k) => snake(+a, b, k))}
       ${repeat(round.order.filter(id => ctx.room.players[id]), id => id, id => token(ctx, id, live))}
     </svg>
-    ${myTurn ? button(busy ? 'Moving…' : 'Roll!', () => rollDice(ctx).catch(() => toast("That didn't go through. Try again?")), { disabled: busy }) : nothing}
+    <div class="sl-roll">
+      ${keyed(last?.n || 0, dieFace(face, spinning))}
+      ${myTurn ? button(busy ? 'Moving…' : 'Roll!', () => rollDice(ctx).catch(() => toast("That didn't go through. Try again?")), { disabled: busy }) : nothing}
+    </div>
   </div>`;
 }
+
+// A doodled dice showing a number, tumbling while it rolls.
+const PIPS = { 1: [[12, 12]], 2: [[7, 7], [17, 17]], 3: [[7, 7], [12, 12], [17, 17]], 4: [[7, 7], [17, 7], [7, 17], [17, 17]],
+  5: [[7, 7], [17, 7], [12, 12], [7, 17], [17, 17]], 6: [[7, 7], [17, 7], [7, 12], [17, 12], [7, 17], [17, 17]] };
+const dieFace = (n, spinning) => html`<svg class="sl-die ${spinning ? 'sl-die--spin' : ''}" viewBox="0 0 24 24" width="52" height="52" role="img" aria-label=${spinning ? 'Rolling' : `Rolled ${n}`}>
+  <rect x="1.5" y="1.5" width="21" height="21" rx="4.5" fill="#fff" stroke="#222" stroke-width="1.6" />
+  ${PIPS[n].map(([x, y]) => svg`<circle cx=${x} cy=${y} r="2" fill="#222" />`)}</svg>`;
 
 // A counter: the player's face in a ring of their ink. The one that just moved hops to the square it
 // landed on, then climbs or slides to where it ends up. Counters sharing a square sit side by side.
 function token(ctx, id, live) {
   const { round } = ctx;
   const k = round.order.indexOf(id);
-  const off = [((k % 4) - 1.5) * 2.1, (Math.floor(k / 4) % 3 - 1) * 2.1];
+  const off = [((k % 4) - 1.5) * 1.4, (Math.floor(k / 4) % 3 - 1) * 1.6]; // small, so counters stay on the board
   const at = s => centre(s).map((v, i) => v + off[i]);
   const p = ctx.room.players[id];
   const move = live && round.last?.by === id && ctx.now() < (round.busyUntil || 0) ? round.last : null;

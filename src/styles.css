@@ -1197,9 +1197,13 @@ frame-reel { display: block; max-width: 760px; width: 100%; margin: 8px auto; }
 .sl-snake__outline { fill: none; stroke: #222; stroke-width: 2.6; stroke-linecap: round; stroke-linejoin: round; }
 .sl-snake__body { fill: none; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
 .sl-token { transition: transform 0.4s; }
-.sl-token--moving { animation: sl-move 1.9s ease-in-out forwards; }
+.sl-token--moving { animation: sl-move 1.9s ease-in-out 0.75s both; }
 @keyframes sl-move { 0% { transform: translate(var(--x0), var(--y0)); } 45%, 60% { transform: translate(var(--x1), var(--y1)); } 100% { transform: translate(var(--x2), var(--y2)); } }
-.sl > .btn { margin-top: 10px; }
+.sl-roll { display: flex; align-items: center; justify-content: center; gap: 14px; min-height: 64px; margin-top: 8px; }
+.sl-roll .btn { margin: 0; }
+.sl-die { flex: none; filter: drop-shadow(2px 2px 0 rgba(0, 0, 0, 0.15)); }
+.sl-die--spin { animation: sl-tumble 0.75s ease-out; }
+@keyframes sl-tumble { 0% { transform: translateY(-14px) rotate(-200deg) scale(0.8); } 60% { transform: translateY(2px) rotate(15deg); } 100% { transform: none; } }
 
 /* ----- Maze Race ----- */
 .mr-board { touch-action: manipulation; }
