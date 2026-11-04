@@ -1197,8 +1197,25 @@ frame-reel { display: block; max-width: 760px; width: 100%; margin: 8px auto; }
 .sl-snake__outline { fill: none; stroke: #222; stroke-width: 2.6; stroke-linecap: round; stroke-linejoin: round; }
 .sl-snake__body { fill: none; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
 .sl-token { transition: transform 0.4s; }
-.sl-token--moving { animation: sl-move 1.9s ease-in-out 0.75s both; }
-@keyframes sl-move { 0% { transform: translate(var(--x0), var(--y0)); } 45%, 60% { transform: translate(var(--x1), var(--y1)); } 100% { transform: translate(var(--x2), var(--y2)); } }
+.sl-token--walking { transition: none; }
+.sl-turn { fill: none; stroke: #7a8796; stroke-width: 0.6; stroke-linecap: round; stroke-linejoin: round; }
+.sl-box rect { fill: #ffe066; stroke: #222; stroke-width: 0.6; transform-box: fill-box; transform-origin: center; animation: sl-box-bob 2.4s ease-in-out infinite; }
+.sl-box text { font-size: 5.6px; font-weight: 700; text-anchor: middle; fill: #222; font-family: inherit; pointer-events: none; }
+@keyframes sl-box-bob { 50% { transform: rotate(-8deg); } }
+.sl-pickable { fill: #ffe066; fill-opacity: 0.35; stroke: #222; stroke-width: 0.5; stroke-dasharray: 1 0.8; }
+.sl-pickable--on { fill-opacity: 0.8; }
+.sl-board--pick { cursor: pointer; }
+.sl-fresh { animation: pf-blink 0.35s ease-in-out 2; }
+.sl-dice { display: inline-flex; gap: 8px; }
+.sl-held { margin-left: 3px; font-size: 13px; color: #b8860b; letter-spacing: 1px; }
+.sl-items { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; align-items: stretch; margin-top: 8px; width: var(--board); }
+.sl-item { display: flex; flex-direction: column; align-items: center; gap: 4px; flex: 1 1 140px; max-width: 220px; padding: 6px 10px; background: #fff7cc; border: 2px solid #222; border-radius: 8px; box-shadow: 2px 2px 0 #222; text-align: center; line-height: 1.2; }
+.sl-item small { font-size: 13px; }
+.sl-item .btn { margin: 2px 0 0; }
+.sl-item--next { background: #fff; opacity: 0.7; box-shadow: none; }
+.sl-fx { width: 100%; margin: 0; text-align: center; }
+.sl-targets { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin-top: 8px; }
+.sl-targets .btn { margin: 0; }
 .sl-roll { display: flex; align-items: center; justify-content: center; gap: 14px; min-height: 64px; margin-top: 8px; }
 .sl-roll .btn { margin: 0; }
 .sl-die { flex: none; filter: drop-shadow(2px 2px 0 rgba(0, 0, 0, 0.15)); }
