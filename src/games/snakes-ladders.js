@@ -77,30 +77,54 @@ function ageBoxes(ctx, round) {
   });
   round.stale = stale;
 }
+// Keeping the board tidy: each snake or ladder stays fairly upright (no more than 3 columns
+// sideways, 1 to 4 rows tall) and keeps a clear gap from every other one, so none cross or pile up.
+const MAX_SIDEWAYS = 30;
+const MAX_ROWS = 4;
+const GAP = 5.5;
+function tidy([a, b]) {
+  const [ax, ay] = centre(a), [bx, by] = centre(b);
+  const rows = Math.abs(ay - by) / 10;
+  return Math.abs(ax - bx) <= MAX_SIDEWAYS && rows >= 1 && rows <= MAX_ROWS;
+}
+// The closest two snakes or ladders get, checking points along each.
+function apart([a, b], [c, d]) {
+  const [p1, p2, q1, q2] = [a, b, c, d].map(centre);
+  let best = Infinity;
+  for (let i = 0; i <= 12; i++) for (let j = 0; j <= 12; j++) {
+    const u = i / 12, v = j / 12;
+    best = Math.min(best, Math.hypot(p1[0] + (p2[0] - p1[0]) * u - (q1[0] + (q2[0] - q1[0]) * v), p1[1] + (p2[1] - p1[1]) * u - (q1[1] + (q2[1] - q1[1]) * v)));
+  }
+  return best;
+}
+const fits = (link, others) => tidy(link) && others.every(o => apart(link, o) >= GAP);
+
 // Every few rounds the snakes and ladders all jump to new places.
 const SHUFFLE_ROUNDS = 3;
 const turnsPerShuffle = (ctx, round) => playersHere(ctx, round).length * SHUFFLE_ROUNDS;
 function shuffleBoard(ctx, round) {
   const players = new Set(Object.values(round.pos));
-  for (let tries = 0; tries < 50; tries++) {
+  for (let tries = 0; tries < 60; tries++) {
     const used = new Set([1, 100, ...(round.boxes || [])]);
+    const all = [];
     const place = (count, up) => {
       const list = [];
-      for (let k = 0; list.length < count && k < 400; k++) {
-        const len = 8 + Math.floor(Math.random() * 24);
+      for (let k = 0; list.length < count && k < 600; k++) {
+        const len = 8 + Math.floor(Math.random() * 28);
         const start = up ? 2 + Math.floor(Math.random() * (98 - len)) : len + 2 + Math.floor(Math.random() * (98 - len - 1));
         const end = up ? start + len : start - len;
         // Ends can't share a square with anything, and a start can't be under someone's counter.
         if (end < 2 || end > 99 || used.has(start) || used.has(end) || players.has(start)) continue;
-        // Keep each one spanning at least one row, so none are flat.
-        if (Math.floor((start - 1) / 10) === Math.floor((end - 1) / 10)) continue;
+        if (!fits([start, end], all)) continue;
         used.add(start); used.add(end);
         list.push([start, end]);
+        all.push([start, end]);
       }
       return list;
     };
-    const ladders = place(7, true);
-    const snakes = place(7, false);
+    // Alternate, so ladders and snakes get an equal share of the room.
+    const ladders = [], snakes = [];
+    for (let k = 0; k < 7; k++) { ladders.push(...place(1, true)); snakes.push(...place(1, false)); }
     if (ladders.length === 7 && snakes.length === 7) { round.ladders = ladders; round.snakes = snakes; return true; }
   }
   return false;
@@ -203,6 +227,7 @@ function usePower(ctx, target) {
       const start = target.at, end = target.at + (old[1] - old[0]);
       const others = { ...round, [kind]: list.filter(l => l !== old) };
       if (start < 2 || start > 99 || end < 2 || end > 99 || taken(others).has(start) || taken(others).has(end)) return undefined;
+      if (!fits([start, end], links(others))) return undefined;
       round[kind] = list.map(l => (l === old ? [start, end] : l));
       round.last = { ...note, link: [start, end], moved: kind === 'ladders' ? 'ladder' : 'snake' };
       round.busyUntil = now + QUICK_MS;
